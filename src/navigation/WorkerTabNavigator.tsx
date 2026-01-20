@@ -1,15 +1,19 @@
-import React from "react";
+import React, { useRef } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Home, Search, Briefcase, Wallet, User } from "lucide-react-native";
+import { Animated } from "react-native";
 import { COLORS } from "../constants/theme";
 
-import { WorkerHomeScreen } from "../screens/WorkerHomeScreen";
-import { WorkerSearchScreen } from "../screens/WorkerSearchScreen";
-import { WorkerJobsScreen } from "../screens/WorkerJobsScreen";
+import { HomeStackNavigator } from "./HomeStackNavigator";
+import { SearchStackNavigator } from "./SearchStackNavigator";
+import { JobsStackNavigator } from "./JobsStackNavigator";
 import { WorkerWalletScreen } from "../screens/WorkerWalletScreen";
-import { WorkerProfileScreen } from "../screens/WorkerProfileScreen";
+import { ProfileStackNavigator } from "./ProfileStackNavigator";
 
 const Tab = createBottomTabNavigator();
+
+// Shared animated value for tab bar visibility
+export const tabBarTranslateY = new Animated.Value(0);
 
 export function WorkerTabNavigator() {
   return (
@@ -32,6 +36,7 @@ export function WorkerTabNavigator() {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
+          transform: [{ translateY: tabBarTranslateY }],
         },
         tabBarItemStyle: {
           borderRadius: 12,
@@ -55,7 +60,7 @@ export function WorkerTabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={WorkerHomeScreen}
+        component={HomeStackNavigator}
         options={{
           title: "Trang chủ",
           headerShown: true,
@@ -64,7 +69,7 @@ export function WorkerTabNavigator() {
       />
       <Tab.Screen
         name="Search"
-        component={WorkerSearchScreen}
+        component={SearchStackNavigator}
         options={{
           title: "Tìm việc",
           tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
@@ -72,7 +77,7 @@ export function WorkerTabNavigator() {
       />
       <Tab.Screen
         name="Jobs"
-        component={WorkerJobsScreen}
+        component={JobsStackNavigator}
         options={{
           title: "Công việc",
           tabBarIcon: ({ color, size }) => (
@@ -90,7 +95,7 @@ export function WorkerTabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={WorkerProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           title: "Tài khoản",
           headerStyle: { paddingBottom: 16 },

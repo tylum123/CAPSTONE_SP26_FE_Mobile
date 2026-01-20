@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Alert,
   ImageBackground,
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent } from "../components/ui/Card";
@@ -24,9 +27,36 @@ import {
   Edit2,
 } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
+import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
-export function WorkerProfileScreen() {
+export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
+
+  const scrollY = useRef(0);
+  const lastScrollY = useRef(0);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const currentScrollY = event.nativeEvent.contentOffset.y;
+    const scrollDiff = currentScrollY - lastScrollY.current;
+
+    if (scrollDiff > 5) {
+      // Scrolling down - hide tab bar
+      Animated.timing(tabBarTranslateY, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else if (scrollDiff < -5) {
+      // Scrolling up - show tab bar
+      Animated.timing(tabBarTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    lastScrollY.current = currentScrollY;
+  };
 
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
@@ -36,12 +66,25 @@ export function WorkerProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    Alert.alert("Chỉnh sửa hồ sơ", "Chức năng này sẽ được phát triển sau");
+    navigation.navigate("EditProfile", {
+      currentProfile: {
+        name: user?.name || "Minh Nguyen",
+        phone: "0123456789",
+        email: "minh@example.com",
+        address: "Cần Thơ, Việt Nam",
+        bio: "Có kinh nghiệm 5 năm làm việc trong lĩnh vực nông nghiệp",
+        skills: "Thu hoạch, Chăm sóc cây trồng, Phun thuốc, Làm đất",
+      },
+    });
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Header with Edit Button */}
         <ImageBackground
           source={require("../../assets/bgWorker.jpg")}

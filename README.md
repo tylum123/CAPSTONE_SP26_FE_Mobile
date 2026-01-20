@@ -160,12 +160,14 @@ Chúng tôi hoan nghênh mọi đóng góp cho dự án! Để đóng góp, vui 
 1. **Fork repository** - Tạo một bản sao của dự án về tài khoản GitHub của bạn
 
 2. **Clone về máy local**
+
    ```bash
    git clone https://github.com/<your-username>/CAPSTONE_SP26_FE_Mobile.git
    cd CAPSTONE_SP26_FE_Mobile
    ```
 
 3. **Tạo nhánh mới** cho tính năng hoặc bugfix của bạn
+
    ```bash
    git checkout -b feature/ten-tinh-nang
    # hoặc
@@ -173,6 +175,7 @@ Chúng tôi hoan nghênh mọi đóng góp cho dự án! Để đóng góp, vui 
    ```
 
 4. **Thực hiện thay đổi** và commit code của bạn
+
    ```bash
    git add .
    git commit -m "feat: thêm tính năng xyz"
@@ -181,6 +184,7 @@ Chúng tôi hoan nghênh mọi đóng góp cho dự án! Để đóng góp, vui 
    ```
 
 5. **Push lên nhánh của bạn**
+
    ```bash
    git push origin feature/ten-tinh-nang
    ```
@@ -216,6 +220,7 @@ Vui lòng tuân theo conventional commits:
 ### Review process
 
 Mọi Pull Request sẽ được review bởi maintainers. Vui lòng:
+
 - Mô tả rõ ràng những thay đổi trong PR
 - Liên kết đến issue liên quan (nếu có)
 - Trả lời các comments và thực hiện thay đổi nếu được yêu cầu

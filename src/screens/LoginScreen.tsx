@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,33 +12,109 @@ import {
   ImageBackground,
   Image,
 } from "react-native";
-import { User, Tractor, Mail, Lock } from "lucide-react-native";
+import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 
+type LoginTab = "phone" | "email";
+
 export function LoginScreen({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<LoginTab>("phone");
+
+  // Phone login states
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [phoneCountdown, setPhoneCountdown] = useState(0);
+
+  // Email login states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<"worker" | "farmer">(
-    "worker"
-  );
+  const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (phoneCountdown > 0) {
+      const timer = setTimeout(
+        () => setPhoneCountdown(phoneCountdown - 1),
+        1000
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [phoneCountdown]);
+
+  const handleSendPhoneOtp = async () => {
+    if (!phoneNumber) {
+      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
+      return;
+    }
+
+    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password, selectedRole);
+      // TODO: Call API to send OTP
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setPhoneOtpSent(true);
+      setPhoneCountdown(60);
+      Alert.alert("Thành công", "Mã OTP đã được gửi đến số điện thoại của bạn");
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể gửi OTP. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneLogin = async () => {
+    if (!phoneOtp || phoneOtp.length !== 6) {
+      Alert.alert("Lỗi", "Vui lòng nhập mã OTP 6 số");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // TODO: Call API to verify OTP and login
+      await login(phoneNumber, phoneOtp, "worker");
+    } catch (error) {
+      Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng kiểm tra lại mã OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Email không hợp lệ");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login(email, password, "worker");
     } catch (error) {
       Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = () => {
+    if (phoneCountdown === 0) {
+      handleSendPhoneOtp();
     }
   };
 
@@ -60,113 +136,207 @@ export function LoginScreen({ navigation }: any) {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
+            <View style={styles.logoWrapper}>
               <Image
                 source={require("../../assets/logo.png")}
                 style={styles.logo}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             </View>
             <Text style={styles.title}>Chào mừng trở lại</Text>
             <Text style={styles.subtitle}>
-              Kết nối cơ hội việc làm nông nghiệp
+              Tìm kiếm cơ hội việc làm nông nghiệp
             </Text>
           </View>
 
-          {/* Role Selection */}
-          <View style={styles.roleContainer}>
+          {/* Tabs */}
+          <View style={styles.tabs}>
             <TouchableOpacity
-              style={[
-                styles.roleButton,
-                selectedRole === "worker" && styles.roleButtonActive,
-              ]}
-              onPress={() => setSelectedRole("worker")}
+              style={[styles.tab, activeTab === "phone" && styles.activeTab]}
+              onPress={() => setActiveTab("phone")}
             >
-              <User
-                size={24}
-                color={
-                  selectedRole === "worker" ? COLORS.white : COLORS.emerald[600]
-                }
+              <Phone
+                size={20}
+                color={activeTab === "phone" ? COLORS.white : COLORS.gray[600]}
               />
               <Text
                 style={[
-                  styles.roleButtonText,
-                  selectedRole === "worker" && styles.roleButtonTextActive,
+                  styles.tabText,
+                  activeTab === "phone" && styles.activeTabText,
                 ]}
               >
-                Người lao động
+                Số điện thoại
               </Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[
-                styles.roleButton,
-                selectedRole === "farmer" && styles.roleButtonActive,
-              ]}
-              onPress={() => setSelectedRole("farmer")}
+              style={[styles.tab, activeTab === "email" && styles.activeTab]}
+              onPress={() => setActiveTab("email")}
             >
-              <Tractor
-                size={24}
-                color={
-                  selectedRole === "farmer" ? COLORS.white : COLORS.emerald[600]
-                }
+              <Mail
+                size={20}
+                color={activeTab === "email" ? COLORS.white : COLORS.gray[600]}
               />
               <Text
                 style={[
-                  styles.roleButtonText,
-                  selectedRole === "farmer" && styles.roleButtonTextActive,
+                  styles.tabText,
+                  activeTab === "email" && styles.activeTabText,
                 ]}
               >
-                Nông dân
+                Email
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Mail size={20} color={COLORS.gray[500]} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={COLORS.gray[500]}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-              />
-            </View>
+            {activeTab === "phone" ? (
+              // Phone Login Form
+              <>
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}>
+                    <Phone size={20} color={COLORS.gray[500]} />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Số điện thoại"
+                    placeholderTextColor={COLORS.gray[400]}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                    editable={!phoneOtpSent}
+                  />
+                </View>
 
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color={COLORS.gray[500]} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Mật khẩu"
-                placeholderTextColor={COLORS.gray[500]}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-              />
-            </View>
+                {phoneOtpSent && (
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputIcon}>
+                      <Lock size={20} color={COLORS.gray[500]} />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nhập mã OTP (6 số)"
+                      placeholderTextColor={COLORS.gray[400]}
+                      value={phoneOtp}
+                      onChangeText={setPhoneOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                    />
+                  </View>
+                )}
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-            </TouchableOpacity>
+                {phoneOtpSent ? (
+                  <>
+                    <Button
+                      onPress={handlePhoneLogin}
+                      loading={loading}
+                      style={styles.loginButton}
+                    >
+                      Đăng nhập
+                    </Button>
 
-            <Button
-              onPress={handleLogin}
-              loading={loading}
-              style={styles.loginButton}
-            >
-              Đăng nhập
-            </Button>
+                    <View style={styles.resendContainer}>
+                      <Text style={styles.resendText}>
+                        Không nhận được mã?{" "}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={handleResendOtp}
+                        disabled={phoneCountdown > 0}
+                      >
+                        <Text
+                          style={[
+                            styles.resendLink,
+                            phoneCountdown > 0 && styles.resendDisabled,
+                          ]}
+                        >
+                          {phoneCountdown > 0
+                            ? `Gửi lại (${phoneCountdown}s)`
+                            : "Gửi lại mã"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPhoneOtpSent(false);
+                        setPhoneOtp("");
+                        setPhoneCountdown(0);
+                      }}
+                      style={styles.changeNumberButton}
+                    >
+                      <Text style={styles.changeNumberText}>
+                        Đổi số điện thoại
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Button
+                    onPress={handleSendPhoneOtp}
+                    loading={loading}
+                    style={styles.loginButton}
+                  >
+                    Gửi mã OTP
+                  </Button>
+                )}
+              </>
+            ) : (
+              // Email Login Form
+              <>
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}>
+                    <Mail size={20} color={COLORS.gray[500]} />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor={COLORS.gray[400]}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}>
+                    <Lock size={20} color={COLORS.gray[500]} />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Mật khẩu"
+                    placeholderTextColor={COLORS.gray[400]}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={COLORS.gray[500]} />
+                    ) : (
+                      <Eye size={20} color={COLORS.gray[500]} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("ForgotPassword")}
+                  style={styles.forgotPassword}
+                >
+                  <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+                </TouchableOpacity>
+
+                <Button
+                  onPress={handleEmailLogin}
+                  loading={loading}
+                  style={styles.loginButton}
+                >
+                  Đăng nhập
+                </Button>
+              </>
+            )}
           </View>
 
           {/* Footer */}
@@ -197,70 +367,49 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   scrollContent: {
-    flexGrow: 1,
-    padding: SPACING.xl,
-    justifyContent: "center",
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md * -3,
+    paddingBottom: SPACING.md * 2,
   },
   header: {
     alignItems: "center",
-    marginBottom: SPACING.xl,
-  },
-  logoContainer: {
     marginBottom: SPACING.xs,
   },
+  logoWrapper: {
+    width: 340,
+    height: 340,
+    overflow: "hidden",
+    marginBottom: SPACING.xs * -2,
+  },
   logo: {
-    width: 320,
-    height: 120,
+    width: "110%",
+    height: "110%",
+    marginLeft: "-5%",
+    marginTop: "-5%",
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "bold",
     color: COLORS.white,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.white,
     opacity: 0.9,
-  },
-  roleContainer: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    marginBottom: SPACING.xl,
-  },
-  roleButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 2,
-    borderColor: COLORS.emerald[600],
-    backgroundColor: COLORS.white,
-  },
-  roleButtonActive: {
-    backgroundColor: COLORS.emerald[600],
-    borderColor: COLORS.emerald[600],
-  },
-  roleButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.emerald[600],
-  },
-  roleButtonTextActive: {
-    color: COLORS.white,
+    textAlign: "center",
+    marginBottom: SPACING.sm,
   },
   form: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.md,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     paddingHorizontal: SPACING.md,
   },
   inputIcon: {
@@ -272,13 +421,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.gray[900],
   },
+  eyeIcon: {
+    padding: SPACING.xs,
+  },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 4,
+    marginBottom: SPACING.md,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "transparent",
+  },
+  activeTab: {
+    backgroundColor: COLORS.emerald[600],
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.gray[600],
+  },
+  activeTabText: {
+    color: COLORS.white,
+  },
+  resendContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: SPACING.md,
+  },
+  resendText: {
+    fontSize: 14,
+    color: COLORS.white,
+  },
+  resendLink: {
+    fontSize: 14,
+    color: COLORS.emerald[100],
+    fontWeight: "600",
+  },
+  resendDisabled: {
+    color: COLORS.gray[400],
+  },
+  changeNumberButton: {
+    marginTop: SPACING.md,
+    alignItems: "center",
+  },
+  changeNumberText: {
+    fontSize: 14,
+    color: COLORS.white,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: COLORS.emerald[600],
+    color: COLORS.white,
     fontWeight: "600",
   },
   loginButton: {
@@ -291,11 +501,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: COLORS.gray[600],
+    color: COLORS.white,
   },
   registerLink: {
     fontSize: 14,
-    color: COLORS.emerald[600],
+    color: COLORS.emerald[100],
     fontWeight: "600",
   },
 });

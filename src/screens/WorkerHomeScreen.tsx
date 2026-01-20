@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Animated,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import {
   MapPin,
@@ -22,8 +25,35 @@ import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { Job, UpcomingJob } from "../types";
+import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 export function WorkerHomeScreen({ navigation }: any) {
+  const scrollY = useRef(0);
+  const lastScrollY = useRef(0);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const currentScrollY = event.nativeEvent.contentOffset.y;
+    const scrollDiff = currentScrollY - lastScrollY.current;
+
+    if (scrollDiff > 5) {
+      // Scrolling down - hide tab bar
+      Animated.timing(tabBarTranslateY, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else if (scrollDiff < -5) {
+      // Scrolling up - show tab bar
+      Animated.timing(tabBarTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    lastScrollY.current = currentScrollY;
+  };
+
   const nearbyJobs: Job[] = [
     {
       id: 1,
@@ -72,7 +102,12 @@ export function WorkerHomeScreen({ navigation }: any) {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+    >
       {/* Welcome Section */}
       <View style={styles.welcomeCard}>
         <View style={styles.gradientOverlay} />
