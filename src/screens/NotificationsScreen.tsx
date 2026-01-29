@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Bell,
   CheckCircle2,
@@ -131,7 +132,7 @@ export function NotificationsScreen({ navigation }: any) {
 
   const markAsRead = (id: number) => {
     setNotifications((prev) =>
-      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
+      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)),
     );
   };
 
@@ -154,99 +155,119 @@ export function NotificationsScreen({ navigation }: any) {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Thông báo</Text>
-          {unreadCount > 0 && <Badge variant="danger">{unreadCount} mới</Badge>}
-        </View>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead}>
-            <Text style={styles.markAllRead}>Đánh dấu tất cả đã đọc</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Notifications List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {notifications.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Bell size={48} color={COLORS.gray[300]} />
-            <Text style={styles.emptyTitle}>Không có thông báo</Text>
-            <Text style={styles.emptySubtitle}>
-              Bạn sẽ nhận được thông báo ở đây
-            </Text>
-          </View>
-        ) : (
-          notifications.map((notification) => (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.title}>Thông báo</Text>
+              {unreadCount > 0 && (
+                <Badge variant="danger">{unreadCount} mới</Badge>
+              )}
+            </View>
             <TouchableOpacity
-              key={notification.id}
-              onPress={() => handleNotificationPress(notification)}
-              activeOpacity={0.7}
+              style={styles.closeButton}
+              onPress={() => navigation.goBack()}
             >
-              <Card
-                style={
-                  !notification.read
-                    ? StyleSheet.flatten([
-                        styles.notificationCard,
-                        styles.unreadCard,
-                      ])
-                    : styles.notificationCard
-                }
-              >
-                <CardContent style={styles.cardContent}>
-                  <View
-                    style={{
-                      ...styles.iconContainer,
-                      backgroundColor: getNotificationColor(notification.type),
-                    }}
-                  >
-                    {getNotificationIcon(notification.type)}
-                  </View>
-
-                  <View style={styles.contentContainer}>
-                    <View style={styles.headerRow}>
-                      <Text
-                        style={[
-                          styles.notificationTitle,
-                          !notification.read && styles.unreadTitle,
-                        ]}
-                      >
-                        {notification.title}
-                      </Text>
-                      {!notification.read && <View style={styles.unreadDot} />}
-                    </View>
-
-                    <Text style={styles.notificationMessage}>
-                      {notification.message}
-                    </Text>
-
-                    <View style={styles.footer}>
-                      <Text style={styles.timestamp}>
-                        {notification.timestamp}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          deleteNotification(notification.id);
-                        }}
-                      >
-                        <Text style={styles.deleteButton}>Xóa</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </CardContent>
-              </Card>
+              <X size={24} color={COLORS.gray[600]} />
             </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
-    </View>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity onPress={markAllAsRead}>
+              <Text style={styles.markAllRead}>Đánh dấu tất cả đã đọc</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Notifications List */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {notifications.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Bell size={48} color={COLORS.gray[300]} />
+              <Text style={styles.emptyTitle}>Không có thông báo</Text>
+              <Text style={styles.emptySubtitle}>
+                Bạn sẽ nhận được thông báo ở đây
+              </Text>
+            </View>
+          ) : (
+            notifications.map((notification) => (
+              <TouchableOpacity
+                key={notification.id}
+                onPress={() => handleNotificationPress(notification)}
+                activeOpacity={0.7}
+              >
+                <Card
+                  style={
+                    !notification.read
+                      ? StyleSheet.flatten([
+                          styles.notificationCard,
+                          styles.unreadCard,
+                        ])
+                      : styles.notificationCard
+                  }
+                >
+                  <CardContent style={styles.cardContent}>
+                    <View
+                      style={{
+                        ...styles.iconContainer,
+                        backgroundColor: getNotificationColor(
+                          notification.type,
+                        ),
+                      }}
+                    >
+                      {getNotificationIcon(notification.type)}
+                    </View>
+
+                    <View style={styles.contentContainer}>
+                      <View style={styles.headerRow}>
+                        <Text
+                          style={[
+                            styles.notificationTitle,
+                            !notification.read && styles.unreadTitle,
+                          ]}
+                        >
+                          {notification.title}
+                        </Text>
+                        {!notification.read && (
+                          <View style={styles.unreadDot} />
+                        )}
+                      </View>
+
+                      <Text style={styles.notificationMessage}>
+                        {notification.message}
+                      </Text>
+
+                      <View style={styles.footer}>
+                        <Text style={styles.timestamp}>
+                          {notification.timestamp}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                        >
+                          <Text style={styles.deleteButton}>Xóa</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </CardContent>
+                </Card>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.emerald[50],
@@ -263,6 +284,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: SPACING.xs,
   },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    flex: 1,
+  },
+  closeButton: {
+    padding: SPACING.xs,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -275,7 +305,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: SPACING.md,
   },
   notificationCard: {
     marginBottom: SPACING.md,

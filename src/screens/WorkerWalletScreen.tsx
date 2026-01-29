@@ -7,10 +7,8 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Wallet,
   TrendingUp,
@@ -29,7 +27,6 @@ import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 const { width } = Dimensions.get("window");
 
@@ -51,35 +48,8 @@ export function WorkerWalletScreen({ navigation }: any) {
     "vnpay" | "momo" | null
   >(null);
 
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
-
   const walletBalance = 1250000;
   const escrowBalance = 450000; // Tiền đang giữ
-  const monthlyIncome = 3200000;
 
   const paymentMethods = [
     {
@@ -145,7 +115,7 @@ export function WorkerWalletScreen({ navigation }: any) {
 
   const getTransactionIcon = (
     type: TransactionType,
-    status: TransactionStatus
+    status: TransactionStatus,
   ) => {
     const size = 20;
 
@@ -196,180 +166,185 @@ export function WorkerWalletScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {/* Balance Card with Gradient */}
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceHeader}>
-            <View>
-              <Text style={styles.balanceLabel}>Tổng số dư</Text>
-              <Text style={styles.balanceAmount}>
-                {walletBalance.toLocaleString("vi-VN")}₫
-              </Text>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEventThrottle={16}
+        >
+          {/* Balance Card with Gradient */}
+          <View style={styles.balanceCard}>
+            <View style={styles.balanceHeader}>
+              <View>
+                <Text style={styles.balanceLabel}>Tổng số dư</Text>
+                <Text style={styles.balanceAmount}>
+                  {walletBalance.toLocaleString("vi-VN")}₫
+                </Text>
+              </View>
+              <View style={styles.walletIconContainer}>
+                <Wallet size={32} color={COLORS.white} />
+              </View>
             </View>
-            <View style={styles.walletIconContainer}>
-              <Wallet size={32} color={COLORS.white} />
-            </View>
-          </View>
 
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickActionButton}>
-              <View style={styles.actionIconContainer}>
-                <Download size={22} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Rút tiền</Text>
-            </TouchableOpacity>
+            {/* Quick Actions */}
+            <View style={styles.quickActions}>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <View style={styles.actionIconContainer}>
+                  <Download size={22} color={COLORS.emerald[600]} />
+                </View>
+                <Text style={styles.actionText}>Rút tiền</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton}>
-              <View style={styles.actionIconContainer}>
-                <History size={22} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Lịch sử</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <View style={styles.actionIconContainer}>
+                  <History size={22} color={COLORS.emerald[600]} />
+                </View>
+                <Text style={styles.actionText}>Lịch sử</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.quickActionButton}>
-              <View style={styles.actionIconContainer}>
-                <CreditCard size={22} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Liên kết</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Payment Methods */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-
-          {paymentMethods.map((method) => (
-            <TouchableOpacity
-              key={method.id}
-              style={[
-                styles.paymentMethod,
-                !method.connected && styles.paymentMethodDisabled,
-              ]}
-              onPress={() => {
-                if (method.connected) {
-                  setSelectedPaymentMethod(method.id as any);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.paymentLogoContainer}>
-                <Image
-                  source={{ uri: method.logo }}
-                  style={styles.paymentLogo}
-                  resizeMode="contain"
-                />
-              </View>
-              <View style={styles.paymentInfo}>
-                <Text style={styles.paymentName}>{method.name}</Text>
-                {method.connected ? (
-                  <View style={styles.connectedRow}>
-                    <CheckCircle2 size={14} color={COLORS.emerald[600]} />
-                    <Text style={styles.connectedText}>Đã kết nối</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.notConnectedText}>Chưa kết nối</Text>
-                )}
-              </View>
-              {!method.connected && (
-                <Button variant="outline" size="sm">
-                  Kết nối
-                </Button>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Escrow Info */}
-        {escrowBalance > 0 && (
-          <View style={styles.escrowCard}>
-            <View style={styles.escrowIconContainer}>
-              <Clock size={24} color={COLORS.amber[600]} />
-            </View>
-            <View style={styles.escrowInfo}>
-              <Text style={styles.escrowTitle}>Hệ thống Escrow</Text>
-              <Text style={styles.escrowDescription}>
-                Tiền sẽ được giữ an toàn cho đến khi bạn hoàn thành công việc
-              </Text>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <View style={styles.actionIconContainer}>
+                  <CreditCard size={22} color={COLORS.emerald[600]} />
+                </View>
+                <Text style={styles.actionText}>Liên kết</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
 
-        {/* Transactions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
+          {/* Payment Methods */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
 
-          <View style={styles.transactionsList}>
-            {transactions.map((transaction) => (
+            {paymentMethods.map((method) => (
               <TouchableOpacity
-                key={transaction.id}
-                style={styles.transaction}
+                key={method.id}
+                style={[
+                  styles.paymentMethod,
+                  !method.connected && styles.paymentMethodDisabled,
+                ]}
+                onPress={() => {
+                  if (method.connected) {
+                    setSelectedPaymentMethod(method.id as any);
+                  }
+                }}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.transactionIcon,
-                    {
-                      backgroundColor: `${getTransactionColor(transaction.type)}15`,
-                    },
-                  ]}
-                >
-                  {getTransactionIcon(transaction.type, transaction.status)}
+                <View style={styles.paymentLogoContainer}>
+                  <Image
+                    source={{ uri: method.logo }}
+                    style={styles.paymentLogo}
+                    resizeMode="contain"
+                  />
                 </View>
-
-                <View style={styles.transactionContent}>
-                  <View style={styles.transactionHeader}>
-                    <Text style={styles.transactionTitle}>
-                      {transaction.description}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.transactionAmount,
-                        {
-                          color: getTransactionColor(transaction.type),
-                        },
-                      ]}
-                    >
-                      {transaction.type === "withdraw" ? "-" : "+"}
-                      {transaction.amount.toLocaleString("vi-VN")}₫
-                    </Text>
-                  </View>
-
-                  <View style={styles.transactionFooter}>
-                    {transaction.jobTitle && (
-                      <Text
-                        style={styles.transactionSubtitle}
-                        numberOfLines={1}
-                      >
-                        {transaction.jobTitle}
-                      </Text>
-                    )}
-                    <View style={styles.transactionMeta}>
-                      <Text style={styles.transactionDate}>
-                        {transaction.date}
-                      </Text>
-                      {getStatusBadge(transaction.status)}
+                <View style={styles.paymentInfo}>
+                  <Text style={styles.paymentName}>{method.name}</Text>
+                  {method.connected ? (
+                    <View style={styles.connectedRow}>
+                      <CheckCircle2 size={14} color={COLORS.emerald[600]} />
+                      <Text style={styles.connectedText}>Đã kết nối</Text>
                     </View>
-                  </View>
+                  ) : (
+                    <Text style={styles.notConnectedText}>Chưa kết nối</Text>
+                  )}
                 </View>
+                {!method.connected && (
+                  <Button variant="outline" size="sm">
+                    Kết nối
+                  </Button>
+                )}
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      </ScrollView>
-    </View>
+
+          {/* Escrow Info */}
+          {escrowBalance > 0 && (
+            <View style={styles.escrowCard}>
+              <View style={styles.escrowIconContainer}>
+                <Clock size={24} color={COLORS.amber[600]} />
+              </View>
+              <View style={styles.escrowInfo}>
+                <Text style={styles.escrowTitle}>Hệ thống Escrow</Text>
+                <Text style={styles.escrowDescription}>
+                  Tiền sẽ được giữ an toàn cho đến khi bạn hoàn thành công việc
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Transactions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
+
+            <View style={styles.transactionsList}>
+              {transactions.map((transaction) => (
+                <TouchableOpacity
+                  key={transaction.id}
+                  style={styles.transaction}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.transactionIcon,
+                      {
+                        backgroundColor: `${getTransactionColor(transaction.type)}15`,
+                      },
+                    ]}
+                  >
+                    {getTransactionIcon(transaction.type, transaction.status)}
+                  </View>
+
+                  <View style={styles.transactionContent}>
+                    <View style={styles.transactionHeader}>
+                      <Text style={styles.transactionTitle}>
+                        {transaction.description}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.transactionAmount,
+                          {
+                            color: getTransactionColor(transaction.type),
+                          },
+                        ]}
+                      >
+                        {transaction.type === "withdraw" ? "-" : "+"}
+                        {transaction.amount.toLocaleString("vi-VN")}₫
+                      </Text>
+                    </View>
+
+                    <View style={styles.transactionFooter}>
+                      {transaction.jobTitle && (
+                        <Text
+                          style={styles.transactionSubtitle}
+                          numberOfLines={1}
+                        >
+                          {transaction.jobTitle}
+                        </Text>
+                      )}
+                      <View style={styles.transactionMeta}>
+                        <Text style={styles.transactionDate}>
+                          {transaction.date}
+                        </Text>
+                        {getStatusBadge(transaction.status)}
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.gray[50],
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.gray[50],
@@ -378,12 +353,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   balanceCard: {
     backgroundColor: COLORS.emerald[600],
-    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     marginBottom: SPACING.lg,
     elevation: 8,
@@ -413,7 +386,6 @@ const styles = StyleSheet.create({
   walletIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 28,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
@@ -421,7 +393,6 @@ const styles = StyleSheet.create({
   quickStats: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.lg,
   },
@@ -434,7 +405,6 @@ const styles = StyleSheet.create({
   statIconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.25)",
     justifyContent: "center",
     alignItems: "center",
@@ -465,7 +435,6 @@ const styles = StyleSheet.create({
   quickActionButton: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xs,
     alignItems: "center",
@@ -479,7 +448,6 @@ const styles = StyleSheet.create({
   actionIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     backgroundColor: COLORS.emerald[50],
     justifyContent: "center",
     alignItems: "center",
@@ -497,6 +465,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.gray[900],
     marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
   },
   paymentMethod: {
     flexDirection: "row",
@@ -504,7 +473,6 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.md,
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
@@ -515,7 +483,6 @@ const styles = StyleSheet.create({
   paymentLogoContainer: {
     width: 56,
     height: 56,
-    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.gray[50],
     justifyContent: "center",
     alignItems: "center",
@@ -553,7 +520,6 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.lg,
     backgroundColor: COLORS.amber[50],
-    borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.lg,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.amber[600],
@@ -561,7 +527,6 @@ const styles = StyleSheet.create({
   escrowIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
     backgroundColor: COLORS.amber[100],
     justifyContent: "center",
     alignItems: "center",
@@ -582,7 +547,6 @@ const styles = StyleSheet.create({
   },
   transactionsList: {
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
     overflow: "hidden",
   },
   transaction: {
@@ -595,7 +559,6 @@ const styles = StyleSheet.create({
   transactionIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
   },

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   User,
@@ -16,31 +17,32 @@ import {
   MapPin,
   Briefcase,
   Camera,
+  X,
 } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { COLORS, SPACING } from "../constants/theme";
 
 export function EditProfileScreen({ navigation, route }: any) {
   const { currentProfile } = route.params || {};
 
   const [name, setName] = useState(currentProfile?.name || "Minh Nguyen");
   const [phoneNumber, setPhoneNumber] = useState(
-    currentProfile?.phone || "0123456789"
+    currentProfile?.phone || "0123456789",
   );
   const [email, setEmail] = useState(
-    currentProfile?.email || "minh@example.com"
+    currentProfile?.email || "minh@example.com",
   );
   const [address, setAddress] = useState(
-    currentProfile?.address || "Cần Thơ, Việt Nam"
+    currentProfile?.address || "Cần Thơ, Việt Nam",
   );
   const [bio, setBio] = useState(
     currentProfile?.bio ||
-      "Có kinh nghiệm 5 năm làm việc trong lĩnh vực nông nghiệp"
+      "Có kinh nghiệm 5 năm làm việc trong lĩnh vực nông nghiệp",
   );
   const [skills, setSkills] = useState(
     currentProfile?.skills ||
-      "Thu hoạch, Chăm sóc cây trồng, Phun thuốc, Làm đất"
+      "Thu hoạch, Chăm sóc cây trồng, Phun thuốc, Làm đất",
   );
   const [loading, setLoading] = useState(false);
 
@@ -76,185 +78,172 @@ export function EditProfileScreen({ navigation, route }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={24} color={COLORS.gray[900]} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <Avatar fallback={name[0] || "M"} size={100} />
-          <TouchableOpacity style={styles.changeAvatarButton}>
-            <Camera size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <Text style={styles.changeAvatarText}>Đổi ảnh đại diện</Text>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>
-              Họ và tên <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <User size={20} color={COLORS.gray[500]} />
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Nhập họ và tên"
-                placeholderTextColor={COLORS.gray[400]}
-              />
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarContainer}>
+              <Avatar fallback={name[0] || "M"} size={80} />
+              <TouchableOpacity style={styles.changeAvatarButton}>
+                <Camera size={18} color={COLORS.gray[900]} />
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>
-              Số điện thoại <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <Phone size={20} color={COLORS.gray[500]} />
-              <TextInput
-                style={styles.input}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                placeholder="Nhập số điện thoại"
-                placeholderTextColor={COLORS.gray[400]}
-                keyboardType="phone-pad"
-                maxLength={11}
-              />
+          {/* Form */}
+          <View style={styles.form}>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Họ và tên <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.inputContainer}>
+                <User size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nhập họ và tên"
+                  placeholderTextColor={COLORS.gray[400]}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color={COLORS.gray[500]} />
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Nhập email"
-                placeholderTextColor={COLORS.gray[400]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Số điện thoại <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.inputContainer}>
+                <Phone size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="Nhập số điện thoại"
+                  placeholderTextColor={COLORS.gray[400]}
+                  keyboardType="phone-pad"
+                  maxLength={11}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Địa chỉ</Text>
-            <View style={styles.inputContainer}>
-              <MapPin size={20} color={COLORS.gray[500]} />
-              <TextInput
-                style={styles.input}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Nhập địa chỉ"
-                placeholderTextColor={COLORS.gray[400]}
-              />
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputContainer}>
+                <Mail size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Nhập email"
+                  placeholderTextColor={COLORS.gray[400]}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Giới thiệu bản thân</Text>
-            <View style={[styles.inputContainer, styles.textAreaContainer]}>
-              <Briefcase
-                size={20}
-                color={COLORS.gray[500]}
-                style={styles.textAreaIcon}
-              />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={bio}
-                onChangeText={setBio}
-                placeholder="Mô tả ngắn về bản thân và kinh nghiệm"
-                placeholderTextColor={COLORS.gray[400]}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Địa chỉ</Text>
+              <View style={styles.inputContainer}>
+                <MapPin size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Nhập địa chỉ"
+                  placeholderTextColor={COLORS.gray[400]}
+                />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Kỹ năng</Text>
-            <View style={[styles.inputContainer, styles.textAreaContainer]}>
-              <Briefcase
-                size={20}
-                color={COLORS.gray[500]}
-                style={styles.textAreaIcon}
-              />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={skills}
-                onChangeText={setSkills}
-                placeholder="Các kỹ năng của bạn (cách nhau bởi dấu phẩy)"
-                placeholderTextColor={COLORS.gray[400]}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Giới thiệu bản thân</Text>
+              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="Mô tả ngắn về bản thân và kinh nghiệm"
+                  placeholderTextColor={COLORS.gray[400]}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Kỹ năng</Text>
+              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={skills}
+                  onChangeText={setSkills}
+                  placeholder="Các kỹ năng của bạn (cách nhau bởi dấu phẩy)"
+                  placeholderTextColor={COLORS.gray[400]}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
             </View>
           </View>
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Button
+            variant="outline"
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            Hủy
+          </Button>
+          <Button
+            style={styles.saveButton}
+            onPress={handleSave}
+            loading={loading}
+          >
+            Lưu thay đổi
+          </Button>
         </View>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          variant="outline"
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-        >
-          Hủy
-        </Button>
-        <Button
-          style={styles.saveButton}
-          onPress={handleSave}
-          loading={loading}
-        >
-          Lưu thay đổi
-        </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.gray[50],
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray[200],
   },
-  backButton: {
-    padding: SPACING.xs,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     color: COLORS.gray[900],
   },
-  placeholder: {
-    width: 40,
+  closeButton: {
+    padding: SPACING.xs,
   },
   content: {
     flex: 1,
@@ -266,28 +255,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray[200],
   },
+  avatarContainer: {
+    position: "relative",
+  },
   changeAvatarButton: {
     position: "absolute",
-    bottom: SPACING.xl,
-    right: "50%",
-    marginRight: -56,
-    width: 36,
-    height: 36,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.emerald[600],
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
-    borderColor: COLORS.white,
-  },
-  changeAvatarText: {
-    fontSize: 14,
-    color: COLORS.emerald[600],
-    marginTop: SPACING.sm,
-    fontWeight: "500",
+    borderWidth: 2,
+    borderColor: COLORS.gray[200],
   },
   form: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
   },
   formGroup: {
     marginBottom: SPACING.lg,
@@ -305,33 +290,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
     paddingHorizontal: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
     gap: SPACING.sm,
+    minHeight: 48,
   },
   textAreaContainer: {
     alignItems: "flex-start",
     paddingVertical: SPACING.md,
   },
-  textAreaIcon: {
-    marginTop: SPACING.xs,
-  },
   input: {
     flex: 1,
-    height: 48,
     fontSize: 15,
     color: COLORS.gray[900],
+    paddingVertical: SPACING.sm,
   },
   textArea: {
-    height: 100,
+    minHeight: 100,
     paddingTop: 0,
   },
   footer: {
     flexDirection: "row",
     gap: SPACING.md,
-    padding: SPACING.md,
+    padding: SPACING.lg,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.gray[200],

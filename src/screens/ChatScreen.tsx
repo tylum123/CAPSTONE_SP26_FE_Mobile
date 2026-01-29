@@ -8,10 +8,8 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   Send,
@@ -22,7 +20,6 @@ import {
 } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 interface Message {
   id: number;
@@ -33,6 +30,7 @@ interface Message {
 }
 
 export function ChatScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { farmerId, farmerName, farmerAvatar } = route.params || {
     farmerId: "1",
     farmerName: "Nguyễn Văn A",
@@ -79,31 +77,6 @@ export function ChatScreen({ navigation, route }: any) {
 
   const [inputText, setInputText] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -145,11 +118,11 @@ export function ChatScreen({ navigation, route }: any) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -189,7 +162,6 @@ export function ChatScreen({ navigation, route }: any) {
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
         scrollEventThrottle={16}
       >
         {messages.map((message) => (
@@ -302,6 +274,7 @@ const styles = StyleSheet.create({
   messagesContent: {
     padding: SPACING.md,
     gap: SPACING.sm,
+    paddingBottom: 100,
   },
   messageBubble: {
     maxWidth: "80%",

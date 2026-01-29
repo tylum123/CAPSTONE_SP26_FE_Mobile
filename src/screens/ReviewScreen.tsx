@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
 } from "react-native";
-import { ArrowLeft, Star } from "lucide-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { X, Star } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { COLORS, SPACING } from "../constants/theme";
 
 export function ReviewScreen({ navigation, route }: any) {
   const { jobId } = route.params;
@@ -45,7 +46,7 @@ export function ReviewScreen({ navigation, route }: any) {
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -69,187 +70,190 @@ export function ReviewScreen({ navigation, route }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <ArrowLeft size={24} color={COLORS.gray[900]} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đánh giá công việc</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Đánh giá công việc</Text>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.closeButton}
+          >
+            <X size={24} color={COLORS.gray[700]} />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Job Info */}
-        <Card style={styles.jobCard}>
-          <CardContent>
-            <View style={styles.jobHeader}>
-              <Avatar source={{ uri: jobInfo.farmer.avatar }} size={56} />
-              <View style={styles.jobInfo}>
-                <Text style={styles.jobTitle}>{jobInfo.title}</Text>
-                <Text style={styles.farmerName}>{jobInfo.farmer.name}</Text>
-                <Text style={styles.completedDate}>
-                  Hoàn thành: {jobInfo.completedDate}
-                </Text>
-              </View>
-            </View>
-          </CardContent>
-        </Card>
-
-        {/* Rating Section */}
-        <Card style={styles.ratingCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>
-              Bạn đánh giá thế nào về công việc này?
-            </Text>
-
-            <View style={styles.starsContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => setRating(star)}
-                  onPressIn={() => setHoveredRating(star)}
-                  onPressOut={() => setHoveredRating(0)}
-                  style={styles.starButton}
-                >
-                  <Star
-                    size={48}
-                    color={COLORS.amber[400]}
-                    fill={
-                      star <= (hoveredRating || rating)
-                        ? COLORS.amber[400]
-                        : "none"
-                    }
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {rating > 0 && (
-              <Text style={styles.ratingText}>
-                {rating === 1 && "Rất tệ"}
-                {rating === 2 && "Tệ"}
-                {rating === 3 && "Bình thường"}
-                {rating === 4 && "Tốt"}
-                {rating === 5 && "Xuất sắc"}
-              </Text>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Tags Section */}
-        <Card style={styles.tagsCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>
-              Thêm nhãn đánh giá (tùy chọn)
-            </Text>
-
-            <View style={styles.tagsContainer}>
-              {reviewTags.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={[
-                    styles.tag,
-                    selectedTags.includes(tag) && styles.tagSelected,
-                  ]}
-                  onPress={() => handleTagToggle(tag)}
-                >
-                  <Text
-                    style={[
-                      styles.tagText,
-                      selectedTags.includes(tag) && styles.tagTextSelected,
-                    ]}
-                  >
-                    {tag}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Job Info */}
+          <Card style={styles.jobCard}>
+            <CardContent>
+              <View style={styles.jobHeader}>
+                <Avatar source={{ uri: jobInfo.farmer.avatar }} size={56} />
+                <View style={styles.jobInfo}>
+                  <Text style={styles.jobTitle}>{jobInfo.title}</Text>
+                  <Text style={styles.farmerName}>{jobInfo.farmer.name}</Text>
+                  <Text style={styles.completedDate}>
+                    Hoàn thành: {jobInfo.completedDate}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </CardContent>
-        </Card>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
 
-        {/* Review Text */}
-        <Card style={styles.reviewCard}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>
-              Chia sẻ trải nghiệm của bạn (tùy chọn)
-            </Text>
+          {/* Rating Section */}
+          <Card style={styles.ratingCard}>
+            <CardContent>
+              <Text style={styles.sectionTitle}>
+                Bạn đánh giá thế nào về công việc này?
+              </Text>
 
-            <TextInput
-              style={styles.reviewInput}
-              placeholder="Viết đánh giá chi tiết về công việc, người thuê, môi trường làm việc..."
-              placeholderTextColor={COLORS.gray[400]}
-              value={review}
-              onChangeText={setReview}
-              multiline
-              numberOfLines={6}
-              maxLength={500}
-              textAlignVertical="top"
-            />
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => setRating(star)}
+                    onPressIn={() => setHoveredRating(star)}
+                    onPressOut={() => setHoveredRating(0)}
+                    style={styles.starButton}
+                  >
+                    <Star
+                      size={48}
+                      color={COLORS.amber[400]}
+                      fill={
+                        star <= (hoveredRating || rating)
+                          ? COLORS.amber[400]
+                          : "none"
+                      }
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-            <Text style={styles.characterCount}>{review.length}/500 ký tự</Text>
-          </CardContent>
-        </Card>
+              {rating > 0 && (
+                <Text style={styles.ratingText}>
+                  {rating === 1 && "Rất tệ"}
+                  {rating === 2 && "Tệ"}
+                  {rating === 3 && "Bình thường"}
+                  {rating === 4 && "Tốt"}
+                  {rating === 5 && "Xuất sắc"}
+                </Text>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Tips */}
-        <Card style={styles.tipsCard}>
-          <CardContent>
-            <Text style={styles.tipsTitle}>💡 Gợi ý đánh giá:</Text>
-            <Text style={styles.tipsText}>
-              • Đánh giá về thái độ và sự hỗ trợ của người thuê{"\n"}• Điều kiện
-              làm việc và môi trường{"\n"}• Tính rõ ràng của công việc{"\n"}•
-              Việc thanh toán có đúng hạn không
-            </Text>
-          </CardContent>
-        </Card>
-      </ScrollView>
+          {/* Tags Section */}
+          <Card style={styles.tagsCard}>
+            <CardContent>
+              <Text style={styles.sectionTitle}>
+                Thêm nhãn đánh giá (tùy chọn)
+              </Text>
 
-      {/* Submit Button */}
-      <View style={styles.footer}>
-        <Button
-          onPress={handleSubmit}
-          disabled={rating === 0}
-          style={styles.submitButton}
-        >
-          Gửi đánh giá
-        </Button>
+              <View style={styles.tagsContainer}>
+                {reviewTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[
+                      styles.tag,
+                      selectedTags.includes(tag) && styles.tagSelected,
+                    ]}
+                    onPress={() => handleTagToggle(tag)}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        selectedTags.includes(tag) && styles.tagTextSelected,
+                      ]}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </CardContent>
+          </Card>
+
+          {/* Review Text */}
+          <Card style={styles.reviewCard}>
+            <CardContent>
+              <Text style={styles.sectionTitle}>
+                Chia sẻ trải nghiệm của bạn (tùy chọn)
+              </Text>
+
+              <TextInput
+                style={styles.reviewInput}
+                placeholder="Viết đánh giá chi tiết về công việc, người thuê, môi trường làm việc..."
+                placeholderTextColor={COLORS.gray[400]}
+                value={review}
+                onChangeText={setReview}
+                multiline
+                numberOfLines={6}
+                maxLength={500}
+                textAlignVertical="top"
+              />
+
+              <Text style={styles.characterCount}>
+                {review.length}/500 ký tự
+              </Text>
+            </CardContent>
+          </Card>
+
+          {/* Tips */}
+          <Card style={styles.tipsCard}>
+            <CardContent>
+              <Text style={styles.tipsTitle}>💡 Gợi ý đánh giá:</Text>
+              <Text style={styles.tipsText}>
+                • Đánh giá về thái độ và sự hỗ trợ của người thuê{"\n"}• Điều
+                kiện làm việc và môi trường{"\n"}• Tính rõ ràng của công việc
+                {"\n"}• Việc thanh toán có đúng hạn không
+              </Text>
+            </CardContent>
+          </Card>
+        </ScrollView>
+
+        {/* Submit Button */}
+        <View style={styles.footer}>
+          <Button
+            onPress={handleSubmit}
+            disabled={rating === 0}
+            style={styles.submitButton}
+          >
+            Gửi đánh giá
+          </Button>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.gray[50],
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray[200],
   },
-  backButton: {
-    padding: SPACING.xs,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     color: COLORS.gray[900],
   },
-  placeholder: {
-    width: 40,
+  closeButton: {
+    padding: SPACING.xs,
   },
   content: {
     flex: 1,
-    padding: SPACING.md,
   },
   jobCard: {
     marginBottom: SPACING.md,
@@ -314,7 +318,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     backgroundColor: COLORS.gray[100],
-    borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
   },
@@ -337,7 +340,6 @@ const styles = StyleSheet.create({
     minHeight: 120,
     padding: SPACING.md,
     backgroundColor: COLORS.gray[50],
-    borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.gray[200],
     fontSize: 15,

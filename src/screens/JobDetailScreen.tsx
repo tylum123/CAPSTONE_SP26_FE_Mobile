@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   MapPin,
   Clock,
@@ -27,37 +25,11 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 export function JobDetailScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { jobId } = route.params;
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
-
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
 
   // Mock data - sẽ thay bằng API call
   const jobDetail = {
@@ -107,7 +79,7 @@ export function JobDetailScreen({ navigation, route }: any) {
     setSelectedTimeSlots((prev) =>
       prev.includes(slotKey)
         ? prev.filter((s) => s !== slotKey)
-        : [...prev, slotKey]
+        : [...prev, slotKey],
     );
   };
 
@@ -124,7 +96,7 @@ export function JobDetailScreen({ navigation, route }: any) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
@@ -137,8 +109,8 @@ export function JobDetailScreen({ navigation, route }: any) {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
         scrollEventThrottle={16}
       >
         {/* Job Header */}
@@ -346,7 +318,7 @@ export function JobDetailScreen({ navigation, route }: any) {
           <Text style={styles.footerLabel}>Tổng thu nhập dự kiến</Text>
           <Text style={styles.footerAmount}>
             {(jobDetail.wage * selectedTimeSlots.length).toLocaleString(
-              "vi-VN"
+              "vi-VN",
             )}{" "}
             VNĐ
           </Text>

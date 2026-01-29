@@ -1,14 +1,12 @@
-import React, { useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   MapPin,
   Clock,
@@ -25,35 +23,8 @@ import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { Job, UpcomingJob } from "../types";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 export function WorkerHomeScreen({ navigation }: any) {
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
-
   const nearbyJobs: Job[] = [
     {
       id: 1,
@@ -102,169 +73,177 @@ export function WorkerHomeScreen({ navigation }: any) {
   ];
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-    >
-      {/* Welcome Section */}
-      <View style={styles.welcomeCard}>
-        <View style={styles.gradientOverlay} />
-        <View style={styles.welcomeContent}>
-          <View style={styles.welcomeLeft}>
-            <Text style={styles.welcomeGreeting}>Xin chào</Text>
-            <Text style={styles.welcomeName}>Minh Nguyen</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statBadge}>
-                <Star
-                  size={14}
-                  color={COLORS.amber[400]}
-                  fill={COLORS.amber[400]}
-                />
-                <Text style={styles.statText}>4.8</Text>
-              </View>
-              <View style={styles.statBadge}>
-                <Briefcase size={14} color={COLORS.white} />
-                <Text style={styles.statText}>12 việc</Text>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+      >
+        {/* Welcome Section */}
+        <View style={styles.welcomeCard}>
+          <View style={styles.gradientOverlay} />
+          <View style={styles.welcomeContent}>
+            <View style={styles.welcomeLeft}>
+              <Text style={styles.welcomeGreeting}>Xin chào</Text>
+              <Text style={styles.welcomeName}>Minh Nguyen</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statBadge}>
+                  <Star
+                    size={14}
+                    color={COLORS.amber[400]}
+                    fill={COLORS.amber[400]}
+                  />
+                  <Text style={styles.statText}>4.8</Text>
+                </View>
+                <View style={styles.statBadge}>
+                  <Briefcase size={14} color={COLORS.white} />
+                  <Text style={styles.statText}>12 việc</Text>
+                </View>
               </View>
             </View>
+            <Avatar fallback="MN" size={64} style={styles.avatar} />
           </View>
-          <Avatar fallback="MN" size={64} style={styles.avatar} />
         </View>
-      </View>
 
-      {/* Quick Stats */}
-      <View style={styles.quickStats}>
-        <View style={styles.statCard}>
-          <View style={styles.statIcon}>
-            <Briefcase size={20} color={COLORS.white} />
+        {/* Quick Stats */}
+        <View style={styles.quickStats}>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Briefcase size={20} color={COLORS.white} />
+            </View>
+            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statLabel}>Việc đã làm</Text>
           </View>
-          <Text style={styles.statValue}>12</Text>
-          <Text style={styles.statLabel}>Việc đã làm</Text>
-        </View>
-        <View style={styles.statCard}>
-          <View
-            style={[styles.statIcon, { backgroundColor: COLORS.amber[400] }]}
-          >
-            <Star size={20} color={COLORS.white} />
+          <View style={styles.statCard}>
+            <View
+              style={[styles.statIcon, { backgroundColor: COLORS.amber[400] }]}
+            >
+              <Star size={20} color={COLORS.white} />
+            </View>
+            <Text style={styles.statValue}>4.8</Text>
+            <Text style={styles.statLabel}>Đánh giá</Text>
           </View>
-          <Text style={styles.statValue}>4.8</Text>
-          <Text style={styles.statLabel}>Đánh giá</Text>
-        </View>
-        <View style={styles.statCard}>
-          <View
-            style={[styles.statIcon, { backgroundColor: COLORS.teal[600] }]}
-          >
-            <TrendingUp size={20} color={COLORS.white} />
+          <View style={styles.statCard}>
+            <View
+              style={[styles.statIcon, { backgroundColor: COLORS.teal[600] }]}
+            >
+              <TrendingUp size={20} color={COLORS.white} />
+            </View>
+            <Text style={styles.statValue}>6.5M</Text>
+            <Text style={styles.statLabel}>Thu nhập</Text>
           </View>
-          <Text style={styles.statValue}>6.5M</Text>
-          <Text style={styles.statLabel}>Thu nhập</Text>
         </View>
-      </View>
 
-      {/* Upcoming Jobs */}
-      {upcomingJobs.length > 0 && (
+        {/* Upcoming Jobs */}
+        {upcomingJobs.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Việc sắp tới</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAll}>Xem tất cả</Text>
+              </TouchableOpacity>
+            </View>
+            {upcomingJobs.map((job) => (
+              <Card key={job.id} style={styles.upcomingCard}>
+                <CardContent>
+                  <View style={styles.upcomingContent}>
+                    <View style={styles.upcomingLeft}>
+                      <View style={styles.dateBox}>
+                        <Text style={styles.dateDay}>15</Text>
+                        <Text style={styles.dateMonth}>Th 1</Text>
+                      </View>
+                    </View>
+                    <View style={styles.upcomingRight}>
+                      <Text style={styles.upcomingTitle}>{job.title}</Text>
+                      <Text style={styles.upcomingFarmer}>{job.farmer}</Text>
+                      <View style={styles.upcomingTime}>
+                        <Clock size={14} color={COLORS.gray[500]} />
+                        <Text style={styles.upcomingTimeText}>{job.time}</Text>
+                      </View>
+                    </View>
+                    <Badge variant="success">Đã xác nhận</Badge>
+                  </View>
+                </CardContent>
+              </Card>
+            ))}
+          </View>
+        )}
+
+        {/* Nearby Jobs */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Việc sắp tới</Text>
-            <TouchableOpacity>
+            <View style={styles.sectionTitleRow}>
+              <Zap size={20} color={COLORS.emerald[600]} />
+              <Text style={styles.sectionTitle}>Việc gần bạn</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate("Search")}>
               <Text style={styles.seeAll}>Xem tất cả</Text>
             </TouchableOpacity>
           </View>
-          {upcomingJobs.map((job) => (
-            <Card key={job.id} style={styles.upcomingCard}>
-              <CardContent>
-                <View style={styles.upcomingContent}>
-                  <View style={styles.upcomingLeft}>
-                    <View style={styles.dateBox}>
-                      <Text style={styles.dateDay}>15</Text>
-                      <Text style={styles.dateMonth}>Th 1</Text>
+          {nearbyJobs.map((job) => (
+            <TouchableOpacity
+              key={job.id}
+              onPress={() =>
+                navigation.navigate("JobDetail", { jobId: job.id })
+              }
+            >
+              <Card style={styles.jobCard}>
+                <CardContent>
+                  {job.urgent && (
+                    <Badge variant="danger" style={styles.urgentBadge}>
+                      🔥 Cần gấp
+                    </Badge>
+                  )}
+                  <View style={styles.jobHeader}>
+                    <Avatar fallback={job.farmer[0]} size={48} />
+                    <View style={styles.jobHeaderInfo}>
+                      <Text style={styles.jobTitle}>{job.title}</Text>
+                      <Text style={styles.farmerName}>{job.farmer}</Text>
+                      <View style={styles.ratingRow}>
+                        <Star
+                          size={12}
+                          color={COLORS.amber[400]}
+                          fill={COLORS.amber[400]}
+                        />
+                        <Text style={styles.ratingText}>{job.rating}</Text>
+                      </View>
+                    </View>
+                    <ChevronRight size={20} color={COLORS.gray[500]} />
+                  </View>
+                  <View style={styles.jobDetails}>
+                    <View style={styles.jobDetailItem}>
+                      <MapPin size={16} color={COLORS.gray[500]} />
+                      <Text style={styles.jobDetailText}>{job.location}</Text>
+                      <Text style={styles.jobDetailTextMuted}>
+                        • {job.distance}
+                      </Text>
+                    </View>
+                    <View style={styles.jobDetailItem}>
+                      <Banknote size={16} color={COLORS.emerald[600]} />
+                      <Text style={styles.jobWage}>{job.wage}đ</Text>
+                      <Text style={styles.jobDetailTextMuted}>
+                        / {job.duration}
+                      </Text>
                     </View>
                   </View>
-                  <View style={styles.upcomingRight}>
-                    <Text style={styles.upcomingTitle}>{job.title}</Text>
-                    <Text style={styles.upcomingFarmer}>{job.farmer}</Text>
-                    <View style={styles.upcomingTime}>
-                      <Clock size={14} color={COLORS.gray[500]} />
-                      <Text style={styles.upcomingTimeText}>{job.time}</Text>
-                    </View>
-                  </View>
-                  <Badge variant="success">Đã xác nhận</Badge>
-                </View>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </TouchableOpacity>
           ))}
         </View>
-      )}
 
-      {/* Nearby Jobs */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Zap size={20} color={COLORS.emerald[600]} />
-            <Text style={styles.sectionTitle}>Việc gần bạn</Text>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate("Search")}>
-            <Text style={styles.seeAll}>Xem tất cả</Text>
-          </TouchableOpacity>
-        </View>
-        {nearbyJobs.map((job) => (
-          <TouchableOpacity
-            key={job.id}
-            onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
-          >
-            <Card style={styles.jobCard}>
-              <CardContent>
-                {job.urgent && (
-                  <Badge variant="danger" style={styles.urgentBadge}>
-                    🔥 Cần gấp
-                  </Badge>
-                )}
-                <View style={styles.jobHeader}>
-                  <Avatar fallback={job.farmer[0]} size={48} />
-                  <View style={styles.jobHeaderInfo}>
-                    <Text style={styles.jobTitle}>{job.title}</Text>
-                    <Text style={styles.farmerName}>{job.farmer}</Text>
-                    <View style={styles.ratingRow}>
-                      <Star
-                        size={12}
-                        color={COLORS.amber[400]}
-                        fill={COLORS.amber[400]}
-                      />
-                      <Text style={styles.ratingText}>{job.rating}</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={20} color={COLORS.gray[500]} />
-                </View>
-                <View style={styles.jobDetails}>
-                  <View style={styles.jobDetailItem}>
-                    <MapPin size={16} color={COLORS.gray[500]} />
-                    <Text style={styles.jobDetailText}>{job.location}</Text>
-                    <Text style={styles.jobDetailTextMuted}>
-                      • {job.distance}
-                    </Text>
-                  </View>
-                  <View style={styles.jobDetailItem}>
-                    <Banknote size={16} color={COLORS.emerald[600]} />
-                    <Text style={styles.jobWage}>{job.wage}đ</Text>
-                    <Text style={styles.jobDetailTextMuted}>
-                      / {job.duration}
-                    </Text>
-                  </View>
-                </View>
-              </CardContent>
-            </Card>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.bottomSpacing} />
-    </ScrollView>
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.emerald[50],
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.emerald[50],
@@ -319,7 +298,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.xl,
   },
   statText: {
     color: COLORS.white,
@@ -333,13 +311,11 @@ const styles = StyleSheet.create({
   quickStats: {
     flexDirection: "row",
     gap: 12,
-    paddingHorizontal: SPACING.md,
     marginBottom: SPACING.md,
   },
   statCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
     alignItems: "center",
     shadowColor: "#000",
@@ -351,7 +327,6 @@ const styles = StyleSheet.create({
   statIcon: {
     width: 40,
     height: 40,
-    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.emerald[600],
     justifyContent: "center",
     alignItems: "center",
@@ -368,7 +343,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   section: {
-    paddingHorizontal: SPACING.md,
     marginBottom: SPACING.lg,
   },
   sectionHeader: {
@@ -376,6 +350,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
   },
   sectionTitleRow: {
     flexDirection: "row",
@@ -386,11 +361,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: COLORS.gray[900],
+    paddingHorizontal: 5,
   },
   seeAll: {
     fontSize: 14,
     color: COLORS.emerald[600],
     fontWeight: "600",
+    paddingHorizontal: 5,
   },
   upcomingCard: {
     marginBottom: SPACING.md,
@@ -405,7 +382,6 @@ const styles = StyleSheet.create({
   },
   dateBox: {
     backgroundColor: COLORS.emerald[50],
-    borderRadius: BORDER_RADIUS.md,
     padding: 8,
     alignItems: "center",
   },

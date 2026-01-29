@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,57 +6,31 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ImageBackground,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, CardContent } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
-import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import {
-  Star,
-  Briefcase,
-  Award,
-  MapPin,
+  Heart,
+  CreditCard,
+  Users,
+  Tag,
+  Settings,
+  LogOut,
+  Edit,
   Phone,
   Mail,
-  LogOut,
-  Edit2,
+  Wallet,
+  Briefcase,
+  Star,
+  Award,
+  Bell,
+  FileText,
 } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
-
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
 
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
@@ -78,112 +52,157 @@ export function WorkerProfileScreen({ navigation }: any) {
     });
   };
 
+  const menuItems = [
+    {
+      icon: Bell,
+      label: "Thông báo",
+      onPress: () => navigation.navigate("Notifications"),
+      color: COLORS.amber[600],
+    },
+    {
+      icon: Heart,
+      label: "Việc đã lưu",
+      onPress: () => {},
+      color: COLORS.rose[500],
+    },
+    {
+      icon: FileText,
+      label: "Lịch sử ứng tuyển",
+      onPress: () => navigation.navigate("Jobs"),
+      color: COLORS.blue[600],
+    },
+    {
+      icon: CreditCard,
+      label: "Ví & Thanh toán",
+      onPress: () => navigation.navigate("Wallet"),
+      color: COLORS.emerald[600],
+    },
+    {
+      icon: Users,
+      label: "Giới thiệu bạn bè",
+      onPress: () => {},
+      color: COLORS.teal[400],
+    },
+    {
+      icon: Settings,
+      label: "Cài đặt",
+      onPress: () => {},
+      color: COLORS.gray[600],
+    },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
         style={styles.container}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header with Edit Button */}
-        <ImageBackground
-          source={require("../../assets/bgWorker.jpg")}
-          style={styles.headerContainer}
-          resizeMode="cover"
-        >
-          <View style={styles.headerOverlay}>
-            <View style={styles.header}>
-              <View style={styles.avatarSection}>
-                <Avatar fallback={user?.name?.[0] || "MN"} size={80} />
-                <Text style={styles.name}>{user?.name || "Minh Nguyen"}</Text>
-                <Text style={styles.role}>Người lao động</Text>
-              </View>
+        {/* Profile Info */}
+        <View style={styles.profileSection}>
+          {/* Avatar, Name and Edit Button Row */}
+          <View style={styles.profileHeader}>
+            <Avatar fallback={user?.name?.[0] || "MN"} size={80} />
+            <View style={styles.profileNameContainer}>
+              <Text style={styles.name}>{user?.name || "Minh Nguyen"}</Text>
+              <Text style={styles.role}>Người lao động</Text>
             </View>
             <TouchableOpacity
-              style={styles.editButton}
+              style={styles.editIconButton}
               onPress={handleEditProfile}
             >
-              <Edit2 size={20} color={COLORS.white} />
+              <Edit size={22} color={COLORS.gray[700]} />
             </TouchableOpacity>
           </View>
-        </ImageBackground>
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Star
-                size={20}
-                color={COLORS.amber[400]}
-                fill={COLORS.amber[400]}
-              />
-            </View>
-            <Text style={styles.statValue}>4.8</Text>
-            <Text style={styles.statLabel}>Đánh giá</Text>
-          </View>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Briefcase size={20} color={COLORS.emerald[600]} />
-            </View>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Việc làm</Text>
-          </View>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Award size={20} color={COLORS.teal[600]} />
-            </View>
-            <Text style={styles.statValue}>98%</Text>
-            <Text style={styles.statLabel}>Hoàn thành</Text>
-          </View>
-        </View>
 
-        <Card style={styles.card}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-            <View style={styles.infoRow}>
-              <MapPin size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>Cần Thơ, Việt Nam</Text>
+          {/* Contact Info - Đơn giản, sát với profile */}
+          <View style={styles.contactContainer}>
+            <View style={styles.contactItem}>
+              <Phone size={16} color={COLORS.gray[500]} />
+              <Text style={styles.contactText}>0123 456 789</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Phone size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>0123 456 789</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Mail size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>
+            <View style={styles.contactItem}>
+              <Mail size={16} color={COLORS.gray[500]} />
+              <Text style={styles.contactText}>
                 {user?.email || "minh.nguyen@email.com"}
               </Text>
             </View>
-          </CardContent>
-        </Card>
+          </View>
 
-        <Card style={styles.card}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Kỹ năng</Text>
-            <View style={styles.skillsContainer}>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Thu hoạch lúa</Text>
+          {/* Stats Grid - Border ở giữa chia 4 mục */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statsGrid}>
+              {/* Row 1 */}
+              <View style={styles.statItem}>
+                <Wallet size={24} color={COLORS.emerald[600]} />
+                <Text style={styles.statValue}>2.500.000đ</Text>
+                <Text style={styles.statLabel}>Ví tiền</Text>
               </View>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Chăm sóc cây trồng</Text>
+              <View style={[styles.statItem, styles.statBorderLeft]}>
+                <Briefcase size={24} color={COLORS.blue[600]} />
+                <Text style={styles.statValue}>12</Text>
+                <Text style={styles.statLabel}>Việc làm</Text>
               </View>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Làm đất</Text>
+              {/* Row 2 */}
+              <View style={[styles.statItem, styles.statBorderTop]}>
+                <Star size={24} color={COLORS.amber[600]} />
+                <Text style={styles.statValue}>4.8</Text>
+                <Text style={styles.statLabel}>Đánh giá</Text>
+              </View>
+              <View
+                style={[
+                  styles.statItem,
+                  styles.statBorderLeft,
+                  styles.statBorderTop,
+                ]}
+              >
+                <Award size={24} color={COLORS.pink[500]} />
+                <Text style={styles.statValue}>98%</Text>
+                <Text style={styles.statLabel}>Hoàn thành</Text>
               </View>
             </View>
-          </CardContent>
-        </Card>
-
-        <View style={styles.logoutContainer}>
-          <Button
-            variant="outline"
-            onPress={handleLogout}
-            style={styles.logoutButton}
-          >
-            <LogOut size={15} color={COLORS.rose[500]} />
-            <Text style={styles.logoutText}> Đăng xuất</Text>
-          </Button>
+          </View>
         </View>
 
-        <View style={styles.bottomSpacing} />
+        {/* Menu Items */}
+        <View style={styles.menuContainer}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.menuItem}
+              onPress={item.onPress}
+            >
+              <View style={styles.menuItemLeft}>
+                <View
+                  style={[
+                    styles.menuIconContainer,
+                    { backgroundColor: COLORS.blue[50] },
+                  ]}
+                >
+                  <item.icon size={20} color={item.color} />
+                </View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          {/* Logout Button */}
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+            <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuIconContainer,
+                  { backgroundColor: COLORS.red[50] },
+                ]}
+              >
+                <LogOut size={20} color={COLORS.rose[500]} />
+              </View>
+              <Text style={[styles.menuLabel, { color: COLORS.rose[500] }]}>
+                Đăng xuất
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -196,122 +215,108 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.white,
   },
-  headerContainer: {
-    position: "relative",
+  scrollContent: {
+    paddingBottom: 100,
   },
-  headerOverlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  profileSection: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
   },
-  header: {
-    paddingVertical: SPACING.xl,
+  profileHeader: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
   },
-  editButton: {
-    position: "absolute",
-    top: SPACING.lg,
-    right: SPACING.lg,
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    zIndex: 10,
-    elevation: 2,
-  },
-  avatarSection: {
-    alignItems: "center",
+  profileNameContainer: {
+    flex: 1,
   },
   name: {
     fontSize: 24,
     fontWeight: "bold",
-    color: COLORS.white,
-    marginTop: SPACING.md,
+    color: COLORS.gray[900],
   },
   role: {
     fontSize: 14,
-    color: COLORS.white,
+    color: COLORS.gray[600],
     marginTop: 4,
   },
-  statsContainer: {
+  editIconButton: {
+    padding: SPACING.sm,
+  },
+  contactContainer: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xl,
+    gap: SPACING.xs,
+  },
+  contactItem: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    padding: SPACING.md,
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  contactText: {
+    fontSize: 14,
+    color: COLORS.gray[600],
+  },
+  statsContainer: {
+    marginBottom: SPACING.lg,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   statItem: {
+    width: "50%",
+    paddingVertical: SPACING.xl,
     alignItems: "center",
+    gap: SPACING.xs,
   },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
+  statBorderLeft: {
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.gray[200],
+  },
+  statBorderTop: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.gray[200],
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     color: COLORS.gray[900],
+    marginTop: SPACING.xs,
   },
   statLabel: {
     fontSize: 12,
     color: COLORS.gray[600],
-    marginTop: 2,
   },
-  card: {
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
+  menuContainer: {
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.gray[900],
-    marginBottom: SPACING.md,
-  },
-  infoRow: {
+  menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
+    justifyContent: "space-between",
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray[100],
   },
-  infoText: {
-    fontSize: 14,
-    color: COLORS.gray[600],
-  },
-  skillsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  skillBadge: {
-    backgroundColor: COLORS.emerald[100],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  skillText: {
-    fontSize: 12,
-    color: COLORS.emerald[700],
-    fontWeight: "600",
-  },
-  logoutContainer: {
-    paddingHorizontal: SPACING.md,
-    marginTop: SPACING.lg,
-  },
-  logoutButton: {
+  menuItemLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: SPACING.md,
+  },
+  menuIconContainer: {
+    width: 36,
+    height: 36,
     justifyContent: "center",
-    gap: 8,
-    borderColor: COLORS.rose[500],
+    alignItems: "center",
   },
-  logoutText: {
-    color: COLORS.rose[500],
-    fontWeight: "600",
+  menuLabel: {
     fontSize: 16,
-  },
-  bottomSpacing: {
-    height: 100,
+    color: COLORS.gray[900],
+    fontWeight: "500",
   },
 });

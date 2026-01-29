@@ -5,15 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
-import { tabBarTranslateY } from "../navigation/WorkerTabNavigator";
 import {
   Clock,
   MapPin,
@@ -27,32 +24,6 @@ type TabType = "applied" | "upcoming" | "completed";
 
 export function WorkerJobsScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabType>("applied");
-
-  const scrollY = useRef(0);
-  const lastScrollY = useRef(0);
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollDiff = currentScrollY - lastScrollY.current;
-
-    if (scrollDiff > 5) {
-      // Scrolling down - hide tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 100,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else if (scrollDiff < -5) {
-      // Scrolling up - show tab bar
-      Animated.timing(tabBarTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    lastScrollY.current = currentScrollY;
-  };
 
   const appliedJobs = [
     {
@@ -325,7 +296,7 @@ export function WorkerJobsScreen({ navigation }: any) {
               </View>
             </View>
 
-            {job.rating ? (
+            {job.rating && job.review ? (
               <View style={styles.ratingSection}>
                 <Text style={styles.ratingLabel}>Đánh giá của bạn:</Text>
                 <View style={styles.stars}>
@@ -358,25 +329,30 @@ export function WorkerJobsScreen({ navigation }: any) {
   );
 
   return (
-    <View style={styles.container}>
-      {renderTabBar()}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
+        {renderTabBar()}
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {activeTab === "applied" && renderAppliedJobs()}
-        {activeTab === "upcoming" && renderUpcomingJobs()}
-        {activeTab === "completed" && renderCompletedJobs()}
-      </ScrollView>
-    </View>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+        >
+          {activeTab === "applied" && renderAppliedJobs()}
+          {activeTab === "upcoming" && renderUpcomingJobs()}
+          {activeTab === "completed" && renderCompletedJobs()}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.emerald[50],
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.emerald[50],
@@ -427,10 +403,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: SPACING.md,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   jobCard: {
     marginBottom: SPACING.md,
@@ -492,7 +467,6 @@ const styles = StyleSheet.create({
   ratingSection: {
     padding: SPACING.sm,
     backgroundColor: COLORS.gray[50],
-    borderRadius: BORDER_RADIUS.md,
     gap: SPACING.xs,
   },
   ratingLabel: {
