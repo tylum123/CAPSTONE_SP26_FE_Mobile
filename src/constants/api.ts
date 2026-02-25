@@ -14,62 +14,78 @@ export const STORAGE_KEYS = {
   THEME: "theme",
 } as const;
 
+const API_PREFIX = "/api/v1";
+
 // API Endpoints
 export const API_ENDPOINTS = {
   // Auth
   AUTH: {
-    LOGIN: "/auth/login",
-    REGISTER: "/auth/register",
-    LOGOUT: "/auth/logout",
-    REFRESH_TOKEN: "/auth/refresh",
-    FORGOT_PASSWORD: "/auth/forgot-password",
-    RESET_PASSWORD: "/auth/reset-password",
-    VERIFY_EMAIL: "/auth/verify-email",
+    LOGIN: `${API_PREFIX}/login`,
+    REGISTER: `${API_PREFIX}/register`,
+    GOOGLE_LOGIN: `${API_PREFIX}/google-login`,
+    LOGOUT: `${API_PREFIX}/logout`,
+    REFRESH_TOKEN: `${API_PREFIX}/refresh`,
+    FORGOT_PASSWORD: `${API_PREFIX}/forgot-password`,
+    RESET_PASSWORD: `${API_PREFIX}/reset-password`,
+    VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
+  },
+  // Worker profile
+  WORKER_PROFILE: {
+    BASE: `${API_PREFIX}/worker-profile`,
   },
   // User
   USER: {
-    PROFILE: "/user/profile",
-    UPDATE_PROFILE: "/user/profile",
-    CHANGE_PASSWORD: "/user/change-password",
-    UPLOAD_AVATAR: "/user/avatar",
+    PROFILE: `${API_PREFIX}/user/profile`,
+    UPDATE_PROFILE: `${API_PREFIX}/user/profile`,
+    CHANGE_PASSWORD: `${API_PREFIX}/user/change-password`,
+    UPLOAD_AVATAR: `${API_PREFIX}/user/avatar`,
   },
   // Jobs
-  JOBS: {
-    LIST: "/jobs",
-    DETAIL: (id: string) => `/jobs/${id}`,
-    APPLY: (id: string) => `/jobs/${id}/apply`,
-    SAVED: "/jobs/saved",
-    SAVE: (id: string) => `/jobs/${id}/save`,
-    UNSAVE: (id: string) => `/jobs/${id}/unsave`,
-    HISTORY: "/jobs/history",
+  JOB: {
+    CATEGORY_LIST: `${API_PREFIX}/job/category`,
+    CATEGORY_DETAIL: (id: string) => `${API_PREFIX}/job/category/${id}`,
+    POST_LIST: `${API_PREFIX}/job/post`,
+    POST_DETAIL: (id: string) => `${API_PREFIX}/job/post/${id}`,
+  },
+  // Attendance
+  ATTENDANCE: {
+    CHECK_IN: `${API_PREFIX}/attendance/check-in`,
+    CHECK_OUT: `${API_PREFIX}/attendance/check-out`,
+    DETAIL: (id: string) => `${API_PREFIX}/attendance/${id}`,
+    WORKER: (workerProfileId: string) =>
+      `${API_PREFIX}/attendance/worker/${workerProfileId}`,
+  },
+  // Media
+  MEDIA: {
+    UPLOAD_IMAGE: `${API_PREFIX}/media/upload/image`,
   },
   // Reviews
   REVIEWS: {
-    LIST: "/reviews",
-    CREATE: "/reviews",
-    UPDATE: (id: string) => `/reviews/${id}`,
-    DELETE: (id: string) => `/reviews/${id}`,
+    LIST: `${API_PREFIX}/reviews`,
+    CREATE: `${API_PREFIX}/reviews`,
+    UPDATE: (id: string) => `${API_PREFIX}/reviews/${id}`,
+    DELETE: (id: string) => `${API_PREFIX}/reviews/${id}`,
   },
   // Notifications
   NOTIFICATIONS: {
-    LIST: "/notifications",
-    READ: (id: string) => `/notifications/${id}/read`,
-    READ_ALL: "/notifications/read-all",
-    DELETE: (id: string) => `/notifications/${id}`,
+    LIST: `${API_PREFIX}/notifications`,
+    READ: (id: string) => `${API_PREFIX}/notifications/${id}/read`,
+    READ_ALL: `${API_PREFIX}/notifications/read-all`,
+    DELETE: (id: string) => `${API_PREFIX}/notifications/${id}`,
   },
   // Wallet
   WALLET: {
-    BALANCE: "/wallet/balance",
-    TRANSACTIONS: "/wallet/transactions",
-    WITHDRAW: "/wallet/withdraw",
+    BALANCE: `${API_PREFIX}/wallet/balance`,
+    TRANSACTIONS: `${API_PREFIX}/wallet/transactions`,
+    WITHDRAW: `${API_PREFIX}/wallet/withdraw`,
   },
   // Chat
   CHAT: {
-    CONVERSATIONS: "/chat/conversations",
+    CONVERSATIONS: `${API_PREFIX}/chat/conversations`,
     MESSAGES: (conversationId: string) =>
-      `/chat/conversations/${conversationId}/messages`,
+      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
     SEND_MESSAGE: (conversationId: string) =>
-      `/chat/conversations/${conversationId}/messages`,
+      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
   },
 } as const;
 

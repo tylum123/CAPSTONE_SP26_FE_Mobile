@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -19,13 +19,20 @@ import {
   CheckCircle2,
   Star,
 } from "lucide-react-native";
+import { jobService, JobPostDTO } from "../services";
+import { useAuth } from "../context/AuthContext";
 
 type TabType = "applied" | "upcoming" | "completed";
 
 export function WorkerJobsScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabType>("applied");
+  const { isAuthenticated } = useAuth();
 
-  const appliedJobs = [
+  const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
+  const [upcomingJobs, setUpcomingJobs] = useState<any[]>([]);
+  const [completedJobs, setCompletedJobs] = useState<any[]>([]);
+
+  const demoAppliedJobs = [
     {
       id: 1,
       title: "Thu hoạch lúa",
@@ -50,7 +57,7 @@ export function WorkerJobsScreen({ navigation }: any) {
     },
   ];
 
-  const upcomingJobs = [
+  const demoUpcomingJobs = [
     {
       id: 3,
       title: "Chăm sóc vườn cam",
@@ -73,7 +80,7 @@ export function WorkerJobsScreen({ navigation }: any) {
     },
   ];
 
-  const completedJobs = [
+  const demoCompletedJobs = [
     {
       id: 5,
       title: "Làm đất trồng rau",
@@ -99,6 +106,45 @@ export function WorkerJobsScreen({ navigation }: any) {
       paidAmount: 200000,
     },
   ];
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAppliedJobs(demoAppliedJobs);
+      setUpcomingJobs(demoUpcomingJobs);
+      setCompletedJobs(demoCompletedJobs);
+      return;
+    }
+
+    const loadJobs = async () => {
+      try {
+        const result = await jobService.getJobPosts();
+        const mappedApplied = result.map((job: JobPostDTO) => ({
+          id: job.id,
+          title: job.title,
+          farmer: "Chủ nông trại",
+          location: job.address,
+          date: job.startDate
+            ? new Date(job.startDate).toLocaleDateString("vi-VN")
+            : "",
+          time: "",
+          wage: job.wageAmount || 0,
+          status: "pending" as const,
+          appliedDate: job.publishedAt
+            ? new Date(job.publishedAt).toLocaleDateString("vi-VN")
+            : "",
+        }));
+        setAppliedJobs(mappedApplied);
+        setUpcomingJobs([]);
+        setCompletedJobs([]);
+      } catch {
+        setAppliedJobs([]);
+        setUpcomingJobs([]);
+        setCompletedJobs([]);
+      }
+    };
+
+    loadJobs().catch(() => undefined);
+  }, [isAuthenticated]);
 
   const renderTabBar = () => (
     <View style={styles.tabBar}>
@@ -249,6 +295,17 @@ export function WorkerJobsScreen({ navigation }: any) {
                 Nhắn tin
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onPress={() =>
+                  navigation.navigate("CheckIn", {
+                    jobApplicationId: String(job.id),
+                  })
+                }
+              >
+                Check in
+              </Button>
+              <Button
                 size="sm"
                 onPress={() =>
                   navigation.navigate("JobDetail", { jobId: job.id })
@@ -331,6 +388,15 @@ export function WorkerJobsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Cong viec</Text>
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => navigation.navigate("AttendanceHistory")}
+          >
+            <Text style={styles.historyButtonText}>Cham cong</Text>
+          </TouchableOpacity>
+        </View>
         {renderTabBar()}
 
         <ScrollView
@@ -363,10 +429,31 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray[200],
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray[200],
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     color: COLORS.gray[900],
+  },
+  historyButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.emerald[600],
+  },
+  historyButtonText: {
+    color: COLORS.emerald[700],
+    fontWeight: "600",
   },
   tabBar: {
     flexDirection: "row",

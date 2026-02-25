@@ -1,5 +1,5 @@
 export interface Job {
-  id: number;
+  id: string | number;
   title: string;
   farmer: string;
   farmerAvatar?: string;
@@ -12,7 +12,7 @@ export interface Job {
 }
 
 export interface UpcomingJob {
-  id: number;
+  id: string | number;
   title: string;
   farmer: string;
   date: string;
@@ -37,3 +37,5 @@ export interface Stat {
   change: string;
   icon: string;
 }
+
+export * from "./api";

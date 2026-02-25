@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { jobService, JobCategoryDTO, JobPostDTO } from "../services";
 
 interface FilterOptions {
   jobType: string[];
@@ -32,6 +33,8 @@ interface FilterOptions {
 export function WorkerSearchScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
+  const [jobs, setJobs] = useState<JobPostDTO[]>([]);
   const [filters, setFilters] = useState<FilterOptions>({
     jobType: [],
     maxDistance: 50,
@@ -40,65 +43,31 @@ export function WorkerSearchScreen({ navigation }: any) {
     sortBy: "distance",
   });
 
-  const jobTypes = [
-    "Thu hoạch",
-    "Chăm sóc cây trồng",
-    "Làm đất",
-    "Phun thuốc",
-    "Tưới tiêu",
-    "Vận chuyển",
-  ];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [jobPosts, jobCategories] = await Promise.all([
+          jobService.getJobPosts(),
+          jobService.getCategories(),
+        ]);
+        setJobs(jobPosts);
+        setCategories(jobCategories);
+      } catch {
+        setJobs([]);
+        setCategories([]);
+      }
+    };
 
-  const searchResults = [
-    {
-      id: 1,
-      title: "Thu hoạch lúa",
-      farmer: "Nguyễn Văn A",
-      location: "Cần Thơ",
-      distance: 2.5,
-      wage: 250000,
-      duration: "1 ngày",
-      rating: 4.8,
-      jobType: "Thu hoạch",
-      urgent: true,
-    },
-    {
-      id: 2,
-      title: "Làm đất trồng rau",
-      farmer: "Trần Thị B",
-      location: "Vĩnh Long",
-      distance: 5,
-      wage: 200000,
-      duration: "2 ngày",
-      rating: 4.5,
-      jobType: "Làm đất",
-      urgent: false,
-    },
-    {
-      id: 3,
-      title: "Chăm sóc vườn cam",
-      farmer: "Lê Văn C",
-      location: "Tiền Giang",
-      distance: 8,
-      wage: 180000,
-      duration: "3 ngày",
-      rating: 4.7,
-      jobType: "Chăm sóc cây trồng",
-      urgent: false,
-    },
-    {
-      id: 4,
-      title: "Phun thuốc sâu",
-      farmer: "Phạm Thị D",
-      location: "An Giang",
-      distance: 12,
-      wage: 300000,
-      duration: "1 ngày",
-      rating: 4.9,
-      jobType: "Phun thuốc",
-      urgent: true,
-    },
-  ];
+    loadData().catch(() => undefined);
+  }, []);
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
+
+  const jobTypes = useMemo(() => categories.map((c) => c.name), [categories]);
 
   const toggleJobType = (type: string) => {
     setFilters((prev) => ({
@@ -109,7 +78,24 @@ export function WorkerSearchScreen({ navigation }: any) {
     }));
   };
 
-  const filteredJobs = searchResults.filter((job) => {
+  const mappedJobs = useMemo(
+    () =>
+      jobs.map((job) => ({
+        id: job.id,
+        title: job.title,
+        farmer: "Chủ nông trại",
+        location: job.address,
+        distance: 0,
+        wage: job.wageAmount,
+        duration: job.estimatedHours ? `${job.estimatedHours} giờ` : "",
+        rating: 0,
+        jobType: categoryMap.get(job.jobCategoryId) || job.jobCategoryId,
+        urgent: job.isUrgent,
+      })),
+    [jobs, categoryMap],
+  );
+
+  const filteredJobs = mappedJobs.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -260,9 +246,7 @@ export function WorkerSearchScreen({ navigation }: any) {
                   <View style={styles.jobInfo}>
                     <View style={styles.infoRow}>
                       <MapPin size={16} color={COLORS.emerald[600]} />
-                      <Text style={styles.infoText}>
-                        {job.location} • {job.distance} km
-                      </Text>
+                      <Text style={styles.infoText}>{job.location}</Text>
                     </View>
 
                     <View style={styles.infoRow}>

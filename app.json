@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "CAPSTONE_SP26_FE_Mobile_NEW",
-    "slug": "CAPSTONE_SP26_FE_Mobile_NEW",
+    "name": "CAPSTONE_SP26_FE_Mobile",
+    "slug": "CAPSTONE_SP26_FE_Mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "../CAPSTONE_SP26_FE_Mobile/assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "../CAPSTONE_SP26_FE_Mobile/assets/logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

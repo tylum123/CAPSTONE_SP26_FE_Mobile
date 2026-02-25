@@ -10,6 +10,7 @@ import {
   REQUEST_HEADERS,
   HTTP_STATUS,
   ERROR_MESSAGES,
+  API_ENDPOINTS,
 } from "../constants/api";
 
 // Create axios instance
@@ -51,11 +52,20 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     // Handle 401 Unauthorized
     if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
-      // Clear token and redirect to login
-      await AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-      // You can add navigation to login screen here
-      // navigationRef.current?.navigate('Login');
-      console.error(ERROR_MESSAGES.UNAUTHORIZED);
+      const requestUrl = error.config?.url || "";
+      const isAuthRequest =
+        requestUrl.includes(API_ENDPOINTS.AUTH.LOGIN) ||
+        requestUrl.includes(API_ENDPOINTS.AUTH.REGISTER) ||
+        requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN);
+      const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+
+      if (!isAuthRequest && token) {
+        // Clear token and redirect to login
+        await AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        // You can add navigation to login screen here
+        // navigationRef.current?.navigate('Login');
+        // Suppress terminal log; handle UI messaging elsewhere if needed
+      }
     }
 
     // Handle network errors

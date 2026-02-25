@@ -12,14 +12,7 @@ import {
   ImageBackground,
   Image,
 } from "react-native";
-import {
-  Phone,
-  Lock,
-  UserCircle,
-  Eye,
-  EyeOff,
-  Mail,
-} from "lucide-react-native";
+import { Phone, Lock, Eye, EyeOff, Mail, MapPin } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
@@ -28,9 +21,9 @@ export function RegisterScreen({ navigation }: any) {
   const [step, setStep] = useState<1 | 2>(1); // Step 1: Form, Step 2: OTP
 
   // Form data
-  const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -52,7 +45,7 @@ export function RegisterScreen({ navigation }: any) {
   }, [step, countdown]);
 
   const handleSendOtp = async () => {
-    if (!name || !phoneNumber || !password || !confirmPassword) {
+    if (!phoneNumber || !email || !address || !password || !confirmPassword) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
       return;
     }
@@ -64,13 +57,10 @@ export function RegisterScreen({ navigation }: any) {
       return;
     }
 
-    // Validate email if provided
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        Alert.alert("Lỗi", "Email không hợp lệ");
-        return;
-      }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Email không hợp lệ");
+      return;
     }
 
     if (password !== confirmPassword) {
@@ -106,7 +96,13 @@ export function RegisterScreen({ navigation }: any) {
     setLoading(true);
     try {
       // TODO: Call API to verify OTP and register
-      await register(name, phoneNumber, password, "worker");
+      await register({
+        email,
+        phoneNumber,
+        password,
+        address,
+        roleId: 2,
+      });
       Alert.alert("Thành công", "Đăng ký tài khoản thành công!", [
         {
           text: "OK",
@@ -178,19 +174,6 @@ export function RegisterScreen({ navigation }: any) {
               <>
                 <View style={styles.inputContainer}>
                   <View style={styles.inputIcon}>
-                    <UserCircle size={20} color={COLORS.gray[500]} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Họ và tên"
-                    placeholderTextColor={COLORS.gray[400]}
-                    value={name}
-                    onChangeText={setName}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
                     <Phone size={20} color={COLORS.gray[500]} />
                   </View>
                   <TextInput
@@ -210,12 +193,25 @@ export function RegisterScreen({ navigation }: any) {
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email (tùy chọn)"
+                    placeholder="Email"
                     placeholderTextColor={COLORS.gray[400]}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}>
+                    <MapPin size={20} color={COLORS.gray[500]} />
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Địa chỉ"
+                    placeholderTextColor={COLORS.gray[400]}
+                    value={address}
+                    onChangeText={setAddress}
                   />
                 </View>
 

@@ -41,7 +41,7 @@ export function LoginScreen({ navigation }: any) {
     if (phoneCountdown > 0) {
       const timer = setTimeout(
         () => setPhoneCountdown(phoneCountdown - 1),
-        1000
+        1000,
       );
       return () => clearTimeout(timer);
     }
@@ -82,7 +82,7 @@ export function LoginScreen({ navigation }: any) {
     setLoading(true);
     try {
       // TODO: Call API to verify OTP and login
-      await login(phoneNumber, phoneOtp, "worker");
+      await login(phoneNumber, phoneOtp);
     } catch (error) {
       Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng kiểm tra lại mã OTP.");
     } finally {
@@ -104,7 +104,8 @@ export function LoginScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      await login(email, password, "worker");
+      await login(email, password);
+      Alert.alert("Đăng Nhập Thành Công");
     } catch (error) {
       Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
@@ -346,6 +347,15 @@ export function LoginScreen({ navigation }: any) {
               <Text style={styles.registerLink}>Đăng ký ngay</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.demoLinkContainer}
+            onPress={() => navigation.navigate("WorkerDemo")}
+          >
+            <Text style={styles.demoLinkText}>
+              Xem demo không cần đăng nhập
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
@@ -507,5 +517,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.emerald[100],
     fontWeight: "600",
+  },
+  demoLinkContainer: {
+    marginTop: SPACING.sm,
+    alignItems: "center",
+  },
+  demoLinkText: {
+    fontSize: 14,
+    color: COLORS.white,
+    textDecorationLine: "underline",
   },
 });

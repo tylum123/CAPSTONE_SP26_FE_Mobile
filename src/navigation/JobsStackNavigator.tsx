@@ -5,6 +5,9 @@ import { WorkerJobsScreen } from "../screens/WorkerJobsScreen";
 import { JobDetailScreen } from "../screens/JobDetailScreen";
 import { ChatScreen } from "../screens/ChatScreen";
 import { ReviewScreen } from "../screens/ReviewScreen";
+import { CheckInScreen } from "../screens/CheckInScreen";
+import { AttendanceHistoryScreen } from "../screens/AttendanceHistoryScreen";
+import { AttendanceDetailScreen } from "../screens/AttendanceDetailScreen";
 
 const Stack = createStackNavigator();
 
@@ -90,6 +93,69 @@ export function JobsStackNavigator() {
       <Stack.Screen
         name="Review"
         component={ReviewScreen}
+        options={{
+          headerShown: false,
+        }}
+        listeners={({ navigation }) => ({
+          focus: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: { display: "none" },
+              headerShown: false,
+            });
+          },
+          blur: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: defaultTabBarStyle,
+              headerShown: false,
+            });
+          },
+        })}
+      />
+      <Stack.Screen
+        name="CheckIn"
+        component={CheckInScreen}
+        options={{
+          headerShown: false,
+        }}
+        listeners={({ navigation }) => ({
+          focus: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: { display: "none" },
+              headerShown: false,
+            });
+          },
+          blur: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: defaultTabBarStyle,
+              headerShown: false,
+            });
+          },
+        })}
+      />
+      <Stack.Screen
+        name="AttendanceHistory"
+        component={AttendanceHistoryScreen}
+        options={{
+          headerShown: false,
+        }}
+        listeners={({ navigation }) => ({
+          focus: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: { display: "none" },
+              headerShown: false,
+            });
+          },
+          blur: () => {
+            navigation.getParent()?.setOptions({
+              tabBarStyle: defaultTabBarStyle,
+              headerShown: false,
+            });
+          },
+        })}
+      />
+      <Stack.Screen
+        name="AttendanceDetail"
+        component={AttendanceDetailScreen}
         options={{
           headerShown: false,
         }}

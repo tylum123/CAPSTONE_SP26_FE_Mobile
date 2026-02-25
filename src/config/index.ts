@@ -1,10 +1,13 @@
-import { API_BASE_URL, API_TIMEOUT } from "@env";
+import { API_BASE_URL, API_BASE_URL_TEST, API_TIMEOUT } from "@env";
 import { API_CONFIG } from "../constants/api";
+
+const url =
+  process.env.NODE_ENV === "development" ? API_BASE_URL_TEST : API_BASE_URL;
 
 // App Configuration
 export const CONFIG = {
   // API
-  API_BASE_URL: API_BASE_URL || "http://localhost:3000/api",
+  API_BASE_URL: url || "http://localhost:3000/api",
   API_TIMEOUT: parseInt(API_TIMEOUT) || API_CONFIG.TIMEOUT,
 
   // Feature Flags
@@ -33,5 +36,7 @@ export const CONFIG = {
   // Cache
   CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
 } as const;
+
+console.log("App Configuration:", CONFIG);
 
 export type ConfigType = typeof CONFIG;

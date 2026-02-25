@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -23,9 +23,18 @@ import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { Job, UpcomingJob } from "../types";
+import { jobService, JobPostDTO, workerProfileService } from "../services";
+import { useAuth } from "../context/AuthContext";
 
 export function WorkerHomeScreen({ navigation }: any) {
-  const nearbyJobs: Job[] = [
+  const { user, isAuthenticated } = useAuth();
+  const [nearbyJobs, setNearbyJobs] = useState<Job[]>([]);
+  const [profileRating, setProfileRating] = useState<number | null>(null);
+  const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(
+    null,
+  );
+
+  const demoNearbyJobs: Job[] = [
     {
       id: 1,
       title: "Thu hoạch lúa",
@@ -61,7 +70,7 @@ export function WorkerHomeScreen({ navigation }: any) {
     },
   ];
 
-  const upcomingJobs: UpcomingJob[] = [
+  const demoUpcomingJobs: UpcomingJob[] = [
     {
       id: 1,
       title: "Phun thuốc trừ sâu",
@@ -71,6 +80,61 @@ export function WorkerHomeScreen({ navigation }: any) {
       status: "confirmed",
     },
   ];
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setNearbyJobs(demoNearbyJobs);
+      setProfileRating(null);
+      setTotalJobsCompleted(null);
+      return;
+    }
+
+    const loadJobs = async () => {
+      try {
+        const jobs = await jobService.getJobPosts();
+        const mappedJobs = jobs.map(
+          (job: JobPostDTO): Job => ({
+            id: job.id,
+            title: job.title,
+            farmer: "Chủ nông trại",
+            location: job.address,
+            distance: "N/A",
+            wage: job.wageAmount ? job.wageAmount.toLocaleString("vi-VN") : "0",
+            duration: job.estimatedHours ? `${job.estimatedHours} giờ` : "N/A",
+            rating: 0,
+            urgent: job.isUrgent,
+          }),
+        );
+        setNearbyJobs(mappedJobs);
+      } catch {
+        setNearbyJobs([]);
+      }
+    };
+
+    loadJobs().catch(() => undefined);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await workerProfileService.getProfile();
+        setProfileRating(profile.averageRating);
+        setTotalJobsCompleted(profile.totalJobsCompleted);
+      } catch {
+        setProfileRating(null);
+        setTotalJobsCompleted(null);
+      }
+    };
+
+    loadProfile().catch(() => undefined);
+  }, [isAuthenticated]);
+
+  const upcomingJobs = useMemo(
+    () => (isAuthenticated ? [] : demoUpcomingJobs),
+    [isAuthenticated],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -86,7 +150,7 @@ export function WorkerHomeScreen({ navigation }: any) {
           <View style={styles.welcomeContent}>
             <View style={styles.welcomeLeft}>
               <Text style={styles.welcomeGreeting}>Xin chào</Text>
-              <Text style={styles.welcomeName}>Minh Nguyen</Text>
+              <Text style={styles.welcomeName}>{user?.name || "Khách"}</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statBadge}>
                   <Star
@@ -94,15 +158,21 @@ export function WorkerHomeScreen({ navigation }: any) {
                     color={COLORS.amber[400]}
                     fill={COLORS.amber[400]}
                   />
-                  <Text style={styles.statText}>4.8</Text>
+                  <Text style={styles.statText}>{profileRating ?? "--"}</Text>
                 </View>
                 <View style={styles.statBadge}>
                   <Briefcase size={14} color={COLORS.white} />
-                  <Text style={styles.statText}>12 việc</Text>
+                  <Text style={styles.statText}>
+                    {totalJobsCompleted ?? 0} việc
+                  </Text>
                 </View>
               </View>
             </View>
-            <Avatar fallback="MN" size={64} style={styles.avatar} />
+            <Avatar
+              fallback={(user?.name || "Kh")[0]}
+              size={64}
+              style={styles.avatar}
+            />
           </View>
         </View>
 
@@ -112,7 +182,7 @@ export function WorkerHomeScreen({ navigation }: any) {
             <View style={styles.statIcon}>
               <Briefcase size={20} color={COLORS.white} />
             </View>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{totalJobsCompleted ?? 0}</Text>
             <Text style={styles.statLabel}>Việc đã làm</Text>
           </View>
           <View style={styles.statCard}>
@@ -121,7 +191,7 @@ export function WorkerHomeScreen({ navigation }: any) {
             >
               <Star size={20} color={COLORS.white} />
             </View>
-            <Text style={styles.statValue}>4.8</Text>
+            <Text style={styles.statValue}>{profileRating ?? "--"}</Text>
             <Text style={styles.statLabel}>Đánh giá</Text>
           </View>
           <View style={styles.statCard}>
@@ -130,7 +200,7 @@ export function WorkerHomeScreen({ navigation }: any) {
             >
               <TrendingUp size={20} color={COLORS.white} />
             </View>
-            <Text style={styles.statValue}>6.5M</Text>
+            <Text style={styles.statValue}>--</Text>
             <Text style={styles.statLabel}>Thu nhập</Text>
           </View>
         </View>

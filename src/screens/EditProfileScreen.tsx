@@ -12,57 +12,63 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   User,
-  Phone,
-  Mail,
   MapPin,
   Briefcase,
+  Calendar,
+  Clock,
   Camera,
   X,
 } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING } from "../constants/theme";
+import { workerProfileService } from "../services";
 
 export function EditProfileScreen({ navigation, route }: any) {
   const { currentProfile } = route.params || {};
 
-  const [name, setName] = useState(currentProfile?.name || "Minh Nguyen");
-  const [phoneNumber, setPhoneNumber] = useState(
-    currentProfile?.phone || "0123456789",
+  const [fullName, setFullName] = useState(currentProfile?.fullName || "");
+  const [ageRange, setAgeRange] = useState(currentProfile?.ageRange || "");
+  const [primaryLocation, setPrimaryLocation] = useState(
+    currentProfile?.primaryLocation || "",
   );
-  const [email, setEmail] = useState(
-    currentProfile?.email || "minh@example.com",
+  const [travelRadiusKmPreference, setTravelRadiusKmPreference] = useState(
+    currentProfile?.travelRadiusKmPreference?.toString() || "",
   );
-  const [address, setAddress] = useState(
-    currentProfile?.address || "Cần Thơ, Việt Nam",
+  const [experienceLevelId, setExperienceLevelId] = useState(
+    currentProfile?.experienceLevelId || "",
   );
-  const [bio, setBio] = useState(
-    currentProfile?.bio ||
-      "Có kinh nghiệm 5 năm làm việc trong lĩnh vực nông nghiệp",
+  const [availabilitySchedule, setAvailabilitySchedule] = useState(
+    currentProfile?.availabilitySchedule || "",
   );
-  const [skills, setSkills] = useState(
-    currentProfile?.skills ||
-      "Thu hoạch, Chăm sóc cây trồng, Phun thuốc, Làm đất",
-  );
+  const [avatarUrl, setAvatarUrl] = useState(currentProfile?.avatarUrl || "");
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-    if (!name || !phoneNumber) {
+    if (
+      !fullName ||
+      !ageRange ||
+      !primaryLocation ||
+      !experienceLevelId ||
+      !availabilitySchedule
+    ) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin bắt buộc");
-      return;
-    }
-
-    // Validate phone number
-    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: Call API to update profile
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await workerProfileService.updateProfile({
+        fullName,
+        ageRange,
+        primaryLocation,
+        travelRadiusKmPreference: travelRadiusKmPreference
+          ? Number(travelRadiusKmPreference)
+          : undefined,
+        experienceLevelId,
+        availabilitySchedule,
+        avatarUrl,
+      });
 
       Alert.alert("Thành công", "Cập nhật hồ sơ thành công", [
         {
@@ -89,7 +95,11 @@ export function EditProfileScreen({ navigation, route }: any) {
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
-              <Avatar fallback={name[0] || "M"} size={80} />
+              <Avatar
+                source={avatarUrl ? { uri: avatarUrl } : undefined}
+                fallback={fullName[0] || "M"}
+                size={80}
+              />
               <TouchableOpacity style={styles.changeAvatarButton}>
                 <Camera size={18} color={COLORS.gray[900]} />
               </TouchableOpacity>
@@ -106,8 +116,8 @@ export function EditProfileScreen({ navigation, route }: any) {
                 <User size={18} color={COLORS.gray[400]} />
                 <TextInput
                   style={styles.input}
-                  value={name}
-                  onChangeText={setName}
+                  value={fullName}
+                  onChangeText={setFullName}
                   placeholder="Nhập họ và tên"
                   placeholderTextColor={COLORS.gray[400]}
                 />
@@ -116,80 +126,93 @@ export function EditProfileScreen({ navigation, route }: any) {
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>
-                Số điện thoại <Text style={styles.required}>*</Text>
+                Độ tuổi <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Phone size={18} color={COLORS.gray[400]} />
+                <Calendar size={18} color={COLORS.gray[400]} />
                 <TextInput
                   style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  placeholder="Nhập số điện thoại"
+                  value={ageRange}
+                  onChangeText={setAgeRange}
+                  placeholder="Ví dụ: 18-25"
                   placeholderTextColor={COLORS.gray[400]}
-                  keyboardType="phone-pad"
-                  maxLength={11}
                 />
               </View>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputContainer}>
-                <Mail size={18} color={COLORS.gray[400]} />
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Nhập email"
-                  placeholderTextColor={COLORS.gray[400]}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Địa chỉ</Text>
+              <Text style={styles.label}>
+                Khu vực chính <Text style={styles.required}>*</Text>
+              </Text>
               <View style={styles.inputContainer}>
                 <MapPin size={18} color={COLORS.gray[400]} />
                 <TextInput
                   style={styles.input}
-                  value={address}
-                  onChangeText={setAddress}
-                  placeholder="Nhập địa chỉ"
+                  value={primaryLocation}
+                  onChangeText={setPrimaryLocation}
+                  placeholder="Nhập khu vực chính"
                   placeholderTextColor={COLORS.gray[400]}
                 />
               </View>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Giới thiệu bản thân</Text>
-              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <Text style={styles.label}>Bán kính di chuyển (km)</Text>
+              <View style={styles.inputContainer}>
+                <MapPin size={18} color={COLORS.gray[400]} />
                 <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="Mô tả ngắn về bản thân và kinh nghiệm"
+                  style={styles.input}
+                  value={travelRadiusKmPreference}
+                  onChangeText={setTravelRadiusKmPreference}
+                  placeholder="Ví dụ: 10"
                   placeholderTextColor={COLORS.gray[400]}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
+                  keyboardType="number-pad"
                 />
               </View>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Kỹ năng</Text>
-              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <Text style={styles.label}>
+                Mức kinh nghiệm <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.inputContainer}>
+                <Briefcase size={18} color={COLORS.gray[400]} />
                 <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={skills}
-                  onChangeText={setSkills}
-                  placeholder="Các kỹ năng của bạn (cách nhau bởi dấu phẩy)"
+                  style={styles.input}
+                  value={experienceLevelId}
+                  onChangeText={setExperienceLevelId}
+                  placeholder="Nhập experienceLevelId"
                   placeholderTextColor={COLORS.gray[400]}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                Lịch làm việc <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.inputContainer}>
+                <Clock size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={availabilitySchedule}
+                  onChangeText={setAvailabilitySchedule}
+                  placeholder="Ví dụ: T2-T7"
+                  placeholderTextColor={COLORS.gray[400]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Avatar URL</Text>
+              <View style={styles.inputContainer}>
+                <Camera size={18} color={COLORS.gray[400]} />
+                <TextInput
+                  style={styles.input}
+                  value={avatarUrl}
+                  onChangeText={setAvatarUrl}
+                  placeholder="Nhập URL avatar"
+                  placeholderTextColor={COLORS.gray[400]}
                 />
               </View>
             </View>
