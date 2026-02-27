@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -21,14 +20,13 @@ import {
   CreditCard,
   Download,
   History,
-  DollarSign,
 } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
+import { ListItem } from "../components/ui/ListItem";
+import { SectionHeader } from "../components/ui/SectionHeader";
 import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
-
-const { width } = Dimensions.get("window");
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 
 type TransactionType = "income" | "withdraw" | "escrow" | "refund";
 type TransactionStatus = "completed" | "pending" | "failed" | "processing";
@@ -215,124 +213,99 @@ export function WorkerWalletScreen({ navigation }: any) {
 
           {/* Payment Methods */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-
-            {paymentMethods.map((method) => (
-              <TouchableOpacity
-                key={method.id}
-                style={[
-                  styles.paymentMethod,
-                  !method.connected && styles.paymentMethodDisabled,
-                ]}
-                onPress={() => {
-                  if (method.connected) {
-                    setSelectedPaymentMethod(method.id as any);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={styles.paymentLogoContainer}>
-                  <Image
-                    source={{ uri: method.logo }}
-                    style={styles.paymentLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.paymentInfo}>
-                  <Text style={styles.paymentName}>{method.name}</Text>
-                  {method.connected ? (
-                    <View style={styles.connectedRow}>
-                      <CheckCircle2 size={14} color={COLORS.emerald[600]} />
-                      <Text style={styles.connectedText}>Đã kết nối</Text>
+            <SectionHeader title="Phương thức thanh toán" />
+            <Card>
+              {paymentMethods.map((method, index) => (
+                <ListItem
+                  key={method.id}
+                  title={method.name}
+                  subtitle={method.connected ? "Đã kết nối" : "Chưa kết nối"}
+                  leftSlot={
+                    <View style={styles.paymentLogoContainer}>
+                      <Image
+                        source={{ uri: method.logo }}
+                        style={styles.paymentLogo}
+                        resizeMode="contain"
+                      />
                     </View>
-                  ) : (
-                    <Text style={styles.notConnectedText}>Chưa kết nối</Text>
-                  )}
-                </View>
-                {!method.connected && (
-                  <Button variant="outline" size="sm">
-                    Kết nối
-                  </Button>
-                )}
-              </TouchableOpacity>
-            ))}
+                  }
+                  rightSlot={
+                    !method.connected ? (
+                      <Button variant="outline" size="sm">
+                        Kết nối
+                      </Button>
+                    ) : undefined
+                  }
+                  onPress={() => {
+                    if (method.connected) {
+                      setSelectedPaymentMethod(method.id as any);
+                    }
+                  }}
+                  isLast={index === paymentMethods.length - 1}
+                />
+              ))}
+            </Card>
           </View>
 
           {/* Escrow Info */}
           {escrowBalance > 0 && (
-            <View style={styles.escrowCard}>
-              <View style={styles.escrowIconContainer}>
-                <Clock size={24} color={COLORS.amber[600]} />
-              </View>
-              <View style={styles.escrowInfo}>
-                <Text style={styles.escrowTitle}>Hệ thống Escrow</Text>
-                <Text style={styles.escrowDescription}>
-                  Tiền sẽ được giữ an toàn cho đến khi bạn hoàn thành công việc
-                </Text>
-              </View>
+            <View style={styles.section}>
+              <Card style={styles.escrowCard}>
+                <CardContent style={styles.escrowContent}>
+                  <View style={styles.escrowIconContainer}>
+                    <Clock size={24} color={COLORS.amber[600]} />
+                  </View>
+                  <View style={styles.escrowInfo}>
+                    <Text style={styles.escrowTitle}>Hệ thống Escrow</Text>
+                    <Text style={styles.escrowDescription}>
+                      Tiền sẽ được giữ an toàn cho đến khi bạn hoàn thành công
+                      việc
+                    </Text>
+                  </View>
+                </CardContent>
+              </Card>
             </View>
           )}
 
           {/* Transactions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
-
-            <View style={styles.transactionsList}>
-              {transactions.map((transaction) => (
-                <TouchableOpacity
+            <SectionHeader title="Giao dịch gần đây" actionLabel="Xem tất cả" />
+            <Card>
+              {transactions.map((transaction, index) => (
+                <ListItem
                   key={transaction.id}
-                  style={styles.transaction}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={[
-                      styles.transactionIcon,
-                      {
-                        backgroundColor: `${getTransactionColor(transaction.type)}15`,
-                      },
-                    ]}
-                  >
-                    {getTransactionIcon(transaction.type, transaction.status)}
-                  </View>
-
-                  <View style={styles.transactionContent}>
-                    <View style={styles.transactionHeader}>
-                      <Text style={styles.transactionTitle}>
-                        {transaction.description}
-                      </Text>
+                  title={transaction.description}
+                  subtitle={transaction.jobTitle || transaction.date}
+                  leftSlot={
+                    <View
+                      style={[
+                        styles.transactionIcon,
+                        {
+                          backgroundColor: `${getTransactionColor(transaction.type)}15`,
+                        },
+                      ]}
+                    >
+                      {getTransactionIcon(transaction.type, transaction.status)}
+                    </View>
+                  }
+                  rightSlot={
+                    <View style={styles.transactionRight}>
                       <Text
                         style={[
                           styles.transactionAmount,
-                          {
-                            color: getTransactionColor(transaction.type),
-                          },
+                          { color: getTransactionColor(transaction.type) },
                         ]}
                       >
                         {transaction.type === "withdraw" ? "-" : "+"}
                         {transaction.amount.toLocaleString("vi-VN")}₫
                       </Text>
+                      {getStatusBadge(transaction.status)}
                     </View>
-
-                    <View style={styles.transactionFooter}>
-                      {transaction.jobTitle && (
-                        <Text
-                          style={styles.transactionSubtitle}
-                          numberOfLines={1}
-                        >
-                          {transaction.jobTitle}
-                        </Text>
-                      )}
-                      <View style={styles.transactionMeta}>
-                        <Text style={styles.transactionDate}>
-                          {transaction.date}
-                        </Text>
-                        {getStatusBadge(transaction.status)}
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  }
+                  isLast={index === transactions.length - 1}
+                />
               ))}
-            </View>
+            </Card>
           </View>
         </ScrollView>
       </View>
@@ -343,11 +316,11 @@ export function WorkerWalletScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.gray[50],
+    backgroundColor: COLORS.slate[50],
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.gray[50],
+    backgroundColor: COLORS.slate[50],
   },
   content: {
     flex: 1,
@@ -372,14 +345,13 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   balanceLabel: {
-    fontSize: 14,
+    ...TYPOGRAPHY.body2,
     color: COLORS.emerald[100],
     marginBottom: SPACING.xs,
     fontWeight: "500",
   },
   balanceAmount: {
-    fontSize: 36,
-    fontWeight: "bold",
+    ...TYPOGRAPHY.h1,
     color: COLORS.white,
     letterSpacing: -0.5,
   },
@@ -389,12 +361,14 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.full,
   },
   quickStats: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.15)",
     padding: SPACING.md,
     marginBottom: SPACING.lg,
+    borderRadius: BORDER_RADIUS.lg,
   },
   statItem: {
     flex: 1,
@@ -408,18 +382,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.25)",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.full,
   },
   statInfo: {
     flex: 1,
   },
   statLabel: {
-    fontSize: 12,
+    ...TYPOGRAPHY.caption,
     color: COLORS.emerald[100],
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.white,
   },
   statDivider: {
@@ -439,8 +413,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xs,
     alignItems: "center",
     gap: SPACING.xs,
+    borderRadius: BORDER_RADIUS.lg,
     elevation: 2,
-    shadowColor: COLORS.gray[900],
+    shadowColor: COLORS.slate[900],
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -451,78 +426,50 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.emerald[50],
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.full,
   },
   actionText: {
-    fontSize: 12,
+    ...TYPOGRAPHY.caption,
     fontWeight: "600",
-    color: COLORS.gray[900],
+    color: COLORS.slate[900],
   },
   section: {
     marginBottom: SPACING.lg,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
-    marginBottom: SPACING.md,
     paddingHorizontal: SPACING.md,
   },
-  paymentMethod: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
-    marginBottom: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-  },
-  paymentMethodDisabled: {
-    opacity: 0.6,
-  },
   paymentLogoContainer: {
-    width: 56,
-    height: 56,
-    backgroundColor: COLORS.gray[50],
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.slate[50],
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.md,
     padding: SPACING.xs,
   },
   paymentLogo: {
-    width: 48,
-    height: 48,
-  },
-  paymentInfo: {
-    flex: 1,
-  },
-  paymentName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.gray[900],
-    marginBottom: SPACING.xs,
+    width: 32,
+    height: 32,
   },
   connectedRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.xs,
+    marginTop: 2,
   },
   connectedText: {
-    fontSize: 13,
+    ...TYPOGRAPHY.caption,
     color: COLORS.emerald[600],
     fontWeight: "500",
   },
-  notConnectedText: {
-    fontSize: 13,
-    color: COLORS.gray[500],
-  },
   escrowCard: {
+    backgroundColor: COLORS.amber[50],
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.amber[500],
+  },
+  escrowContent: {
     flexDirection: "row",
     gap: SPACING.md,
-    padding: SPACING.lg,
-    backgroundColor: COLORS.amber[50],
-    marginBottom: SPACING.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.amber[600],
+    alignItems: "center",
   },
   escrowIconContainer: {
     width: 48,
@@ -530,72 +477,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.amber[100],
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.full,
   },
   escrowInfo: {
     flex: 1,
   },
   escrowTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.amber[600],
-    marginBottom: SPACING.xs,
+    ...TYPOGRAPHY.subtitle2,
+    color: COLORS.amber[700],
+    marginBottom: 2,
   },
   escrowDescription: {
-    fontSize: 13,
+    ...TYPOGRAPHY.caption,
     color: COLORS.amber[600],
-    lineHeight: 18,
-  },
-  transactionsList: {
-    backgroundColor: COLORS.white,
-    overflow: "hidden",
-  },
-  transaction: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[100],
   },
   transactionIcon: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: BORDER_RADIUS.full,
   },
-  transactionContent: {
-    flex: 1,
-  },
-  transactionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: SPACING.xs,
-  },
-  transactionTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.gray[900],
-    flex: 1,
-    marginRight: SPACING.sm,
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  transactionFooter: {
+  transactionRight: {
+    alignItems: "flex-end",
     gap: SPACING.xs,
   },
-  transactionSubtitle: {
-    fontSize: 13,
-    color: COLORS.gray[600],
-  },
-  transactionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+  transactionAmount: {
+    ...TYPOGRAPHY.subtitle2,
   },
 });

@@ -18,7 +18,8 @@ import {
 } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { ListItem } from "../components/ui/ListItem";
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 
 type NotificationType =
   | "job_accepted"
@@ -184,30 +185,20 @@ export function NotificationsScreen({ navigation }: any) {
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {notifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <Bell size={48} color={COLORS.gray[300]} />
+              <Bell size={48} color={COLORS.slate[300]} />
               <Text style={styles.emptyTitle}>Không có thông báo</Text>
               <Text style={styles.emptySubtitle}>
                 Bạn sẽ nhận được thông báo ở đây
               </Text>
             </View>
           ) : (
-            notifications.map((notification) => (
-              <TouchableOpacity
-                key={notification.id}
-                onPress={() => handleNotificationPress(notification)}
-                activeOpacity={0.7}
-              >
-                <Card
-                  style={
-                    !notification.read
-                      ? StyleSheet.flatten([
-                          styles.notificationCard,
-                          styles.unreadCard,
-                        ])
-                      : styles.notificationCard
-                  }
-                >
-                  <CardContent style={styles.cardContent}>
+            <Card style={styles.listCard}>
+              {notifications.map((notification, index) => (
+                <ListItem
+                  key={notification.id}
+                  title={notification.title}
+                  subtitle={notification.message}
+                  leftSlot={
                     <View
                       style={{
                         ...styles.iconContainer,
@@ -218,44 +209,21 @@ export function NotificationsScreen({ navigation }: any) {
                     >
                       {getNotificationIcon(notification.type)}
                     </View>
-
-                    <View style={styles.contentContainer}>
-                      <View style={styles.headerRow}>
-                        <Text
-                          style={[
-                            styles.notificationTitle,
-                            !notification.read && styles.unreadTitle,
-                          ]}
-                        >
-                          {notification.title}
-                        </Text>
-                        {!notification.read && (
-                          <View style={styles.unreadDot} />
-                        )}
-                      </View>
-
-                      <Text style={styles.notificationMessage}>
-                        {notification.message}
+                  }
+                  rightSlot={
+                    <View style={styles.rightContent}>
+                      <Text style={styles.timestamp}>
+                        {notification.timestamp}
                       </Text>
-
-                      <View style={styles.footer}>
-                        <Text style={styles.timestamp}>
-                          {notification.timestamp}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            deleteNotification(notification.id);
-                          }}
-                        >
-                          <Text style={styles.deleteButton}>Xóa</Text>
-                        </TouchableOpacity>
-                      </View>
+                      {!notification.read && <View style={styles.unreadDot} />}
                     </View>
-                  </CardContent>
-                </Card>
-              </TouchableOpacity>
-            ))
+                  }
+                  onPress={() => handleNotificationPress(notification)}
+                  isLast={index === notifications.length - 1}
+                  style={!notification.read ? styles.unreadItem : undefined}
+                />
+              ))}
+            </Card>
           )}
         </ScrollView>
       </View>
@@ -270,13 +238,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
   header: {
     padding: SPACING.md,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    borderBottomColor: COLORS.slate[200],
   },
   headerTop: {
     flexDirection: "row",
@@ -294,79 +262,44 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
+    ...TYPOGRAPHY.h2,
+    color: COLORS.slate[900],
   },
   markAllRead: {
-    fontSize: 14,
+    ...TYPOGRAPHY.body2,
     color: COLORS.emerald[600],
     fontWeight: "500",
   },
   content: {
     flex: 1,
+    padding: SPACING.md,
   },
-  notificationCard: {
-    marginBottom: SPACING.md,
+  listCard: {
+    marginBottom: SPACING.xl,
   },
-  unreadCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.emerald[600],
-  },
-  cardContent: {
-    flexDirection: "row",
-    gap: SPACING.md,
+  unreadItem: {
+    backgroundColor: COLORS.emerald[50],
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: BORDER_RADIUS.full,
     justifyContent: "center",
     alignItems: "center",
   },
-  contentContainer: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  rightContent: {
+    alignItems: "flex-end",
     gap: SPACING.xs,
-    marginBottom: SPACING.xs,
   },
-  notificationTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.gray[900],
-  },
-  unreadTitle: {
-    fontWeight: "700",
+  timestamp: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.emerald[600],
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: COLORS.gray[600],
-    lineHeight: 20,
-    marginBottom: SPACING.sm,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  timestamp: {
-    fontSize: 12,
-    color: COLORS.gray[500],
-  },
-  deleteButton: {
-    fontSize: 13,
-    color: COLORS.red[600],
-    fontWeight: "500",
   },
   emptyState: {
     flex: 1,
@@ -375,14 +308,13 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.gray[700],
+    ...TYPOGRAPHY.subtitle1,
+    color: COLORS.slate[700],
     marginTop: SPACING.md,
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.gray[500],
+    ...TYPOGRAPHY.body2,
+    color: COLORS.slate[500],
     marginTop: SPACING.xs,
   },
 });

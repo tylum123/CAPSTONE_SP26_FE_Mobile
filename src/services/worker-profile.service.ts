@@ -26,7 +26,7 @@ export interface UpdateWorkerProfileRequest {
   travelRadiusKmPreference?: number | null;
   experienceLevelId: string;
   availabilitySchedule: string;
-  avatarUrl: string;
+  avatarUrl?: string;
 }
 
 export const workerProfileService = {

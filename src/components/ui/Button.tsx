@@ -1,13 +1,13 @@
 import React from "react";
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   StyleSheet,
   ViewStyle,
   TextStyle,
   ActivityIndicator,
 } from "react-native";
-import { COLORS, BORDER_RADIUS } from "../../constants/theme";
+import { COLORS, BORDER_RADIUS, SPACING, SHADOWS } from "../../constants/theme";
 
 interface ButtonProps {
   onPress?: () => void;
@@ -18,6 +18,7 @@ interface ButtonProps {
   loading?: boolean;
   className?: string;
   style?: ViewStyle;
+  fullWidth?: boolean;
 }
 
 export function Button({
@@ -28,36 +29,45 @@ export function Button({
   disabled = false,
   loading = false,
   style,
+  fullWidth = false,
 }: ButtonProps) {
-  const buttonStyles: ViewStyle[] = [
-    styles.base,
-    styles[variant],
-    styles[`size_${size}`],
-    disabled && styles.disabled,
-    style,
-  ].filter(Boolean) as ViewStyle[];
-
-  const textStyles: TextStyle[] = [
-    styles.text,
-    styles[`text_${variant}`],
-    styles[`text_${size}`],
-  ].filter(Boolean) as TextStyle[];
-
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      style={buttonStyles}
-      activeOpacity={0.7}
+      hitSlop={8}
+      style={({ pressed }) => {
+        const buttonStyles: ViewStyle[] = [
+          styles.base,
+          styles[variant],
+          styles[`size_${size}`],
+          fullWidth && styles.fullWidth,
+          pressed && styles.pressed,
+          disabled && styles.disabled,
+          style,
+        ].filter(Boolean) as ViewStyle[];
+
+        return buttonStyles;
+      }}
     >
       {loading ? (
         <ActivityIndicator
           color={variant === "default" ? COLORS.white : COLORS.emerald[600]}
         />
       ) : (
-        <Text style={textStyles}>{children}</Text>
+        <Text
+          style={
+            [
+              styles.text,
+              styles[`text_${variant}`],
+              styles[`text_${size}`],
+            ] as TextStyle[]
+          }
+        >
+          {children}
+        </Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -67,6 +77,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: BORDER_RADIUS.md,
     flexDirection: "row",
+    minHeight: 48,
+    ...SHADOWS.sm,
   },
   default: {
     backgroundColor: COLORS.emerald[600],
@@ -77,14 +89,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.emerald[600],
   },
   ghost: {
-    backgroundColor: "transparent",
+    backgroundColor: COLORS.emerald[50],
   },
   gradient: {
-    backgroundColor: COLORS.emerald[600],
+    backgroundColor: COLORS.emerald[700],
   },
   size_sm: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   size_md: {
     paddingHorizontal: 16,
@@ -92,13 +104,20 @@ const styles = StyleSheet.create({
   },
   size_lg: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 14,
+  },
+  fullWidth: {
+    alignSelf: "stretch",
   },
   disabled: {
     opacity: 0.5,
   },
+  pressed: {
+    transform: [{ translateY: 1 }],
+    ...SHADOWS.sm,
+  },
   text: {
-    fontWeight: "600",
+    fontWeight: "700",
   },
   text_default: {
     color: COLORS.white,

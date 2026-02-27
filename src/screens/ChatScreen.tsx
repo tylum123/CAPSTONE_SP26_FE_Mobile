@@ -19,7 +19,7 @@ import {
   Video,
 } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 
 interface Message {
   id: number;
@@ -127,7 +127,7 @@ export function ChatScreen({ navigation, route }: any) {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <ArrowLeft size={24} color={COLORS.gray[900]} />
+          <ArrowLeft size={24} color={COLORS.slate[900]} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -145,13 +145,13 @@ export function ChatScreen({ navigation, route }: any) {
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.iconButton}>
-            <Phone size={20} color={COLORS.gray[600]} />
+            <Phone size={20} color={COLORS.slate[600]} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <Video size={20} color={COLORS.gray[600]} />
+            <Video size={20} color={COLORS.slate[600]} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
-            <MoreVertical size={20} color={COLORS.gray[600]} />
+            <MoreVertical size={20} color={COLORS.slate[600]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -197,13 +197,13 @@ export function ChatScreen({ navigation, route }: any) {
       {/* Input */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-          <Paperclip size={22} color={COLORS.gray[600]} />
+          <Paperclip size={22} color={COLORS.slate[600]} />
         </TouchableOpacity>
 
         <TextInput
           style={styles.input}
           placeholder="Nhập tin nhắn..."
-          placeholderTextColor={COLORS.gray[400]}
+          placeholderTextColor={COLORS.slate[400]}
           value={inputText}
           onChangeText={setInputText}
           multiline
@@ -220,7 +220,7 @@ export function ChatScreen({ navigation, route }: any) {
         >
           <Send
             size={20}
-            color={inputText.trim() === "" ? COLORS.gray[400] : COLORS.white}
+            color={inputText.trim() === "" ? COLORS.slate[400] : COLORS.white}
           />
         </TouchableOpacity>
       </View>
@@ -231,7 +231,7 @@ export function ChatScreen({ navigation, route }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
   header: {
     flexDirection: "row",
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    borderBottomColor: COLORS.slate[200],
   },
   backButton: {
     padding: SPACING.xs,
@@ -253,12 +253,11 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   farmerName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.gray[900],
+    ...TYPOGRAPHY.subtitle1,
+    color: COLORS.slate[900],
   },
   onlineStatus: {
-    fontSize: 12,
+    ...TYPOGRAPHY.caption,
     color: COLORS.emerald[600],
   },
   headerActions: {
@@ -293,17 +292,16 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   messageText: {
-    fontSize: 15,
-    color: COLORS.gray[900],
-    lineHeight: 20,
+    ...TYPOGRAPHY.body1,
+    color: COLORS.slate[900],
     marginBottom: SPACING.xs,
   },
   workerMessageText: {
     color: COLORS.white,
   },
   messageTime: {
-    fontSize: 11,
-    color: COLORS.gray[500],
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
     alignSelf: "flex-end",
   },
   workerMessageTime: {
@@ -315,7 +313,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
+    borderTopColor: COLORS.slate[200],
     gap: SPACING.sm,
   },
   attachButton: {
@@ -327,10 +325,10 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: COLORS.slate[100],
     borderRadius: BORDER_RADIUS.full,
-    fontSize: 15,
-    color: COLORS.gray[900],
+    ...TYPOGRAPHY.body1,
+    color: COLORS.slate[900],
   },
   sendButton: {
     width: 40,
@@ -342,6 +340,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   sendButtonDisabled: {
-    backgroundColor: COLORS.gray[300],
+    backgroundColor: COLORS.slate[300],
   },
 });

@@ -6,7 +6,7 @@ import { COLORS, SPACING } from "../constants/theme";
 export function SplashScreen({ navigation }: any) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace("Intro");
+      navigation.replace("Login");
     }, 800);
 
     return () => clearTimeout(timer);

@@ -18,8 +18,9 @@ import {
 } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { ListItem } from "../components/ui/ListItem";
+import { Avatar } from "../components/ui/Avatar";
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 import { jobService, JobCategoryDTO, JobPostDTO } from "../services";
 
 interface FilterOptions {
@@ -222,61 +223,53 @@ export function WorkerSearchScreen({ navigation }: any) {
         {/* Job List */}
         <ScrollView
           style={styles.jobList}
-          contentContainerStyle={{ paddingBottom: 120 }}
+          contentContainerStyle={{
+            paddingBottom: 120,
+            paddingHorizontal: SPACING.md,
+          }}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
         >
           {sortedJobs.map((job) => (
-            <TouchableOpacity
-              key={job.id}
-              onPress={() =>
-                navigation.navigate("JobDetail", { jobId: job.id })
-              }
-            >
-              <Card style={styles.jobCard}>
-                <CardContent>
-                  {job.urgent && (
-                    <Badge variant="danger" style={styles.urgentBadge}>
-                      Gấp
-                    </Badge>
-                  )}
-                  <Text style={styles.jobTitle}>{job.title}</Text>
-                  <Text style={styles.farmerName}>{job.farmer}</Text>
-
-                  <View style={styles.jobInfo}>
-                    <View style={styles.infoRow}>
-                      <MapPin size={16} color={COLORS.emerald[600]} />
-                      <Text style={styles.infoText}>{job.location}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <Clock size={16} color={COLORS.gray[500]} />
-                      <Text style={styles.infoText}>{job.duration}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <Banknote size={16} color={COLORS.emerald[600]} />
+            <Card key={job.id} style={styles.jobCard}>
+              <CardContent>
+                <ListItem
+                  title={job.title}
+                  subtitle={`${job.farmer} • ${job.location}`}
+                  meta={`${job.distance}km • ${job.duration}`}
+                  leftSlot={<Avatar fallback={job.farmer[0]} size={48} />}
+                  rightSlot={
+                    <View style={styles.jobMetaRight}>
+                      {job.urgent ? (
+                        <Badge variant="danger" style={styles.urgentBadge}>
+                          🔥 Cần gấp
+                        </Badge>
+                      ) : null}
                       <Text style={styles.wageText}>
-                        {job.wage.toLocaleString("vi-VN")} VNĐ
+                        {job.wage.toLocaleString("vi-VN")}đ
                       </Text>
                     </View>
-
-                    <View style={styles.infoRow}>
-                      <Star
-                        size={16}
-                        color={COLORS.amber[400]}
-                        fill={COLORS.amber[400]}
-                      />
-                      <Text style={styles.ratingText}>{job.rating}</Text>
-                    </View>
+                  }
+                  onPress={() =>
+                    navigation.navigate("JobDetail", { jobId: job.id })
+                  }
+                />
+                <View style={styles.jobMetaRow}>
+                  <View style={styles.metaChip}>
+                    <MapPin size={14} color={COLORS.slate[500]} />
+                    <Text style={styles.metaChipText}>{job.location}</Text>
                   </View>
-
-                  <Badge variant="secondary" style={styles.jobTypeBadge}>
-                    {job.jobType}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </TouchableOpacity>
+                  <View style={styles.metaChip}>
+                    <Banknote size={14} color={COLORS.emerald[600]} />
+                    <Text style={styles.metaChipText}>{job.duration}</Text>
+                  </View>
+                  <View style={styles.metaChip}>
+                    <Star size={14} color={COLORS.amber[400]} />
+                    <Text style={styles.metaChipText}>{job.rating}</Text>
+                  </View>
+                </View>
+              </CardContent>
+            </Card>
           ))}
         </ScrollView>
       </View>
@@ -287,11 +280,11 @@ export function WorkerSearchScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
   searchHeader: {
     flexDirection: "row",
@@ -390,8 +383,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   resultsCount: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    ...TYPOGRAPHY.body,
+    color: COLORS.slate[600],
     fontWeight: "500",
   },
   jobList: {
@@ -401,44 +394,34 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   urgentBadge: {
-    alignSelf: "flex-start",
-    marginBottom: SPACING.sm,
-  },
-  jobTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
+    alignSelf: "flex-end",
     marginBottom: SPACING.xs,
   },
-  farmerName: {
-    fontSize: 14,
-    color: COLORS.gray[600],
-    marginBottom: SPACING.md,
-  },
-  jobInfo: {
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  infoRow: {
+  jobMetaRow: {
     flexDirection: "row",
-    alignItems: "center",
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    flexWrap: "wrap",
+  },
+  jobMetaRight: {
+    alignItems: "flex-end",
     gap: SPACING.xs,
   },
-  infoText: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.full,
+  },
+  metaChipText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[600],
   },
   wageText: {
-    fontSize: 16,
-    fontWeight: "bold",
+    ...TYPOGRAPHY.subtitle,
     color: COLORS.emerald[700],
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.gray[700],
-  },
-  jobTypeBadge: {
-    alignSelf: "flex-start",
   },
 });

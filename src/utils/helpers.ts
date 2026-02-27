@@ -10,7 +10,9 @@ export function formatCurrency(amount: number | string): string {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-  }).replace("₫", "đ");
+  })
+    .format(num)
+    .replace("₫", "đ");
 }
 
 export function formatDistance(km: number | string): string {

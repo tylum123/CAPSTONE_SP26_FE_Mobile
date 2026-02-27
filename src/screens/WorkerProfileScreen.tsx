@@ -9,12 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "../components/ui/Avatar";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { Card, CardContent } from "../components/ui/Card";
+import { ListItem } from "../components/ui/ListItem";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 import {
   Heart,
   CreditCard,
   Users,
-  Tag,
   Settings,
   LogOut,
   Edit,
@@ -26,6 +28,7 @@ import {
   Award,
   Bell,
   FileText,
+  ChevronRight,
 } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
 import { workerProfileService, WorkerProfileDTO } from "../services";
@@ -102,6 +105,8 @@ export function WorkerProfileScreen({ navigation }: any) {
         availabilitySchedule: displayProfile.availabilitySchedule || "",
         avatarUrl: displayProfile.avatarUrl || "",
       },
+      onUpdated: (updatedProfile: WorkerProfileDTO) =>
+        setProfile(updatedProfile),
     });
   };
 
@@ -158,10 +163,9 @@ export function WorkerProfileScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          {/* Avatar, Name and Edit Button Row */}
-          <View style={styles.profileHeader}>
+        {/* Hero Section */}
+        <View style={styles.hero}>
+          <View style={styles.heroHeader}>
             <Avatar
               source={
                 displayProfile.avatarUrl
@@ -171,7 +175,7 @@ export function WorkerProfileScreen({ navigation }: any) {
               fallback={displayProfile.fullName?.[0] || user?.name?.[0] || "M"}
               size={80}
             />
-            <View style={styles.profileNameContainer}>
+            <View style={styles.heroTextGroup}>
               <Text style={styles.name}>
                 {displayProfile.fullName || user?.name || "Minh Nguyen"}
               </Text>
@@ -181,70 +185,34 @@ export function WorkerProfileScreen({ navigation }: any) {
               style={styles.editIconButton}
               onPress={handleEditProfile}
             >
-              <Edit size={22} color={COLORS.gray[700]} />
+              <Edit size={20} color={COLORS.slate[600]} />
             </TouchableOpacity>
           </View>
 
-          {/* Contact Info - Đơn giản, sát với profile */}
-          <View style={styles.contactContainer}>
-            <View style={[styles.contactItem, styles.contactCentered]}>
-              <Phone size={16} color={COLORS.gray[500]} />
+          <View style={styles.contactRow}>
+            <View style={styles.contactChip}>
+              <Phone size={14} color={COLORS.slate[500]} />
               <Text style={styles.contactText}>
                 {isAuthenticated ? "--" : "0123 456 789"}
               </Text>
             </View>
-            <View style={[styles.contactItem, styles.contactCentered]}>
-              <Mail size={16} color={COLORS.gray[500]} />
+            <View style={styles.contactChip}>
+              <Mail size={14} color={COLORS.slate[500]} />
               <Text style={styles.contactText}>
                 {user?.email || "minh.nguyen@email.com"}
               </Text>
             </View>
-
-            <View style={styles.detailGrid}>
-              <View style={styles.detailItem}>
-                <Text style={styles.contactLabel}>Độ tuổi</Text>
-                <Text style={styles.contactText}>
-                  {formatValue(displayProfile.ageRange)}
-                </Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.contactLabel}>Khu vực</Text>
-                <Text style={styles.contactText}>
-                  {formatValue(displayProfile.primaryLocation)}
-                </Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.contactLabel}>Kinh nghiệm</Text>
-                <Text style={styles.contactText}>
-                  {formatValue(displayProfile.experienceLevel)}
-                </Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.contactLabel}>Lịch làm</Text>
-                <Text style={styles.contactText}>
-                  {formatValue(displayProfile.availabilitySchedule)}
-                </Text>
-              </View>
-              <View style={styles.detailItem}>
-                <Text style={styles.contactLabel}>Bán kính</Text>
-                <Text style={styles.contactText}>
-                  {displayProfile.travelRadiusKmPreference !== null &&
-                  displayProfile.travelRadiusKmPreference !== undefined
-                    ? `${displayProfile.travelRadiusKmPreference} km`
-                    : "Chưa cập nhật"}
-                </Text>
-              </View>
-            </View>
           </View>
+        </View>
 
-          {/* Stats Grid - Border ở giữa chia 4 mục */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statsGrid}>
-              {/* Row 1 */}
+        {/* Stats Grid */}
+        <View style={styles.section}>
+          <Card>
+            <CardContent style={styles.statsGrid}>
               <View style={styles.statItem}>
                 <Wallet size={24} color={COLORS.emerald[600]} />
                 <Text style={styles.statValue}>
-                  {isAuthenticated ? "--" : "2.500.000đ"}
+                  {isAuthenticated ? "--" : "2.5M"}
                 </Text>
                 <Text style={styles.statLabel}>Ví tiền</Text>
               </View>
@@ -255,69 +223,115 @@ export function WorkerProfileScreen({ navigation }: any) {
                 </Text>
                 <Text style={styles.statLabel}>Việc làm</Text>
               </View>
-              {/* Row 2 */}
-              <View style={[styles.statItem, styles.statBorderTop]}>
-                <Star size={24} color={COLORS.amber[600]} />
+              <View style={[styles.statItem, styles.statBorderLeft]}>
+                <Star size={24} color={COLORS.amber[400]} />
                 <Text style={styles.statValue}>
                   {displayProfile.averageRating}
                 </Text>
                 <Text style={styles.statLabel}>Đánh giá</Text>
               </View>
-              <View
-                style={[
-                  styles.statItem,
-                  styles.statBorderLeft,
-                  styles.statBorderTop,
-                ]}
-              >
-                <Award size={24} color={COLORS.pink[500]} />
-                <Text style={styles.statValue}>
-                  {isAuthenticated ? "--" : "98%"}
+            </CardContent>
+          </Card>
+        </View>
+
+        {/* Details */}
+        <View style={styles.section}>
+          <SectionHeader title="Thông tin chi tiết" />
+          <Card>
+            <CardContent style={styles.detailGrid}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Độ tuổi</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.ageRange)}
                 </Text>
-                <Text style={styles.statLabel}>Hoàn thành</Text>
               </View>
-            </View>
-          </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Khu vực</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.primaryLocation)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Kinh nghiệm</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.experienceLevel)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Lịch làm</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.availabilitySchedule)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Bán kính</Text>
+                <Text style={styles.detailValue}>
+                  {displayProfile.travelRadiusKmPreference !== null &&
+                  displayProfile.travelRadiusKmPreference !== undefined
+                    ? `${displayProfile.travelRadiusKmPreference} km`
+                    : "Chưa cập nhật"}
+                </Text>
+              </View>
+            </CardContent>
+          </Card>
         </View>
 
         {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
-              <View style={styles.menuItemLeft}>
-                <View
-                  style={[
-                    styles.menuIconContainer,
-                    { backgroundColor: COLORS.blue[50] },
-                  ]}
-                >
-                  <item.icon size={20} color={item.color} />
-                </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.section}>
+          <SectionHeader title="Tiện ích" />
+          <Card>
+            <CardContent style={styles.menuCardContent}>
+              {menuItems.map((item, index) => (
+                <ListItem
+                  key={index}
+                  title={item.label}
+                  leftSlot={
+                    <View
+                      style={[
+                        styles.menuIconContainer,
+                        { backgroundColor: `${item.color}15` },
+                      ]}
+                    >
+                      <item.icon size={20} color={item.color} />
+                    </View>
+                  }
+                  rightSlot={
+                    <ChevronRight size={20} color={COLORS.slate[400]} />
+                  }
+                  onPress={item.onPress}
+                  style={
+                    index < menuItems.length - 1
+                      ? styles.menuItemBorder
+                      : undefined
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </View>
 
-          {/* Logout Button */}
-          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <View style={styles.menuItemLeft}>
-              <View
-                style={[
-                  styles.menuIconContainer,
-                  { backgroundColor: COLORS.red[50] },
-                ]}
-              >
-                <LogOut size={20} color={COLORS.rose[500]} />
-              </View>
-              <Text style={[styles.menuLabel, { color: COLORS.rose[500] }]}>
-                Đăng xuất
-              </Text>
-            </View>
-          </TouchableOpacity>
+        {/* Logout Button */}
+        <View style={styles.section}>
+          <Card>
+            <CardContent style={styles.menuCardContent}>
+              <ListItem
+                title="Đăng xuất"
+                style={{ backgroundColor: COLORS.rose[50] }}
+                leftSlot={
+                  <View
+                    style={[
+                      styles.menuIconContainer,
+                      { backgroundColor: COLORS.rose[50] },
+                    ]}
+                  >
+                    <LogOut size={20} color={COLORS.rose[500]} />
+                  </View>
+                }
+                onPress={handleLogout}
+                isLast
+              />
+            </CardContent>
+          </Card>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -327,134 +341,122 @@ export function WorkerProfileScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.slate[50],
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.slate[50],
   },
   scrollContent: {
     paddingBottom: 100,
   },
-  profileSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
+  hero: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[200],
+    marginBottom: SPACING.md,
   },
-  profileHeader: {
+  heroHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.md,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
-  profileNameContainer: {
+  heroTextGroup: {
     flex: 1,
   },
   name: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
+    ...TYPOGRAPHY.title,
+    fontSize: 22,
+    color: COLORS.slate[900],
   },
   role: {
-    fontSize: 14,
-    color: COLORS.gray[600],
-    marginTop: 4,
+    ...TYPOGRAPHY.body,
+    color: COLORS.slate[600],
+    marginTop: 2,
   },
   editIconButton: {
     padding: SPACING.sm,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.full,
   },
-  contactContainer: {
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xl,
-    gap: SPACING.xs,
+  contactRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    flexWrap: "wrap",
   },
-  contactItem: {
+  contactChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: SPACING.sm,
-  },
-  contactCentered: {
-    justifyContent: "center",
-  },
-  contactLabel: {
-    fontSize: 14,
-    color: COLORS.gray[500],
-    fontWeight: "600",
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.full,
   },
   contactText: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[600],
   },
-  detailGrid: {
-    marginTop: SPACING.sm,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.sm,
-  },
-  detailItem: {
-    width: "48%",
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.gray[50],
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-  },
-  statsContainer: {
+  section: {
+    paddingHorizontal: SPACING.md,
     marginBottom: SPACING.lg,
   },
   statsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    padding: 0,
   },
   statItem: {
-    width: "50%",
-    paddingVertical: SPACING.xl,
+    flex: 1,
+    paddingVertical: SPACING.md,
     alignItems: "center",
     gap: SPACING.xs,
   },
   statBorderLeft: {
     borderLeftWidth: 1,
-    borderLeftColor: COLORS.gray[200],
-  },
-  statBorderTop: {
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
+    borderLeftColor: COLORS.slate[100],
   },
   statValue: {
+    ...TYPOGRAPHY.title,
     fontSize: 18,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
-    marginTop: SPACING.xs,
+    color: COLORS.slate[900],
   },
   statLabel: {
-    fontSize: 12,
-    color: COLORS.gray[600],
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
   },
-  menuContainer: {
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-  },
-  menuItem: {
+  detailGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[100],
-  },
-  menuItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexWrap: "wrap",
     gap: SPACING.md,
+  },
+  detailItem: {
+    width: "47%",
+  },
+  detailLabel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
+    marginBottom: 2,
+  },
+  detailValue: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.slate[900],
+    fontWeight: "600",
+  },
+  menuCardContent: {
+    padding: 0,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[100],
   },
   menuIconContainer: {
     width: 36,
     height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-  },
-  menuLabel: {
-    fontSize: 16,
-    color: COLORS.gray[900],
-    fontWeight: "500",
   },
 });

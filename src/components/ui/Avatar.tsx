@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Image, Text, StyleSheet, ViewStyle } from "react-native";
-import { COLORS } from "../../constants/theme";
+import { COLORS, SHADOWS } from "../../constants/theme";
 
 interface AvatarProps {
   source?: { uri: string } | number;
@@ -25,6 +25,8 @@ export function Avatar({
     width: size,
     height: size,
     borderRadius: size / 2,
+    borderWidth: 1,
+    borderColor: COLORS.slate[100],
   };
 
   const fallbackStyle: ViewStyle = {
@@ -54,6 +56,7 @@ export function Avatar({
 const styles = StyleSheet.create({
   container: {
     overflow: "hidden",
+    ...SHADOWS.sm,
   },
   fallbackText: {
     color: COLORS.white,

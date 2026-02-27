@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Calendar, Clock } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
+import { EmptyState } from "../components/ui";
 import { COLORS, SPACING } from "../constants/theme";
 import { attendanceService, workerProfileService } from "../services";
 import { WorkerAttendanceDTO } from "../services/attendance.service";
@@ -37,9 +38,16 @@ export function AttendanceHistoryScreen({ navigation }: any) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Lich su cham cong</Text>
+        <Text style={styles.title}>Lịch sử chấm công</Text>
         {records.length === 0 ? (
-          <Text style={styles.emptyText}>Chua co du lieu</Text>
+          <Card style={styles.card}>
+            <CardContent>
+              <EmptyState
+                title="Chưa có lịch sử chấm công"
+                description="Khi bạn bắt đầu check in cho các ca làm việc, lịch sử sẽ hiển thị tại đây."
+              />
+            </CardContent>
+          </Card>
         ) : (
           records.map((item) => (
             <TouchableOpacity
@@ -76,7 +84,7 @@ export function AttendanceHistoryScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
   container: {
     flex: 1,
@@ -89,9 +97,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: COLORS.gray[900],
-  },
-  emptyText: {
-    color: COLORS.gray[500],
+    marginBottom: SPACING.sm,
   },
   card: {
     marginBottom: SPACING.sm,

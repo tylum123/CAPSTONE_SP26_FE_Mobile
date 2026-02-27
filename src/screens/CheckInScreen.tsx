@@ -83,14 +83,14 @@ export function CheckInScreen({ navigation, route }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={COLORS.gray[900]} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Check in / Check out</Text>
+        <Text style={styles.headerTitle}>Chấm công (Check in / out)</Text>
         <View style={{ width: 22 }} />
       </View>
 
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Check in</Text>
-          <Text style={styles.label}>Job Application ID</Text>
+          <Text style={styles.label}>Mã đơn ứng tuyển (jobApplicationId)</Text>
           <TextInput
             style={styles.input}
             placeholder="Nhập jobApplicationId"
@@ -114,7 +114,7 @@ export function CheckInScreen({ navigation, route }: any) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Check out</Text>
-          <Text style={styles.label}>Attendance ID</Text>
+          <Text style={styles.label}>Mã chấm công (attendanceId)</Text>
           <TextInput
             style={styles.input}
             placeholder="Nhập attendanceId"
