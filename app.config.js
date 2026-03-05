@@ -12,6 +12,8 @@ export default {
   expo: {
     name: "CAPSTONE_SP26_FE_Mobile",
     slug: "CAPSTONE_SP26_FE_Mobile",
+    owner: "tylum123",
+    scheme: "agrotemp",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/logo.png",
@@ -26,6 +28,7 @@ export default {
       supportsTablet: true,
     },
     android: {
+      package: "com.tylum123.agrotemp",
       adaptiveIcon: {
         foregroundImage: "./assets/logo.png",
         backgroundColor: "#ffffff",
@@ -41,6 +44,11 @@ export default {
       API_BASE_URL_TEST: process.env.API_BASE_URL_TEST,
       API_TIMEOUT: process.env.API_TIMEOUT,
       NODE_ENV: env,
+      GOOGLE_ANDROID_CLIENT_ID: process.env.GOOGLE_ANDROID_CLIENT_ID,
+      GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,
+      eas: {
+        projectId: "223346b2-aaa1-4f74-ac38-e208d3e06399",
+      },
     },
   },
 };

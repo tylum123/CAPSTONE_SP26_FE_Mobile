@@ -20,6 +20,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (googleToken: string, roleId?: number) => Promise<void>;
   fetchProfile: () => Promise<void>;
   register: (payload: {
     email: string;
@@ -28,7 +29,7 @@ interface AuthContextType {
     address: string;
     roleId: number;
   }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +73,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: "me",
         fullName: response.email || email,
         email: response.email || email,
+        roleID: "worker",
+      });
+    }
+  };
+
+  const loginWithGoogle = async (googleToken: string, roleId = 3) => {
+    const response = await authService.googleLogin({ googleToken, roleId });
+    await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+
+    try {
+      const profile = await workerProfileService.getProfile();
+      const profileWithEmail = {
+        ...profile,
+        email: response.email,
+      };
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(profileWithEmail),
+      );
+      applyUserProfile(profileWithEmail);
+    } catch {
+      applyUserProfile({
+        id: "me",
+        fullName: response.email,
+        email: response.email,
         roleID: "worker",
       });
     }
@@ -131,9 +157,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // ignore API logout failure and clear local session anyway
+    }
+
     setUser(null);
-    AsyncStorage.multiRemove([
+    await AsyncStorage.multiRemove([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_DATA,
       STORAGE_KEYS.REFRESH_TOKEN,
@@ -183,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         login,
+        loginWithGoogle,
         fetchProfile,
         register,
         logout,

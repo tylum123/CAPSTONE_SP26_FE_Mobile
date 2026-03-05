@@ -41,7 +41,7 @@ export const jobService = {
     const response = await api.get<ApiResponse<JobCategoryDTO[]>>(
       API_ENDPOINTS.JOB.CATEGORY_LIST,
     );
-    return response.data.data;
+    return Array.isArray(response.data.data) ? response.data.data : [];
   },
 
   getCategoryDetail: async (id: string): Promise<JobCategoryDTO> => {
@@ -55,7 +55,7 @@ export const jobService = {
     const response = await api.get<ApiResponse<JobPostDTO[]>>(
       API_ENDPOINTS.JOB.POST_LIST,
     );
-    return response.data.data;
+    return Array.isArray(response.data.data) ? response.data.data : [];
   },
 
   getJobPostDetail: async (id: string): Promise<JobPostDTO> => {

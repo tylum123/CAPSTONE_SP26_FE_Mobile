@@ -25,7 +25,6 @@ import {
   Wallet,
   Briefcase,
   Star,
-  Award,
   Bell,
   FileText,
   ChevronRight,
@@ -44,7 +43,7 @@ export function WorkerProfileScreen({ navigation }: any) {
     ageRange: "25-34",
     primaryLocation: "Cần Thơ, Việt Nam",
     travelRadiusKmPreference: 10,
-    experienceLevelId: "demo",
+    experienceLevelId: 1,
     experienceLevel: "Trung cấp",
     averageRating: 4.8,
     availabilitySchedule: "T2-T7",
@@ -90,7 +89,13 @@ export function WorkerProfileScreen({ navigation }: any) {
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
       { text: "Hủy", style: "cancel" },
-      { text: "Đăng xuất", style: "destructive", onPress: logout },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: () => {
+          logout().catch(() => undefined);
+        },
+      },
     ]);
   };
 
@@ -101,7 +106,7 @@ export function WorkerProfileScreen({ navigation }: any) {
         ageRange: displayProfile.ageRange || "",
         primaryLocation: displayProfile.primaryLocation || "",
         travelRadiusKmPreference: displayProfile.travelRadiusKmPreference,
-        experienceLevelId: displayProfile.experienceLevelId || "",
+        experienceLevelId: displayProfile.experienceLevelId || 1,
         availabilitySchedule: displayProfile.availabilitySchedule || "",
         avatarUrl: displayProfile.avatarUrl || "",
       },
@@ -316,19 +321,18 @@ export function WorkerProfileScreen({ navigation }: any) {
             <CardContent style={styles.menuCardContent}>
               <ListItem
                 title="Đăng xuất"
-                style={{ backgroundColor: COLORS.rose[50] }}
+                style={{ backgroundColor: COLORS.red[50] }}
                 leftSlot={
                   <View
                     style={[
                       styles.menuIconContainer,
-                      { backgroundColor: COLORS.rose[50] },
+                      { backgroundColor: COLORS.red[50] },
                     ]}
                   >
                     <LogOut size={20} color={COLORS.rose[500]} />
                   </View>
                 }
                 onPress={handleLogout}
-                isLast
               />
             </CardContent>
           </Card>
@@ -373,7 +377,7 @@ const styles = StyleSheet.create({
     color: COLORS.slate[900],
   },
   role: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
     marginTop: 2,
   },
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   detailValue: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[900],
     fontWeight: "600",
   },

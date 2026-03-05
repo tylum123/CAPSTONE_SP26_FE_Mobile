@@ -6,3 +6,4 @@ export * from "./notification.service";
 export * from "./worker-profile.service";
 export * from "./attendance.service";
 export * from "./media.service";
+export * from "./auth-token.service";

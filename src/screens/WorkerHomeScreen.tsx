@@ -4,18 +4,15 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
 } from "react-native";
 import { SectionHeader, ListItem, EmptyState } from "../components/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   MapPin,
-  Clock,
   Banknote,
   Star,
   Briefcase,
   TrendingUp,
-  Zap,
 } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -486,7 +483,7 @@ const styles = StyleSheet.create({
     color: COLORS.slate[600],
   },
   wageText: {
-    ...TYPOGRAPHY.subtitle,
+    ...TYPOGRAPHY.subtitle1,
     color: COLORS.emerald[700],
   },
   bottomSpacing: {

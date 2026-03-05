@@ -43,14 +43,34 @@ cd CAPSTONE_SP26_FE_Mobile
 npm install
 ```
 
-3. Chạy ứng dụng:
+3. Cấu hình môi trường:
+
+Tạo file `.env.development` từ template (hoặc chỉnh sửa file có sẵn):
 
 ```bash
-# Chạy trên Expo Go
-npm start
+# .env.development
+API_BASE_URL_TEST=http://<IP_MÁY_BẠN>:5057
+API_TIMEOUT=30000
 
-# Chạy trên Android
-npm run android
+GOOGLE_ANDROID_CLIENT_ID=<android_client_id>
+GOOGLE_WEB_CLIENT_ID=<web_client_id>
+
+NODE_ENV=development
+```
+
+> **Lưu ý:** `API_BASE_URL_TEST` phải là IP thực của máy chạy backend trên cùng mạng WiFi với điện thoại. Xem phần [Cập nhật IP tự động](#-cập nhật-ip-tự-động) bên dưới.
+
+4. Chạy ứng dụng:
+
+```bash
+# Tự động cập nhật IP rồi start (khuyến nghị)
+npm run dev
+
+# Tự động cập nhật IP rồi start trên Android
+npm run dev:android
+
+# Chạy thông thường (không cập nhật IP)
+npm start
 
 # Chạy trên iOS
 npm run ios
@@ -146,10 +166,51 @@ npm test
 
 ## Scripts
 
-- `npm start` - Khởi động Expo development server
-- `npm run android` - Chạy trên Android emulator/device
-- `npm run ios` - Chạy trên iOS simulator/device
-- `npm run web` - Chạy trên web browser
+| Script                | Mô tả                                            |
+| --------------------- | ------------------------------------------------ |
+| `npm start`           | Khởi động Expo development server                |
+| `npm run android`     | Chạy trên Android emulator/device                |
+| `npm run ios`         | Chạy trên iOS simulator/device                   |
+| `npm run web`         | Chạy trên web browser                            |
+| `npm run update-ip`   | Cập nhật IP WiFi hiện tại vào `.env.development` |
+| `npm run dev`         | Cập nhật IP + khởi động Expo (dùng hàng ngày)    |
+| `npm run dev:android` | Cập nhật IP + khởi động trên Android             |
+
+## 📡 Cập nhật IP tự động
+
+Khi bạn thay đổi vị trí làm việc (đổi mạng WiFi), IP máy tính sẽ thay đổi khiến app không kết nối được với backend local. Script `scripts/update-ip.js` giải quyết vấn đề này.
+
+### Cách hoạt động
+
+Script tự động:
+
+1. Detect IP WiFi/LAN hiện tại của máy qua `os.networkInterfaces()` (ưu tiên WiFi > Ethernet, bỏ qua VMware/WSL/Docker)
+2. Ghi đè `API_BASE_URL_TEST` trong `.env.development`
+3. Không cần cài thêm package — dùng Node.js built-in
+
+### Cách dùng
+
+```bash
+# Chỉ cập nhật IP (giữ nguyên port 5057)
+npm run update-ip
+
+# Cập nhật IP với port tuỳ chỉnh
+node scripts/update-ip.js 3000
+
+# Cập nhật IP rồi start app luôn (workflow thông thường)
+npm run dev
+```
+
+### Output mẫu
+
+```
+🌐  Interface: Wi-Fi 2 → 192.168.2.105
+🔄  Cũ: http://192.168.1.41:5057
+✅  Mới: http://192.168.2.105:5057
+📄  Đã cập nhật: .env.development
+```
+
+> **Lưu ý:** Sau khi cập nhật IP, Expo cần được restart để load lại biến môi trường (`npm run dev` đã tự xử lý việc này).
 
 ## Contributing
 

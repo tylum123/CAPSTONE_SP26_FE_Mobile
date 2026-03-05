@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,110 +13,130 @@ import {
   Image,
 } from "react-native";
 import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+import { makeRedirectUri } from "expo-auth-session";
+import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
+import { CONFIG } from "../config";
+
+WebBrowser.maybeCompleteAuthSession();
+
+// Proxy redirect URI cho Expo Go (phải được thêm vào Google Console)
+const EXPO_GO_REDIRECT_URI =
+  "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mobile";
 
 type LoginTab = "phone" | "email";
 
 export function LoginScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<LoginTab>("phone");
-
-  // Phone login states
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneOtp, setPhoneOtp] = useState("");
-  const [phoneCountdown, setPhoneCountdown] = useState(0);
-
-  // Email login states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
+  const isExpoGo =
+    Constants.appOwnership === "expo" ||
+    Constants.executionEnvironment === "storeClient";
 
-  // Countdown timer for OTP resend
+  // androidClientId bắt buộc trên Android (kể cả Expo Go).
+  // Expo Go dùng proxy redirect (auth.expo.io); native build dùng scheme riêng.
+  const [googleRequest, googleResponse, promptGoogleAuth] =
+    Google.useIdTokenAuthRequest({
+      webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID || undefined,
+      androidClientId: CONFIG.GOOGLE_ANDROID_CLIENT_ID || undefined,
+      redirectUri: isExpoGo
+        ? EXPO_GO_REDIRECT_URI
+        : makeRedirectUri({ scheme: "agrotemp" }),
+      selectAccount: true,
+      scopes: ["openid", "profile", "email"],
+    });
+
   useEffect(() => {
-    if (phoneCountdown > 0) {
-      const timer = setTimeout(
-        () => setPhoneCountdown(phoneCountdown - 1),
-        1000,
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [phoneCountdown]);
+    const doGoogleLogin = async () => {
+      if (!googleResponse) {
+        return;
+      }
 
-  const handleSendPhoneOtp = async () => {
-    if (!phoneNumber) {
-      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
-      return;
-    }
+      if (googleResponse.type === "error") {
+        const oauthError =
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (googleResponse.params as any)?.error_description ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (googleResponse.params as any)?.error ||
+          "Google OAuth request failed.";
+        Alert.alert("Google Login lỗi", String(oauthError));
+        return;
+      }
 
-    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
-      return;
-    }
+      if (googleResponse.type !== "success") {
+        return;
+      }
 
-    setLoading(true);
-    try {
-      // TODO: Call API to send OTP
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setPhoneOtpSent(true);
-      setPhoneCountdown(60);
-      Alert.alert("Thành công", "Mã OTP đã được gửi đến số điện thoại của bạn");
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể gửi OTP. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const idToken = googleResponse.params?.id_token;
+      if (!idToken) {
+        Alert.alert("Lỗi", "Không lấy được Google ID token.");
+        return;
+      }
 
-  const handlePhoneLogin = async () => {
-    if (!phoneOtp || phoneOtp.length !== 6) {
-      Alert.alert("Lỗi", "Vui lòng nhập mã OTP 6 số");
-      return;
-    }
+      setLoading(true);
+      try {
+        await loginWithGoogle(idToken, 3);
+        Alert.alert("Thành công", "Đăng nhập Google thành công");
+      } catch {
+        Alert.alert("Lỗi", "Đăng nhập Google thất bại. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setLoading(true);
-    try {
-      // TODO: Call API to verify OTP and login
-      await login(phoneNumber, phoneOtp);
-    } catch (error) {
-      Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng kiểm tra lại mã OTP.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    doGoogleLogin().catch(() => undefined);
+  }, [googleResponse, loginWithGoogle]);
 
-  const handleEmailLogin = async () => {
-    if (!email || !password) {
+  const handleLogin = async () => {
+    const identifier =
+      activeTab === "phone" ? phoneNumber.trim() : email.trim();
+
+    if (!identifier || !password) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Lỗi", "Email không hợp lệ");
-      return;
+    if (activeTab === "phone") {
+      const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+      if (!phoneRegex.test(identifier)) {
+        Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
+        return;
+      }
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(identifier)) {
+        Alert.alert("Lỗi", "Email không hợp lệ");
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      await login(email, password);
-      Alert.alert("Đăng Nhập Thành Công");
-    } catch (error) {
+      await login(identifier, password);
+      Alert.alert("Thành công", "Đăng nhập thành công");
+    } catch {
       Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOtp = () => {
-    if (phoneCountdown === 0) {
-      handleSendPhoneOtp();
+  const handleGoogleLogin = async () => {
+    if (!googleRequest) {
+      Alert.alert("Lỗi", "Google Sign-In chưa sẵn sàng. Vui lòng thử lại.");
+      return;
     }
+
+    await promptGoogleAuth();
   };
 
   return (
@@ -135,7 +155,6 @@ export function LoginScreen({ navigation }: any) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoWrapper}>
               <Image
@@ -150,7 +169,6 @@ export function LoginScreen({ navigation }: any) {
             </Text>
           </View>
 
-          {/* Tabs */}
           <View style={styles.tabs}>
             <TouchableOpacity
               style={[styles.tab, activeTab === "phone" && styles.activeTab]}
@@ -188,159 +206,79 @@ export function LoginScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
-            {activeTab === "phone" ? (
-              // Phone Login Form
-              <>
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Phone size={20} color={COLORS.gray[500]} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Số điện thoại"
-                    placeholderTextColor={COLORS.gray[400]}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    maxLength={11}
-                    editable={!phoneOtpSent}
-                  />
-                </View>
-
-                {phoneOtpSent && (
-                  <View style={styles.inputContainer}>
-                    <View style={styles.inputIcon}>
-                      <Lock size={20} color={COLORS.gray[500]} />
-                    </View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Nhập mã OTP (6 số)"
-                      placeholderTextColor={COLORS.gray[400]}
-                      value={phoneOtp}
-                      onChangeText={setPhoneOtp}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                    />
-                  </View>
-                )}
-
-                {phoneOtpSent ? (
-                  <>
-                    <Button
-                      onPress={handlePhoneLogin}
-                      loading={loading}
-                      style={styles.loginButton}
-                    >
-                      Đăng nhập
-                    </Button>
-
-                    <View style={styles.resendContainer}>
-                      <Text style={styles.resendText}>
-                        Không nhận được mã?{" "}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={handleResendOtp}
-                        disabled={phoneCountdown > 0}
-                      >
-                        <Text
-                          style={[
-                            styles.resendLink,
-                            phoneCountdown > 0 && styles.resendDisabled,
-                          ]}
-                        >
-                          {phoneCountdown > 0
-                            ? `Gửi lại (${phoneCountdown}s)`
-                            : "Gửi lại mã"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        setPhoneOtpSent(false);
-                        setPhoneOtp("");
-                        setPhoneCountdown(0);
-                      }}
-                      style={styles.changeNumberButton}
-                    >
-                      <Text style={styles.changeNumberText}>
-                        Đổi số điện thoại
-                      </Text>
-                    </TouchableOpacity>
-                  </>
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIcon}>
+                {activeTab === "phone" ? (
+                  <Phone size={20} color={COLORS.gray[500]} />
                 ) : (
-                  <Button
-                    onPress={handleSendPhoneOtp}
-                    loading={loading}
-                    style={styles.loginButton}
-                  >
-                    Gửi mã OTP
-                  </Button>
+                  <Mail size={20} color={COLORS.gray[500]} />
                 )}
-              </>
-            ) : (
-              // Email Login Form
-              <>
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Mail size={20} color={COLORS.gray[500]} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor={COLORS.gray[400]}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder={activeTab === "phone" ? "Số điện thoại" : "Email"}
+                placeholderTextColor={COLORS.gray[400]}
+                value={activeTab === "phone" ? phoneNumber : email}
+                onChangeText={activeTab === "phone" ? setPhoneNumber : setEmail}
+                keyboardType={
+                  activeTab === "phone" ? "phone-pad" : "email-address"
+                }
+                autoCapitalize="none"
+                maxLength={activeTab === "phone" ? 11 : undefined}
+              />
+            </View>
 
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Lock size={20} color={COLORS.gray[500]} />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Mật khẩu"
-                    placeholderTextColor={COLORS.gray[400]}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} color={COLORS.gray[500]} />
-                    ) : (
-                      <Eye size={20} color={COLORS.gray[500]} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIcon}>
+                <Lock size={20} color={COLORS.gray[500]} />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Mật khẩu"
+                placeholderTextColor={COLORS.gray[400]}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={COLORS.gray[500]} />
+                ) : (
+                  <Eye size={20} color={COLORS.gray[500]} />
+                )}
+              </TouchableOpacity>
+            </View>
 
-                <TouchableOpacity
-                  onPress={() => navigation.navigate("ForgotPassword")}
-                  style={styles.forgotPassword}
-                >
-                  <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPassword")}
+              style={styles.forgotPassword}
+            >
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+            </TouchableOpacity>
 
-                <Button
-                  onPress={handleEmailLogin}
-                  loading={loading}
-                  style={styles.loginButton}
-                >
-                  Đăng nhập
-                </Button>
-              </>
-            )}
+            <Button
+              onPress={handleLogin}
+              loading={loading}
+              style={styles.loginButton}
+            >
+              Đăng nhập
+            </Button>
+
+            <Text style={styles.orText}>Hoặc đăng nhập Google</Text>
+            <Button
+              variant="outline"
+              onPress={handleGoogleLogin}
+              loading={loading}
+              style={styles.googleButton}
+            >
+              Đăng nhập Google
+            </Button>
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Chưa có tài khoản? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Register")}>
@@ -411,6 +349,33 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: SPACING.sm,
   },
+  tabs: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderRadius: BORDER_RADIUS.xl,
+    padding: 4,
+    marginBottom: SPACING.md,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    gap: SPACING.xs,
+  },
+  activeTab: {
+    backgroundColor: COLORS.emerald[600],
+  },
+  tabText: {
+    color: COLORS.gray[100],
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: COLORS.white,
+  },
   form: {
     marginBottom: SPACING.md,
   },
@@ -434,97 +399,52 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: SPACING.xs,
   },
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 4,
-    marginBottom: SPACING.md,
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: "transparent",
-  },
-  activeTab: {
-    backgroundColor: COLORS.emerald[600],
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.gray[600],
-  },
-  activeTabText: {
-    color: COLORS.white,
-  },
-  resendContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: SPACING.md,
-  },
-  resendText: {
-    fontSize: 14,
-    color: COLORS.white,
-  },
-  resendLink: {
-    fontSize: 14,
-    color: COLORS.emerald[100],
-    fontWeight: "600",
-  },
-  resendDisabled: {
-    color: COLORS.gray[400],
-  },
-  changeNumberButton: {
-    marginTop: SPACING.md,
-    alignItems: "center",
-  },
-  changeNumberText: {
-    fontSize: 14,
-    color: COLORS.white,
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   forgotPasswordText: {
-    fontSize: 14,
     color: COLORS.white,
-    fontWeight: "600",
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
   loginButton: {
-    height: 56,
+    marginTop: SPACING.xs,
+  },
+  orText: {
+    color: COLORS.white,
+    textAlign: "center",
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    fontSize: 13,
+    opacity: 0.9,
+  },
+  googleButton: {
+    marginTop: SPACING.xs,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: SPACING.sm,
   },
   footerText: {
-    fontSize: 14,
     color: COLORS.white,
+    fontSize: 14,
   },
   registerLink: {
-    fontSize: 14,
     color: COLORS.emerald[100],
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
   },
   demoLinkContainer: {
-    marginTop: SPACING.sm,
+    marginTop: SPACING.md,
     alignItems: "center",
   },
   demoLinkText: {
-    fontSize: 14,
     color: COLORS.white,
+    opacity: 0.9,
     textDecorationLine: "underline",
+    fontSize: 13,
   },
 });

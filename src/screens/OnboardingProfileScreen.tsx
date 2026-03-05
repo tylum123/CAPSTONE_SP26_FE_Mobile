@@ -34,6 +34,16 @@ export function OnboardingProfileScreen({ navigation }: any) {
       return;
     }
 
+    const parsedExperienceLevelId = Number(experienceLevelId);
+    if (
+      Number.isNaN(parsedExperienceLevelId) ||
+      parsedExperienceLevelId < 1 ||
+      parsedExperienceLevelId > 3
+    ) {
+      Alert.alert("Loi", "ExperienceLevelId phai la so tu 1 den 3");
+      return;
+    }
+
     setLoading(true);
     try {
       await workerProfileService.updateProfile({
@@ -43,9 +53,9 @@ export function OnboardingProfileScreen({ navigation }: any) {
         travelRadiusKmPreference: travelRadiusKmPreference
           ? Number(travelRadiusKmPreference)
           : undefined,
-        experienceLevelId,
+        experienceLevelId: parsedExperienceLevelId,
         availabilitySchedule,
-        avatarUrl,
+        avatarUrl: avatarUrl || "",
       });
       navigation.replace("Worker");
     } catch {

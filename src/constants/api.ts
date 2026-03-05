@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
   // Worker profile
   WORKER_PROFILE: {
     BASE: `${API_PREFIX}/worker-profile`,
+    BY_USER_ID: (userId: string) => `${API_PREFIX}/worker-profile/${userId}`,
   },
   // User
   USER: {
@@ -51,9 +52,14 @@ export const API_ENDPOINTS = {
   ATTENDANCE: {
     CHECK_IN: `${API_PREFIX}/attendance/check-in`,
     CHECK_OUT: `${API_PREFIX}/attendance/check-out`,
+    APPROVE: `${API_PREFIX}/attendance/approve`,
     DETAIL: (id: string) => `${API_PREFIX}/attendance/${id}`,
     WORKER: (workerProfileId: string) =>
       `${API_PREFIX}/attendance/worker/${workerProfileId}`,
+    FARM: (farmerProfileId: string) =>
+      `${API_PREFIX}/attendance/farm/${farmerProfileId}`,
+    FARM_WORKER: (farmerProfileId: string, workerProfileId: string) =>
+      `${API_PREFIX}/attendance/farm/${farmerProfileId}/worker/${workerProfileId}`,
   },
   // Media
   MEDIA: {

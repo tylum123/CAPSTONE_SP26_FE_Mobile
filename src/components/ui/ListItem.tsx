@@ -94,11 +94,11 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   title: {
-    ...TYPOGRAPHY.subtitle,
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.slate[800],
   },
   subtitle: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body2,
     color: COLORS.slate[600],
     marginTop: SPACING.xs,
   },

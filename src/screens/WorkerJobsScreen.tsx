@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     color: COLORS.slate[900],
   },
   subtitle: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
   },
   tabWrap: {

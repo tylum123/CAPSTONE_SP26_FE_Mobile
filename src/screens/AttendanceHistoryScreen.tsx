@@ -11,7 +11,7 @@ import { Calendar, Clock } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { EmptyState } from "../components/ui";
 import { COLORS, SPACING } from "../constants/theme";
-import { attendanceService, workerProfileService } from "../services";
+import { attendanceService } from "../services";
 import { WorkerAttendanceDTO } from "../services/attendance.service";
 
 export function AttendanceHistoryScreen({ navigation }: any) {
@@ -20,8 +20,7 @@ export function AttendanceHistoryScreen({ navigation }: any) {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const profile = await workerProfileService.getProfile();
-        const result = await attendanceService.getWorkerAttendance(profile.id);
+        const result = await attendanceService.getMyWorkerAttendance();
         setRecords(result);
       } catch {
         setRecords([]);

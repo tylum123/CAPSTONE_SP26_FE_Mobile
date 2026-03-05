@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   label: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
   },
   labelActive: {

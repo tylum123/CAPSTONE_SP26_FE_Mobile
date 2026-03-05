@@ -7,11 +7,26 @@ const baseUrl = isDev
   ? extra.API_BASE_URL_TEST || extra.API_BASE_URL
   : extra.API_BASE_URL;
 
+const normalizeGoogleClientId = (value: unknown): string => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/+$/g, "");
+};
+
 // App Configuration
 export const CONFIG = {
   // API
   API_BASE_URL: baseUrl || "http://localhost:3000/api",
   API_TIMEOUT: parseInt(extra.API_TIMEOUT || "") || API_CONFIG.TIMEOUT,
+  GOOGLE_ANDROID_CLIENT_ID: normalizeGoogleClientId(
+    extra.GOOGLE_ANDROID_CLIENT_ID,
+  ),
+  GOOGLE_WEB_CLIENT_ID: normalizeGoogleClientId(extra.GOOGLE_WEB_CLIENT_ID),
 
   // Feature Flags
   ENABLE_ANALYTICS: false,

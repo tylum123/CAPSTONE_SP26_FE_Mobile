@@ -35,7 +35,7 @@ export function EditProfileScreen({ navigation, route }: any) {
     currentProfile?.travelRadiusKmPreference?.toString() || "",
   );
   const [experienceLevelId, setExperienceLevelId] = useState(
-    currentProfile?.experienceLevelId || "",
+    currentProfile?.experienceLevelId?.toString() || "",
   );
   const [availabilitySchedule, setAvailabilitySchedule] = useState(
     currentProfile?.availabilitySchedule || "",
@@ -88,6 +88,20 @@ export function EditProfileScreen({ navigation, route }: any) {
       return;
     }
 
+    const parsedExperienceLevelId = Number(experienceLevelId);
+    if (
+      Number.isNaN(parsedExperienceLevelId) ||
+      parsedExperienceLevelId < 1 ||
+      parsedExperienceLevelId > 3
+    ) {
+      showFeedback({
+        title: "Dữ liệu chưa hợp lệ",
+        message: "Mức kinh nghiệm phải là số từ 1 đến 3.",
+        variant: "error",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const updatedProfile = await workerProfileService.updateProfile({
@@ -97,9 +111,9 @@ export function EditProfileScreen({ navigation, route }: any) {
         travelRadiusKmPreference: travelRadiusKmPreference
           ? Number(travelRadiusKmPreference)
           : undefined,
-        experienceLevelId,
+        experienceLevelId: parsedExperienceLevelId,
         availabilitySchedule,
-        avatarUrl,
+        avatarUrl: avatarUrl || "",
       });
 
       onUpdated?.(updatedProfile);
