@@ -41,7 +41,6 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android
 
 # Exclude web version folder
 mobile đẹp/
