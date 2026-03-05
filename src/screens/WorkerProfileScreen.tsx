@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,141 +6,337 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card, CardContent } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
-import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { Card, CardContent } from "../components/ui/Card";
+import { ListItem } from "../components/ui/ListItem";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
 import {
-  Star,
-  Briefcase,
-  Award,
-  MapPin,
+  Heart,
+  CreditCard,
+  Users,
+  Settings,
+  LogOut,
+  Edit,
   Phone,
   Mail,
-  LogOut,
-  Edit2,
+  Wallet,
+  Briefcase,
+  Star,
+  Bell,
+  FileText,
+  ChevronRight,
 } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
+import { workerProfileService, WorkerProfileDTO } from "../services";
 
-export function WorkerProfileScreen() {
-  const { user, logout } = useAuth();
+export function WorkerProfileScreen({ navigation }: any) {
+  const { user, logout, isAuthenticated } = useAuth();
+  const [profile, setProfile] = useState<WorkerProfileDTO | null>(null);
+
+  const demoProfile: WorkerProfileDTO = {
+    id: "demo",
+    userId: "demo",
+    fullName: "Minh Nguyen",
+    ageRange: "25-34",
+    primaryLocation: "Cần Thơ, Việt Nam",
+    travelRadiusKmPreference: 10,
+    experienceLevelId: 1,
+    experienceLevel: "Trung cấp",
+    averageRating: 4.8,
+    availabilitySchedule: "T2-T7",
+    totalJobsCompleted: 12,
+    avatarUrl: "",
+    createdAt: "",
+    updatedAt: "",
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProfile(demoProfile);
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const data = await workerProfileService.getProfile();
+        setProfile(data);
+      } catch {
+        setProfile(null);
+      }
+    };
+
+    loadProfile().catch(() => undefined);
+  }, [isAuthenticated]);
+
+  const displayProfile = useMemo(() => {
+    if (!isAuthenticated) return demoProfile;
+    if (profile) return profile;
+    return {
+      ...demoProfile,
+      fullName: user?.name || "",
+      primaryLocation: "",
+      experienceLevel: "",
+      availabilitySchedule: "",
+      averageRating: 0,
+      totalJobsCompleted: 0,
+      travelRadiusKmPreference: null,
+    };
+  }, [profile, isAuthenticated, user?.name]);
 
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
       { text: "Hủy", style: "cancel" },
-      { text: "Đăng xuất", style: "destructive", onPress: logout },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: () => {
+          logout().catch(() => undefined);
+        },
+      },
     ]);
   };
 
   const handleEditProfile = () => {
-    Alert.alert("Chỉnh sửa hồ sơ", "Chức năng này sẽ được phát triển sau");
+    navigation.navigate("EditProfile", {
+      currentProfile: {
+        fullName: displayProfile.fullName || user?.name || "",
+        ageRange: displayProfile.ageRange || "",
+        primaryLocation: displayProfile.primaryLocation || "",
+        travelRadiusKmPreference: displayProfile.travelRadiusKmPreference,
+        experienceLevelId: displayProfile.experienceLevelId || 1,
+        availabilitySchedule: displayProfile.availabilitySchedule || "",
+        avatarUrl: displayProfile.avatarUrl || "",
+      },
+      onUpdated: (updatedProfile: WorkerProfileDTO) =>
+        setProfile(updatedProfile),
+    });
   };
 
+  const formatValue = (value?: string | number | null) => {
+    if (value === null || value === undefined || value === "") {
+      return "Chưa cập nhật";
+    }
+    return String(value);
+  };
+
+  const menuItems = [
+    {
+      icon: Bell,
+      label: "Thông báo",
+      onPress: () => navigation.navigate("Notifications"),
+      color: COLORS.amber[600],
+    },
+    {
+      icon: Heart,
+      label: "Việc đã lưu",
+      onPress: () => {},
+      color: COLORS.rose[500],
+    },
+    {
+      icon: FileText,
+      label: "Lịch sử ứng tuyển",
+      onPress: () => navigation.navigate("Jobs"),
+      color: COLORS.blue[600],
+    },
+    {
+      icon: CreditCard,
+      label: "Ví & Thanh toán",
+      onPress: () => navigation.navigate("Wallet"),
+      color: COLORS.emerald[600],
+    },
+    {
+      icon: Users,
+      label: "Giới thiệu bạn bè",
+      onPress: () => {},
+      color: COLORS.teal[400],
+    },
+    {
+      icon: Settings,
+      label: "Cài đặt",
+      onPress: () => {},
+      color: COLORS.gray[600],
+    },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
-      <ScrollView style={styles.container}>
-        {/* Header with Edit Button */}
-        <ImageBackground
-          source={require("../../assets/bgWorker.jpg")}
-          style={styles.headerContainer}
-          resizeMode="cover"
-        >
-          <View style={styles.headerOverlay}>
-            <View style={styles.header}>
-              <View style={styles.avatarSection}>
-                <Avatar fallback={user?.name?.[0] || "MN"} size={80} />
-                <Text style={styles.name}>{user?.name || "Minh Nguyen"}</Text>
-                <Text style={styles.role}>Người lao động</Text>
-              </View>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Section */}
+        <View style={styles.hero}>
+          <View style={styles.heroHeader}>
+            <Avatar
+              source={
+                displayProfile.avatarUrl
+                  ? { uri: displayProfile.avatarUrl }
+                  : undefined
+              }
+              fallback={displayProfile.fullName?.[0] || user?.name?.[0] || "M"}
+              size={80}
+            />
+            <View style={styles.heroTextGroup}>
+              <Text style={styles.name}>
+                {displayProfile.fullName || user?.name || "Minh Nguyen"}
+              </Text>
+              <Text style={styles.role}>Người lao động</Text>
             </View>
             <TouchableOpacity
-              style={styles.editButton}
+              style={styles.editIconButton}
               onPress={handleEditProfile}
             >
-              <Edit2 size={20} color={COLORS.white} />
+              <Edit size={20} color={COLORS.slate[600]} />
             </TouchableOpacity>
           </View>
-        </ImageBackground>
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Star
-                size={20}
-                color={COLORS.amber[400]}
-                fill={COLORS.amber[400]}
-              />
-            </View>
-            <Text style={styles.statValue}>4.8</Text>
-            <Text style={styles.statLabel}>Đánh giá</Text>
-          </View>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Briefcase size={20} color={COLORS.emerald[600]} />
-            </View>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Việc làm</Text>
-          </View>
-          <View style={styles.statItem}>
-            <View style={styles.statIcon}>
-              <Award size={20} color={COLORS.teal[600]} />
-            </View>
-            <Text style={styles.statValue}>98%</Text>
-            <Text style={styles.statLabel}>Hoàn thành</Text>
-          </View>
-        </View>
 
-        <Card style={styles.card}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-            <View style={styles.infoRow}>
-              <MapPin size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>Cần Thơ, Việt Nam</Text>
+          <View style={styles.contactRow}>
+            <View style={styles.contactChip}>
+              <Phone size={14} color={COLORS.slate[500]} />
+              <Text style={styles.contactText}>
+                {isAuthenticated ? "--" : "0123 456 789"}
+              </Text>
             </View>
-            <View style={styles.infoRow}>
-              <Phone size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>0123 456 789</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Mail size={18} color={COLORS.gray[600]} />
-              <Text style={styles.infoText}>
+            <View style={styles.contactChip}>
+              <Mail size={14} color={COLORS.slate[500]} />
+              <Text style={styles.contactText}>
                 {user?.email || "minh.nguyen@email.com"}
               </Text>
             </View>
-          </CardContent>
-        </Card>
-
-        <Card style={styles.card}>
-          <CardContent>
-            <Text style={styles.sectionTitle}>Kỹ năng</Text>
-            <View style={styles.skillsContainer}>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Thu hoạch lúa</Text>
-              </View>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Chăm sóc cây trồng</Text>
-              </View>
-              <View style={styles.skillBadge}>
-                <Text style={styles.skillText}>Làm đất</Text>
-              </View>
-            </View>
-          </CardContent>
-        </Card>
-
-        <View style={styles.logoutContainer}>
-          <Button
-            variant="outline"
-            onPress={handleLogout}
-            style={styles.logoutButton}
-          >
-            <LogOut size={15} color={COLORS.rose[500]} />
-            <Text style={styles.logoutText}> Đăng xuất</Text>
-          </Button>
+          </View>
         </View>
 
-        <View style={styles.bottomSpacing} />
+        {/* Stats Grid */}
+        <View style={styles.section}>
+          <Card>
+            <CardContent style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Wallet size={24} color={COLORS.emerald[600]} />
+                <Text style={styles.statValue}>
+                  {isAuthenticated ? "--" : "2.5M"}
+                </Text>
+                <Text style={styles.statLabel}>Ví tiền</Text>
+              </View>
+              <View style={[styles.statItem, styles.statBorderLeft]}>
+                <Briefcase size={24} color={COLORS.blue[600]} />
+                <Text style={styles.statValue}>
+                  {displayProfile.totalJobsCompleted}
+                </Text>
+                <Text style={styles.statLabel}>Việc làm</Text>
+              </View>
+              <View style={[styles.statItem, styles.statBorderLeft]}>
+                <Star size={24} color={COLORS.amber[400]} />
+                <Text style={styles.statValue}>
+                  {displayProfile.averageRating}
+                </Text>
+                <Text style={styles.statLabel}>Đánh giá</Text>
+              </View>
+            </CardContent>
+          </Card>
+        </View>
+
+        {/* Details */}
+        <View style={styles.section}>
+          <SectionHeader title="Thông tin chi tiết" />
+          <Card>
+            <CardContent style={styles.detailGrid}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Độ tuổi</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.ageRange)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Khu vực</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.primaryLocation)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Kinh nghiệm</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.experienceLevel)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Lịch làm</Text>
+                <Text style={styles.detailValue}>
+                  {formatValue(displayProfile.availabilitySchedule)}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Bán kính</Text>
+                <Text style={styles.detailValue}>
+                  {displayProfile.travelRadiusKmPreference !== null &&
+                  displayProfile.travelRadiusKmPreference !== undefined
+                    ? `${displayProfile.travelRadiusKmPreference} km`
+                    : "Chưa cập nhật"}
+                </Text>
+              </View>
+            </CardContent>
+          </Card>
+        </View>
+
+        {/* Menu Items */}
+        <View style={styles.section}>
+          <SectionHeader title="Tiện ích" />
+          <Card>
+            <CardContent style={styles.menuCardContent}>
+              {menuItems.map((item, index) => (
+                <ListItem
+                  key={index}
+                  title={item.label}
+                  leftSlot={
+                    <View
+                      style={[
+                        styles.menuIconContainer,
+                        { backgroundColor: `${item.color}15` },
+                      ]}
+                    >
+                      <item.icon size={20} color={item.color} />
+                    </View>
+                  }
+                  rightSlot={
+                    <ChevronRight size={20} color={COLORS.slate[400]} />
+                  }
+                  onPress={item.onPress}
+                  style={
+                    index < menuItems.length - 1
+                      ? styles.menuItemBorder
+                      : undefined
+                  }
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </View>
+
+        {/* Logout Button */}
+        <View style={styles.section}>
+          <Card>
+            <CardContent style={styles.menuCardContent}>
+              <ListItem
+                title="Đăng xuất"
+                style={{ backgroundColor: COLORS.red[50] }}
+                leftSlot={
+                  <View
+                    style={[
+                      styles.menuIconContainer,
+                      { backgroundColor: COLORS.red[50] },
+                    ]}
+                  >
+                    <LogOut size={20} color={COLORS.rose[500]} />
+                  </View>
+                }
+                onPress={handleLogout}
+              />
+            </CardContent>
+          </Card>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -149,126 +345,122 @@ export function WorkerProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.slate[50],
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.slate[50],
   },
-  headerContainer: {
-    position: "relative",
+  scrollContent: {
+    paddingBottom: 100,
   },
-  headerOverlay: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  hero: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[200],
+    marginBottom: SPACING.md,
   },
-  header: {
-    paddingVertical: SPACING.xl,
+  heroHeader: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  editButton: {
-    position: "absolute",
-    top: SPACING.lg,
-    right: SPACING.lg,
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    zIndex: 10,
-    elevation: 2,
-  },
-  avatarSection: {
-    alignItems: "center",
+  heroTextGroup: {
+    flex: 1,
   },
   name: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: COLORS.white,
-    marginTop: SPACING.md,
+    ...TYPOGRAPHY.title,
+    fontSize: 22,
+    color: COLORS.slate[900],
   },
   role: {
-    fontSize: 14,
-    color: COLORS.white,
-    marginTop: 4,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    padding: SPACING.md,
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: COLORS.gray[900],
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.gray[600],
+    ...TYPOGRAPHY.body1,
+    color: COLORS.slate[600],
     marginTop: 2,
   },
-  card: {
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
+  editIconButton: {
+    padding: SPACING.sm,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.full,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.gray[900],
-    marginBottom: SPACING.md,
+  contactRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    flexWrap: "wrap",
   },
-  infoRow: {
+  contactChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.full,
   },
-  infoText: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+  contactText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[600],
   },
-  skillsContainer: {
+  section: {
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    padding: 0,
+  },
+  statItem: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  statBorderLeft: {
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.slate[100],
+  },
+  statValue: {
+    ...TYPOGRAPHY.title,
+    fontSize: 18,
+    color: COLORS.slate[900],
+  },
+  statLabel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
+  },
+  detailGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: SPACING.md,
   },
-  skillBadge: {
-    backgroundColor: COLORS.emerald[100],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.md,
+  detailItem: {
+    width: "47%",
   },
-  skillText: {
-    fontSize: 12,
-    color: COLORS.emerald[700],
+  detailLabel: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.slate[500],
+    marginBottom: 2,
+  },
+  detailValue: {
+    ...TYPOGRAPHY.body1,
+    color: COLORS.slate[900],
     fontWeight: "600",
   },
-  logoutContainer: {
-    paddingHorizontal: SPACING.md,
-    marginTop: SPACING.lg,
+  menuCardContent: {
+    padding: 0,
   },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[100],
+  },
+  menuIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
-    gap: 8,
-    borderColor: COLORS.rose[500],
-  },
-  logoutText: {
-    color: COLORS.rose[500],
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  bottomSpacing: {
-    height: 100,
+    alignItems: "center",
   },
 });

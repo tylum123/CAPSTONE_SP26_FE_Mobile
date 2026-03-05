@@ -2,14 +2,14 @@
 
 Ứng dụng di động quản lý công việc nông nghiệp, kết nối nông dân (Farmer) và công nhân (Worker).
 
-## 📱 Giới thiệu
+## Giới thiệu
 
 Đây là phần Frontend Mobile của dự án CAPSTONE SP26, được xây dựng bằng React Native và Expo. Ứng dụng cung cấp nền tảng kết nối giữa:
 
 - **Nông dân (Farmer)**: Đăng công việc, quản lý ứng viên, thanh toán
 - **Công nhân (Worker)**: Tìm kiếm công việc, ứng tuyển, quản lý hồ sơ và ví tiền
 
-## 🚀 Công nghệ sử dụng
+## Công nghệ sử dụng
 
 - **React Native** 0.81.5
 - **Expo** ~54.0.31
@@ -19,7 +19,7 @@
 - **Lucide React Native** (Icons)
 - **React Native Reanimated** (Animations)
 
-## 📦 Cài đặt
+## Cài đặt
 
 ### Yêu cầu hệ thống
 
@@ -43,14 +43,34 @@ cd CAPSTONE_SP26_FE_Mobile
 npm install
 ```
 
-3. Chạy ứng dụng:
+3. Cấu hình môi trường:
+
+Tạo file `.env.development` từ template (hoặc chỉnh sửa file có sẵn):
 
 ```bash
-# Chạy trên Expo Go
-npm start
+# .env.development
+API_BASE_URL_TEST=http://<IP_MÁY_BẠN>:5057
+API_TIMEOUT=30000
 
-# Chạy trên Android
-npm run android
+GOOGLE_ANDROID_CLIENT_ID=<android_client_id>
+GOOGLE_WEB_CLIENT_ID=<web_client_id>
+
+NODE_ENV=development
+```
+
+> **Lưu ý:** `API_BASE_URL_TEST` phải là IP thực của máy chạy backend trên cùng mạng WiFi với điện thoại. Xem phần [Cập nhật IP tự động](#-cập nhật-ip-tự-động) bên dưới.
+
+4. Chạy ứng dụng:
+
+```bash
+# Tự động cập nhật IP rồi start (khuyến nghị)
+npm run dev
+
+# Tự động cập nhật IP rồi start trên Android
+npm run dev:android
+
+# Chạy thông thường (không cập nhật IP)
+npm start
 
 # Chạy trên iOS
 npm run ios
@@ -59,7 +79,7 @@ npm run ios
 npm run web
 ```
 
-## 📂 Cấu trúc dự án
+## Cấu trúc dự án
 
 ```
 CAPSTONE_SP26_FE_Mobile/
@@ -95,29 +115,29 @@ CAPSTONE_SP26_FE_Mobile/
 └── assets/               # Images, fonts, etc.
 ```
 
-## 🎯 Tính năng chính
+## Tính năng chính
 
 ### Cho Nông dân (Farmer)
 
-- ✅ Đăng công việc mới
-- ✅ Quản lý danh sách công việc
-- ✅ Xem và quản lý ứng viên
-- ✅ Thanh toán công nhân
-- ✅ Quản lý hồ sơ cá nhân
+- Đăng công việc mới
+- Quản lý danh sách công việc
+- Xem và quản lý ứng viên
+- Thanh toán công nhân
+- Quản lý hồ sơ cá nhân
 
 ### Cho Công nhân (Worker)
 
-- ✅ Tìm kiếm công việc
-- ✅ Ứng tuyển công việc
-- ✅ Quản lý công việc đã ứng tuyển
-- ✅ Quản lý ví tiền
-- ✅ Quản lý hồ sơ cá nhân
+- Tìm kiếm công việc
+- Ứng tuyển công việc
+- Quản lý công việc đã ứng tuyển
+- Quản lý ví tiền
+- Quản lý hồ sơ cá nhân
 
 ## 🔐 Authentication
 
 Ứng dụng sử dụng AuthContext để quản lý authentication state và phân quyền người dùng (Farmer/Worker).
 
-## 🎨 UI/UX
+## UI/UX
 
 - Material Design principles
 - Responsive layout
@@ -125,11 +145,11 @@ CAPSTONE_SP26_FE_Mobile/
 - Smooth animations với React Native Reanimated
 - Safe area handling cho iOS notch và Android navigation bar
 
-## 📱 Platforms
+## Platforms
 
-- ✅ iOS
-- ✅ Android
-- ✅ Web (Expo Web)
+- iOS
+- Android
+- Web (Expo Web)
 
 ## 🛠️ Development
 
@@ -144,33 +164,140 @@ npm start -- --clear
 npm test
 ```
 
-## 📝 Scripts
+## Scripts
 
-- `npm start` - Khởi động Expo development server
-- `npm run android` - Chạy trên Android emulator/device
-- `npm run ios` - Chạy trên iOS simulator/device
-- `npm run web` - Chạy trên web browser
+| Script                | Mô tả                                            |
+| --------------------- | ------------------------------------------------ |
+| `npm start`           | Khởi động Expo development server                |
+| `npm run android`     | Chạy trên Android emulator/device                |
+| `npm run ios`         | Chạy trên iOS simulator/device                   |
+| `npm run web`         | Chạy trên web browser                            |
+| `npm run update-ip`   | Cập nhật IP WiFi hiện tại vào `.env.development` |
+| `npm run dev`         | Cập nhật IP + khởi động Expo (dùng hàng ngày)    |
+| `npm run dev:android` | Cập nhật IP + khởi động trên Android             |
 
-## 🤝 Contributing
+## 📡 Cập nhật IP tự động
 
-1. Fork repository
-2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
+Khi bạn thay đổi vị trí làm việc (đổi mạng WiFi), IP máy tính sẽ thay đổi khiến app không kết nối được với backend local. Script `scripts/update-ip.js` giải quyết vấn đề này.
 
-## 📄 License
+### Cách hoạt động
+
+Script tự động:
+
+1. Detect IP WiFi/LAN hiện tại của máy qua `os.networkInterfaces()` (ưu tiên WiFi > Ethernet, bỏ qua VMware/WSL/Docker)
+2. Ghi đè `API_BASE_URL_TEST` trong `.env.development`
+3. Không cần cài thêm package — dùng Node.js built-in
+
+### Cách dùng
+
+```bash
+# Chỉ cập nhật IP (giữ nguyên port 5057)
+npm run update-ip
+
+# Cập nhật IP với port tuỳ chỉnh
+node scripts/update-ip.js 3000
+
+# Cập nhật IP rồi start app luôn (workflow thông thường)
+npm run dev
+```
+
+### Output mẫu
+
+```
+🌐  Interface: Wi-Fi 2 → 192.168.2.105
+🔄  Cũ: http://192.168.1.41:5057
+✅  Mới: http://192.168.2.105:5057
+📄  Đã cập nhật: .env.development
+```
+
+> **Lưu ý:** Sau khi cập nhật IP, Expo cần được restart để load lại biến môi trường (`npm run dev` đã tự xử lý việc này).
+
+## Contributing
+
+Chúng tôi hoan nghênh mọi đóng góp cho dự án! Để đóng góp, vui lòng làm theo các bước sau:
+
+### Quy trình đóng góp
+
+1. **Fork repository** - Tạo một bản sao của dự án về tài khoản GitHub của bạn
+
+2. **Clone về máy local**
+
+   ```bash
+   git clone https://github.com/<your-username>/CAPSTONE_SP26_FE_Mobile.git
+   cd CAPSTONE_SP26_FE_Mobile
+   ```
+
+3. **Tạo nhánh mới** cho tính năng hoặc bugfix của bạn
+
+   ```bash
+   git checkout -b feature/ten-tinh-nang
+   # hoặc
+   git checkout -b fix/ten-bug
+   ```
+
+4. **Thực hiện thay đổi** và commit code của bạn
+
+   ```bash
+   git add .
+   git commit -m "feat: thêm tính năng xyz"
+   # hoặc
+   git commit -m "fix: sửa lỗi abc"
+   ```
+
+5. **Push lên nhánh của bạn**
+
+   ```bash
+   git push origin feature/ten-tinh-nang
+   ```
+
+6. **Tạo Pull Request** - Mở Pull Request từ nhánh của bạn về nhánh `develop` của repository gốc
+
+### Quy tắc commit message
+
+Vui lòng tuân theo conventional commits:
+
+- `feat:` - Thêm tính năng mới
+- `fix:` - Sửa lỗi
+- `docs:` - Cập nhật documentation
+- `style:` - Thay đổi code formatting, không ảnh hưởng logic
+- `refactor:` - Refactor code
+- `test:` - Thêm hoặc sửa tests
+- `chore:` - Cập nhật build tasks, package manager configs, etc.
+
+### Code style
+
+- Sử dụng TypeScript cho tất cả code mới
+- Tuân theo ESLint rules của dự án
+- Đặt tên biến và hàm rõ ràng, có ý nghĩa
+- Thêm comments cho các đoạn code phức tạp
+- Đảm bảo code của bạn không có lỗi trước khi commit
+
+### Testing
+
+- Kiểm tra ứng dụng chạy được trên cả iOS và Android
+- Test các tính năng mới kỹ lưỡng
+- Đảm bảo không làm hỏng các tính năng hiện có
+
+### Review process
+
+Mọi Pull Request sẽ được review bởi maintainers. Vui lòng:
+
+- Mô tả rõ ràng những thay đổi trong PR
+- Liên kết đến issue liên quan (nếu có)
+- Trả lời các comments và thực hiện thay đổi nếu được yêu cầu
+
+## License
 
 This project is private.
 
-## 👥 Team
+## Team
 
 CAPSTONE SP26 - FPT University
 
-## 📞 Contact
+## Contact
 
 - Repository: [CAPSTONE_SP26_FE_Mobile](https://github.com/tylum123/CAPSTONE_SP26_FE_Mobile)
 
 ---
 
-Made with ❤️ by CAPSTONE SP26 Team
+Made by CAPSTONE SP26 Team

@@ -12,25 +12,37 @@ import {
   ImageBackground,
   Image,
 } from "react-native";
-import { User, Tractor, Mail, Lock, UserCircle } from "lucide-react-native";
+import { Phone, Lock, Eye, EyeOff, Mail, MapPin } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 
 export function RegisterScreen({ navigation }: any) {
-  const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<"worker" | "farmer">(
-    "worker"
-  );
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
+    if (!phoneNumber || !email || !address || !password || !confirmPassword) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
+
+    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Lỗi", "Email không hợp lệ");
       return;
     }
 
@@ -46,8 +58,21 @@ export function RegisterScreen({ navigation }: any) {
 
     setLoading(true);
     try {
-      await register(name, email, password, selectedRole);
-    } catch (error) {
+      await register({
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
+        password,
+        address: address.trim(),
+        roleId: 3,
+      });
+
+      Alert.alert("Thành công", "Đăng ký tài khoản thành công!", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("Login"),
+        },
+      ]);
+    } catch {
       Alert.alert("Lỗi", "Đăng ký thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
@@ -65,82 +90,38 @@ export function RegisterScreen({ navigation }: any) {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.scrollContent}>
-          {/* Header */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
+            <View style={styles.logoWrapper}>
               <Image
                 source={require("../../assets/logo.png")}
                 style={styles.logo}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             </View>
             <Text style={styles.title}>Tạo tài khoản mới</Text>
-            <Text style={styles.subtitle}>Bắt đầu hành trình cùng AgroTemp</Text>
+            <Text style={styles.subtitle}>
+              Bắt đầu hành trình tìm việc nông nghiệp
+            </Text>
           </View>
 
-          {/* Role Selection */}
-          <View style={styles.roleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.roleButton,
-                selectedRole === "worker" && styles.roleButtonActive,
-              ]}
-              onPress={() => setSelectedRole("worker")}
-            >
-              <User
-                size={24}
-                color={
-                  selectedRole === "worker" ? COLORS.white : COLORS.emerald[600]
-                }
-              />
-              <Text
-                style={[
-                  styles.roleButtonText,
-                  selectedRole === "worker" && styles.roleButtonTextActive,
-                ]}
-              >
-                Người lao động
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.roleButton,
-                selectedRole === "farmer" && styles.roleButtonActive,
-              ]}
-              onPress={() => setSelectedRole("farmer")}
-            >
-              <Tractor
-                size={24}
-                color={
-                  selectedRole === "farmer" ? COLORS.white : COLORS.emerald[600]
-                }
-              />
-              <Text
-                style={[
-                  styles.roleButtonText,
-                  selectedRole === "farmer" && styles.roleButtonTextActive,
-                ]}
-              >
-                Nông dân
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Form */}
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <View style={styles.inputIcon}>
-                <UserCircle size={20} color={COLORS.gray[500]} />
+                <Phone size={20} color={COLORS.gray[500]} />
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="Họ và tên"
-                placeholderTextColor={COLORS.gray[500]}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
+                placeholder="Số điện thoại"
+                placeholderTextColor={COLORS.gray[400]}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+                maxLength={11}
               />
             </View>
 
@@ -151,12 +132,24 @@ export function RegisterScreen({ navigation }: any) {
               <TextInput
                 style={styles.input}
                 placeholder="Email"
-                placeholderTextColor={COLORS.gray[500]}
+                placeholderTextColor={COLORS.gray[400]}
                 value={email}
                 onChangeText={setEmail}
-                autoCapitalize="none"
                 keyboardType="email-address"
-                autoComplete="email"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIcon}>
+                <MapPin size={20} color={COLORS.gray[500]} />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Địa chỉ"
+                placeholderTextColor={COLORS.gray[400]}
+                value={address}
+                onChangeText={setAddress}
               />
             </View>
 
@@ -167,13 +160,21 @@ export function RegisterScreen({ navigation }: any) {
               <TextInput
                 style={styles.input}
                 placeholder="Mật khẩu"
-                placeholderTextColor={COLORS.gray[500]}
+                placeholderTextColor={COLORS.gray[400]}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={COLORS.gray[500]} />
+                ) : (
+                  <Eye size={20} color={COLORS.gray[500]} />
+                )}
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputContainer}>
@@ -183,13 +184,21 @@ export function RegisterScreen({ navigation }: any) {
               <TextInput
                 style={styles.input}
                 placeholder="Xác nhận mật khẩu"
-                placeholderTextColor={COLORS.gray[500]}
+                placeholderTextColor={COLORS.gray[400]}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
+                secureTextEntry={!showConfirmPassword}
               />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeIcon}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff size={20} color={COLORS.gray[500]} />
+                ) : (
+                  <Eye size={20} color={COLORS.gray[500]} />
+                )}
+              </TouchableOpacity>
             </View>
 
             <Button
@@ -201,14 +210,13 @@ export function RegisterScreen({ navigation }: any) {
             </Button>
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Đã có tài khoản? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Login")}>
               <Text style={styles.loginLink}>Đăng nhập ngay</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -229,70 +237,49 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   scrollContent: {
-    flex: 1,
-    padding: SPACING.xl,
-    justifyContent: "center",
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md * -1,
+    paddingBottom: SPACING.lg,
   },
   header: {
     alignItems: "center",
-    marginBottom: SPACING.xl,
-  },
-  logoContainer: {
     marginBottom: SPACING.xs,
   },
+  logoWrapper: {
+    width: 250,
+    height: 250,
+    overflow: "hidden",
+    marginBottom: SPACING.xs * -2,
+  },
   logo: {
-    width: 320,
-    height: 120,
+    width: "110%",
+    height: "110%",
+    marginLeft: "-5%",
+    marginTop: "-5%",
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "bold",
     color: COLORS.white,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.white,
     opacity: 0.9,
-  },
-  roleContainer: {
-    flexDirection: "row",
-    gap: SPACING.md,
-    marginBottom: SPACING.xl,
-  },
-  roleButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 2,
-    borderColor: COLORS.emerald[600],
-    backgroundColor: COLORS.white,
-  },
-  roleButtonActive: {
-    backgroundColor: COLORS.emerald[600],
-    borderColor: COLORS.emerald[600],
-  },
-  roleButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.emerald[600],
-  },
-  roleButtonTextActive: {
-    color: COLORS.white,
+    textAlign: "center",
+    marginBottom: SPACING.sm,
   },
   form: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.md,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.emerald[50],
+    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     paddingHorizontal: SPACING.md,
   },
   inputIcon: {
@@ -304,22 +291,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.gray[900],
   },
+  eyeIcon: {
+    padding: SPACING.xs,
+  },
   registerButton: {
-    height: 56,
-    marginTop: SPACING.md,
+    marginTop: SPACING.xs,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: SPACING.sm,
   },
   footerText: {
+    color: COLORS.white,
     fontSize: 14,
-    color: COLORS.gray[600],
   },
   loginLink: {
+    color: COLORS.emerald[100],
     fontSize: 14,
-    color: COLORS.emerald[600],
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });
