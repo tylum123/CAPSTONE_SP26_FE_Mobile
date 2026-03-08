@@ -12,21 +12,25 @@ import {
   ImageBackground,
   Image,
 } from "react-native";
-import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
+import { Eye, EyeOff, Lock, Mail, Phone } from "lucide-react-native";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config";
 
-WebBrowser.maybeCompleteAuthSession();
-
-// Proxy redirect URI cho Expo Go (phải được thêm vào Google Console)
-const EXPO_GO_REDIRECT_URI =
-  "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mobile";
+// Configure Google Sign-In with your Web Client ID
+if (CONFIG.GOOGLE_WEB_CLIENT_ID) {
+  GoogleSignin.configure({
+    webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID,
+    scopes: ["openid", "profile", "email"],
+    offlineAccess: true, // required to get an idToken on Android Native
+  });
+}
 
 type LoginTab = "phone" | "email";
 
@@ -41,60 +45,6 @@ export function LoginScreen({ navigation }: any) {
   const isExpoGo =
     Constants.appOwnership === "expo" ||
     Constants.executionEnvironment === "storeClient";
-
-  // androidClientId bắt buộc trên Android (kể cả Expo Go).
-  // Expo Go dùng proxy redirect (auth.expo.io); native build dùng scheme riêng.
-  const [googleRequest, googleResponse, promptGoogleAuth] =
-    Google.useIdTokenAuthRequest({
-      webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID || undefined,
-      androidClientId: CONFIG.GOOGLE_ANDROID_CLIENT_ID || undefined,
-      redirectUri: isExpoGo
-        ? EXPO_GO_REDIRECT_URI
-        : makeRedirectUri({ scheme: "agrotemp" }),
-      selectAccount: true,
-      scopes: ["openid", "profile", "email"],
-    });
-
-  useEffect(() => {
-    const doGoogleLogin = async () => {
-      if (!googleResponse) {
-        return;
-      }
-
-      if (googleResponse.type === "error") {
-        const oauthError =
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (googleResponse.params as any)?.error_description ||
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (googleResponse.params as any)?.error ||
-          "Google OAuth request failed.";
-        Alert.alert("Google Login lỗi", String(oauthError));
-        return;
-      }
-
-      if (googleResponse.type !== "success") {
-        return;
-      }
-
-      const idToken = googleResponse.params?.id_token;
-      if (!idToken) {
-        Alert.alert("Lỗi", "Không lấy được Google ID token.");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        await loginWithGoogle(idToken, 3);
-        Alert.alert("Thành công", "Đăng nhập Google thành công");
-      } catch {
-        Alert.alert("Lỗi", "Đăng nhập Google thất bại. Vui lòng thử lại.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    doGoogleLogin().catch(() => undefined);
-  }, [googleResponse, loginWithGoogle]);
 
   const handleLogin = async () => {
     const identifier =
@@ -131,12 +81,42 @@ export function LoginScreen({ navigation }: any) {
   };
 
   const handleGoogleLogin = async () => {
-    if (!googleRequest) {
-      Alert.alert("Lỗi", "Google Sign-In chưa sẵn sàng. Vui lòng thử lại.");
+    // Check that Google Client IDs are configured in .env
+    if (!CONFIG.GOOGLE_WEB_CLIENT_ID) {
+      Alert.alert(
+        "Cấu hình chưa đủ",
+        "GOOGLE_WEB_CLIENT_ID chưa được cấu hình trong file .env.",
+      );
       return;
     }
 
-    await promptGoogleAuth();
+    try {
+      setLoading(true);
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        Alert.alert("Lỗi", "Không lấy được Google ID token.");
+        return;
+      }
+
+      await loginWithGoogle(idToken, 3);
+      Alert.alert("Thành công", "Đăng nhập Google thành công");
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log("User cancelled the login flow");
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log("Sign in is in progress already");
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert("Lỗi", "Google Play Services không khả dụng trên thiết bị này.");
+      } else {
+        Alert.alert("Lỗi", "Đăng nhập Google thất bại. Vui lòng thử lại.");
+        console.error("Google Sign-In Error:", error);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

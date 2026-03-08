@@ -1,18 +1,16 @@
-import dotenv from "dotenv";
-
+// Expo SDK 54 automatically loads .env.{NODE_ENV} — no manual dotenv needed.
 const env = process.env.NODE_ENV || "development";
-dotenv.config({ path: `.env.${env}` });
 
 const apiBaseUrl =
   env === "development"
     ? process.env.API_BASE_URL_TEST || process.env.API_BASE_URL
     : process.env.API_BASE_URL;
 
-export default {
+module.exports = {
   expo: {
     name: "CAPSTONE_SP26_FE_Mobile",
     slug: "CAPSTONE_SP26_FE_Mobile",
-    owner: "tylum123",
+    owner: "manh3101",
     scheme: "agrotemp",
     version: "1.0.0",
     orientation: "portrait",
@@ -47,7 +45,7 @@ export default {
       GOOGLE_ANDROID_CLIENT_ID: process.env.GOOGLE_ANDROID_CLIENT_ID,
       GOOGLE_WEB_CLIENT_ID: process.env.GOOGLE_WEB_CLIENT_ID,
       eas: {
-        projectId: "223346b2-aaa1-4f74-ac38-e208d3e06399",
+        projectId: "e583aaae-9c6d-4cbb-bfd6-15dba57c716c",
       },
     },
   },
