@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { authService, workerProfileService } from "../services";
 import { STORAGE_KEYS } from "../constants/api";
 
@@ -162,6 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
     } catch {
       // ignore API logout failure and clear local session anyway
+    }
+
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // ignore if user was not logged in via Google
     }
 
     setUser(null);
