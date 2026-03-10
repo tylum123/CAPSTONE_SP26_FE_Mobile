@@ -18,13 +18,12 @@ import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
+import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config";
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Proxy redirect URI cho Expo Go (phải được thêm vào Google Console)
 const EXPO_GO_REDIRECT_URI =
   "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mobile";
 
@@ -37,13 +36,13 @@ export function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login, loginWithGoogle } = useAuth();
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const { login, loginWithGoogle, demoLogin } = useAuth();
   const isExpoGo =
     Constants.appOwnership === "expo" ||
     Constants.executionEnvironment === "storeClient";
 
-  // androidClientId bắt buộc trên Android (kể cả Expo Go).
-  // Expo Go dùng proxy redirect (auth.expo.io); native build dùng scheme riêng.
   const [googleRequest, googleResponse, promptGoogleAuth] =
     Google.useIdTokenAuthRequest({
       webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID || undefined,
@@ -57,10 +56,7 @@ export function LoginScreen({ navigation }: any) {
 
   useEffect(() => {
     const doGoogleLogin = async () => {
-      if (!googleResponse) {
-        return;
-      }
-
+      if (!googleResponse) return;
       if (googleResponse.type === "error") {
         const oauthError =
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,60 +67,47 @@ export function LoginScreen({ navigation }: any) {
         Alert.alert("Google Login lỗi", String(oauthError));
         return;
       }
-
-      if (googleResponse.type !== "success") {
-        return;
-      }
-
+      if (googleResponse.type !== "success") return;
       const idToken = googleResponse.params?.id_token;
       if (!idToken) {
         Alert.alert("Lỗi", "Không lấy được Google ID token.");
         return;
       }
-
       setLoading(true);
       try {
         await loginWithGoogle(idToken, 3);
-        Alert.alert("Thành công", "Đăng nhập Google thành công");
       } catch {
         Alert.alert("Lỗi", "Đăng nhập Google thất bại. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
     };
-
     doGoogleLogin().catch(() => undefined);
   }, [googleResponse, loginWithGoogle]);
 
   const handleLogin = async () => {
     const identifier =
       activeTab === "phone" ? phoneNumber.trim() : email.trim();
-
     if (!identifier || !password) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
       return;
     }
-
     if (activeTab === "phone") {
-      const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-      if (!phoneRegex.test(identifier)) {
+      if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(identifier)) {
         Alert.alert("Lỗi", "Số điện thoại không hợp lệ");
         return;
       }
     } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(identifier)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
         Alert.alert("Lỗi", "Email không hợp lệ");
         return;
       }
     }
-
     setLoading(true);
     try {
       await login(identifier, password);
-      Alert.alert("Thành công", "Đăng nhập thành công");
     } catch {
-      Alert.alert("Lỗi", "Đăng nhập thất bại. Vui lòng thử lại.");
+      Alert.alert("Lỗi", "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -132,153 +115,213 @@ export function LoginScreen({ navigation }: any) {
 
   const handleGoogleLogin = async () => {
     if (!googleRequest) {
-      Alert.alert("Lỗi", "Google Sign-In chưa sẵn sàng. Vui lòng thử lại.");
+      Alert.alert("Lỗi", "Google Sign-In chưa sẵn sàng.");
       return;
     }
-
     await promptGoogleAuth();
+  };
+
+  const handleDemoLogin = () => {
+    demoLogin(); // Kích hoạt chế độ demo, user truy cập toàn bộ màn hình
   };
 
   return (
     <ImageBackground
       source={require("../../assets/login.jpg")}
-      style={styles.backgroundImage}
+      style={styles.bg}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
+
       <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <View style={styles.header}>
-            <View style={styles.logoWrapper}>
-              <Image
-                source={require("../../assets/logo.png")}
-                style={styles.logo}
-                resizeMode="cover"
-              />
-            </View>
-            <Text style={styles.title}>Chào mừng trở lại</Text>
+          {/* Header text (No Logo) */}
+          <View style={styles.headerArea}>
+            <Text style={styles.title}>Chào mừng trở lại! 👋</Text>
             <Text style={styles.subtitle}>
-              Tìm kiếm cơ hội việc làm nông nghiệp
+              Đăng nhập để tìm việc nông nghiệp
             </Text>
           </View>
 
-          <View style={styles.tabs}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "phone" && styles.activeTab]}
-              onPress={() => setActiveTab("phone")}
-            >
-              <Phone
-                size={20}
-                color={activeTab === "phone" ? COLORS.white : COLORS.gray[600]}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "phone" && styles.activeTabText,
-                ]}
-              >
-                Số điện thoại
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "email" && styles.activeTab]}
-              onPress={() => setActiveTab("email")}
-            >
-              <Mail
-                size={20}
-                color={activeTab === "email" ? COLORS.white : COLORS.gray[600]}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === "email" && styles.activeTabText,
-                ]}
-              >
-                Email
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                {activeTab === "phone" ? (
-                  <Phone size={20} color={COLORS.gray[500]} />
-                ) : (
-                  <Mail size={20} color={COLORS.gray[500]} />
-                )}
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder={activeTab === "phone" ? "Số điện thoại" : "Email"}
-                placeholderTextColor={COLORS.gray[400]}
-                value={activeTab === "phone" ? phoneNumber : email}
-                onChangeText={activeTab === "phone" ? setPhoneNumber : setEmail}
-                keyboardType={
-                  activeTab === "phone" ? "phone-pad" : "email-address"
-                }
-                autoCapitalize="none"
-                maxLength={activeTab === "phone" ? 11 : undefined}
-              />
+          {/* Form card */}
+          <View style={styles.card}>
+            {/* Tab switcher */}
+            <View style={styles.tabs}>
+              {(["phone", "email"] as LoginTab[]).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tab, activeTab === tab && styles.tabActive]}
+                  onPress={() => setActiveTab(tab)}
+                  activeOpacity={0.8}
+                >
+                  {tab === "phone" ? (
+                    <Phone
+                      size={15}
+                      color={
+                        activeTab === tab
+                          ? COLORS.emerald[600]
+                          : COLORS.slate[400]
+                      }
+                    />
+                  ) : (
+                    <Mail
+                      size={15}
+                      color={
+                        activeTab === tab
+                          ? COLORS.emerald[600]
+                          : COLORS.slate[400]
+                      }
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab && styles.tabTextActive,
+                    ]}
+                  >
+                    {tab === "phone" ? "Điện thoại" : "Email"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color={COLORS.gray[500]} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Mật khẩu"
-                placeholderTextColor={COLORS.gray[400]}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
+            {/* Identifier input */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                {activeTab === "phone" ? "Số điện thoại" : "Email"}
+              </Text>
+              <View
+                style={[
+                  styles.inputRow,
+                  phoneFocused && styles.inputRowFocused,
+                ]}
               >
-                {showPassword ? (
-                  <EyeOff size={20} color={COLORS.gray[500]} />
-                ) : (
-                  <Eye size={20} color={COLORS.gray[500]} />
-                )}
-              </TouchableOpacity>
+                <View style={styles.inputIcon}>
+                  {activeTab === "phone" ? (
+                    <Phone
+                      size={17}
+                      color={
+                        phoneFocused ? COLORS.emerald[600] : COLORS.slate[400]
+                      }
+                    />
+                  ) : (
+                    <Mail
+                      size={17}
+                      color={
+                        phoneFocused ? COLORS.emerald[600] : COLORS.slate[400]
+                      }
+                    />
+                  )}
+                </View>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={
+                    activeTab === "phone" ? "0912 345 678" : "email@example.com"
+                  }
+                  placeholderTextColor={COLORS.slate[300]}
+                  value={activeTab === "phone" ? phoneNumber : email}
+                  onChangeText={
+                    activeTab === "phone" ? setPhoneNumber : setEmail
+                  }
+                  keyboardType={
+                    activeTab === "phone" ? "phone-pad" : "email-address"
+                  }
+                  autoCapitalize="none"
+                  maxLength={activeTab === "phone" ? 11 : undefined}
+                  onFocus={() => setPhoneFocused(true)}
+                  onBlur={() => setPhoneFocused(false)}
+                  returnKeyType="next"
+                />
+              </View>
             </View>
 
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ForgotPassword")}
-              style={styles.forgotPassword}
-            >
-              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-            </TouchableOpacity>
+            {/* Password input */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Mật khẩu</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("ForgotPassword")}
+                >
+                  <Text style={styles.forgotLink}>Quên mật khẩu?</Text>
+                </TouchableOpacity>
+              </View>
+              <View
+                style={[
+                  styles.inputRow,
+                  passwordFocused && styles.inputRowFocused,
+                ]}
+              >
+                <View style={styles.inputIcon}>
+                  <Lock
+                    size={17}
+                    color={
+                      passwordFocused ? COLORS.emerald[600] : COLORS.slate[400]
+                    }
+                  />
+                </View>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="••••••••"
+                  placeholderTextColor={COLORS.slate[300]}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={17} color={COLORS.slate[400]} />
+                  ) : (
+                    <Eye size={17} color={COLORS.slate[400]} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-            <Button
-              onPress={handleLogin}
-              loading={loading}
-              style={styles.loginButton}
-            >
+            {/* Login button */}
+            <Button onPress={handleLogin} loading={loading} fullWidth size="lg">
               Đăng nhập
             </Button>
 
-            <Text style={styles.orText}>Hoặc đăng nhập Google</Text>
-            <Button
-              variant="outline"
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.divLine} />
+              <Text style={styles.divText}>hoặc</Text>
+              <View style={styles.divLine} />
+            </View>
+
+            {/* Google */}
+            <TouchableOpacity
+              style={styles.googleBtn}
               onPress={handleGoogleLogin}
-              loading={loading}
-              style={styles.googleButton}
+              activeOpacity={0.88}
             >
-              Đăng nhập Google
-            </Button>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg",
+                }}
+                style={styles.googleIcon}
+              />
+              <Text style={styles.googleText}>Tiếp tục với Google</Text>
+            </TouchableOpacity>
           </View>
 
+          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Chưa có tài khoản? </Text>
             <TouchableOpacity onPress={() => navigation.navigate("Register")}>
@@ -286,12 +329,9 @@ export function LoginScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.demoLinkContainer}
-            onPress={() => navigation.navigate("WorkerDemo")}
-          >
-            <Text style={styles.demoLinkText}>
-              Xem demo không cần đăng nhập
+          <TouchableOpacity style={styles.demoBtn} onPress={handleDemoLogin}>
+            <Text style={styles.demoText}>
+              Xem bản demo (không cần đăng nhập) →
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -301,150 +341,146 @@ export function LoginScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
+  bg: { flex: 1 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(5, 100, 75, 0.78)",
   },
-  container: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
+  flex: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.md * -3,
-    paddingBottom: SPACING.md * 2,
+    flexGrow: 1,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xl, // increased padding to compensate missing logo
+    paddingBottom: SPACING.xl,
+    justifyContent: "center",
   },
-  header: {
-    alignItems: "center",
-    marginBottom: SPACING.xs,
-  },
-  logoWrapper: {
-    width: 340,
-    height: 340,
-    overflow: "hidden",
-    marginBottom: SPACING.xs * -2,
-  },
-  logo: {
-    width: "110%",
-    height: "110%",
-    marginLeft: "-5%",
-    marginTop: "-5%",
-  },
+
+  /* Header without logo */
+  headerArea: { alignItems: "center", marginBottom: SPACING.xl },
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "800",
     color: COLORS.white,
-    marginBottom: SPACING.xs,
     textAlign: "center",
+    marginBottom: 6,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
-    color: COLORS.white,
-    opacity: 0.9,
+    fontSize: 15,
+    color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    marginBottom: SPACING.sm,
   },
+
+  /* Card */
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.xxl,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.lg,
+  },
+
+  /* Tabs */
   tabs: {
     flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.slate[100],
+    borderRadius: BORDER_RADIUS.lg,
     padding: 4,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   tab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.lg,
-    gap: SPACING.xs,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.md,
+    gap: 6,
   },
-  activeTab: {
-    backgroundColor: COLORS.emerald[600],
+  tabActive: {
+    backgroundColor: COLORS.white,
+    ...SHADOWS.xs,
   },
-  tabText: {
-    color: COLORS.gray[100],
+  tabText: { fontSize: 13, fontWeight: "600", color: COLORS.slate[400] },
+  tabTextActive: { color: COLORS.emerald[600] },
+
+  /* Form fields */
+  fieldGroup: { marginBottom: SPACING.md },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  label: {
+    fontSize: 13,
     fontWeight: "600",
-    fontSize: 14,
+    color: COLORS.slate[600],
+    marginBottom: 6,
   },
-  activeTabText: {
-    color: COLORS.white,
-  },
-  form: {
-    marginBottom: SPACING.md,
-  },
-  inputContainer: {
+  forgotLink: { fontSize: 13, fontWeight: "600", color: COLORS.emerald[600] },
+  inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.slate[50],
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.slate[200],
+    height: 52,
     paddingHorizontal: SPACING.md,
   },
-  inputIcon: {
-    marginRight: SPACING.sm,
+  inputRowFocused: {
+    borderColor: COLORS.emerald[500],
+    backgroundColor: "#f0fdf4",
   },
-  input: {
+  inputIcon: { marginRight: 10 },
+  textInput: {
     flex: 1,
-    height: 56,
-    fontSize: 16,
-    color: COLORS.gray[900],
+    fontSize: 15,
+    color: COLORS.slate[800],
+    height: "100%",
   },
-  eyeIcon: {
-    padding: SPACING.xs,
+  eyeBtn: { padding: 4 },
+
+  /* Divider */
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginVertical: SPACING.md,
   },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    marginBottom: SPACING.sm,
+  divLine: { flex: 1, height: 1, backgroundColor: COLORS.slate[200] },
+  divText: { fontSize: 12, color: COLORS.slate[400], fontWeight: "500" },
+
+  /* Google */
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 50,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: COLORS.slate[300],
+    backgroundColor: COLORS.white,
+    gap: SPACING.sm,
   },
-  forgotPasswordText: {
-    color: COLORS.white,
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  loginButton: {
-    marginTop: SPACING.xs,
-  },
-  orText: {
-    color: COLORS.white,
-    textAlign: "center",
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-    fontSize: 13,
-    opacity: 0.9,
-  },
-  googleButton: {
-    marginTop: SPACING.xs,
-  },
+  googleIcon: { width: 20, height: 20 },
+  googleText: { fontSize: 15, fontWeight: "600", color: COLORS.slate[700] },
+
+  /* Footer */
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  footerText: {
-    color: COLORS.white,
-    fontSize: 14,
-  },
-  registerLink: {
-    color: COLORS.emerald[100],
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  demoLinkContainer: {
-    marginTop: SPACING.md,
-    alignItems: "center",
-  },
-  demoLinkText: {
-    color: COLORS.white,
-    opacity: 0.9,
-    textDecorationLine: "underline",
+  footerText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
+  registerLink: { color: COLORS.white, fontSize: 14, fontWeight: "800" },
+  demoBtn: { alignItems: "center", paddingVertical: SPACING.sm },
+  demoText: {
+    color: "rgba(255,255,255,0.8)",
     fontSize: 13,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

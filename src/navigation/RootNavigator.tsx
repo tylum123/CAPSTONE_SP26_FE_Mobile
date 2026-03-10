@@ -22,7 +22,7 @@ import { EditProfileScreen } from "../screens/EditProfileScreen";
 const Stack = createStackNavigator();
 
 export function RootNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [profileStatus, setProfileStatus] = React.useState<
     "unknown" | "hasProfile" | "needsProfile"
   >("unknown");
@@ -30,6 +30,11 @@ export function RootNavigator() {
   React.useEffect(() => {
     if (!isAuthenticated) {
       setProfileStatus("unknown");
+      return;
+    }
+
+    if (user?.isDemo) {
+      setProfileStatus("hasProfile"); // bypass on-boarding profile call for demo user
       return;
     }
 
@@ -47,7 +52,7 @@ export function RootNavigator() {
     };
 
     checkProfile().catch(() => undefined);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const renderAuthenticatedScreens = () => (
     <>
@@ -57,8 +62,14 @@ export function RootNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} />
-      <Stack.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} />
-      <Stack.Screen name="AttendanceDetail" component={AttendanceDetailScreen} />
+      <Stack.Screen
+        name="AttendanceHistory"
+        component={AttendanceHistoryScreen}
+      />
+      <Stack.Screen
+        name="AttendanceDetail"
+        component={AttendanceDetailScreen}
+      />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </>
   );
@@ -79,7 +90,6 @@ export function RootNavigator() {
             name="ForgotPassword"
             component={ForgotPasswordScreen}
           />
-          <Stack.Screen name="WorkerDemo" component={WorkerTabNavigator} />
         </>
       ) : profileStatus === "needsProfile" ? (
         <>
@@ -90,7 +100,7 @@ export function RootNavigator() {
           {renderAuthenticatedScreens()}
         </>
       ) : (
-        // Main App Stack - Đã đăng nhập (Worker only)
+        // Main App Stack - Đã đăng nhập (Worker real or Demo)
         renderAuthenticatedScreens()
       )}
     </Stack.Navigator>

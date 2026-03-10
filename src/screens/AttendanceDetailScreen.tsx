@@ -7,11 +7,28 @@ import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { attendanceService } from "../services";
 import { WorkerAttendanceDTO } from "../services/attendance.service";
 
+import { useAuth } from "../context/AuthContext";
+
+const mockAttendanceDetails: Record<string, WorkerAttendanceDTO> = {
+  "1": { id: "1", jobApplicationId: "app1", checkInTime: "06:00", checkOutTime: "14:00", workDate: "18/01/2026", checkInNotes: "Đủ thiết bị", checkOutNotes: "Hoàn thiện 100%", totalHoursWorked: 8, isApproved: true, createdAt: "2026-01-18T06:00:00Z" },
+  "2": { id: "2", jobApplicationId: "app2", checkInTime: "07:30", checkOutTime: "11:30", workDate: "15/01/2026", checkInNotes: "", checkOutNotes: "Kết thúc sớm do mưa", totalHoursWorked: 4, isApproved: false, createdAt: "2026-01-15T07:30:00Z" },
+  "3": { id: "3", jobApplicationId: "app2", checkInTime: "13:00", checkOutTime: "17:00", workDate: "15/01/2026", checkInNotes: "", checkOutNotes: "", totalHoursWorked: 4, isApproved: false, createdAt: "2026-01-15T13:00:00Z" },
+};
+
 export function AttendanceDetailScreen({ navigation, route }: any) {
+  const { isAuthenticated, user } = useAuth();
   const { attendanceId } = route.params || {};
   const [record, setRecord] = useState<WorkerAttendanceDTO | null>(null);
 
   useEffect(() => {
+    if (!isAuthenticated || user?.isDemo) {
+      if (attendanceId && mockAttendanceDetails[attendanceId]) {
+        setRecord(mockAttendanceDetails[attendanceId]);
+      } else {
+        setRecord(mockAttendanceDetails["1"]);
+      }
+      return;
+    }
     const loadDetail = async () => {
       if (!attendanceId) return;
       try {
@@ -23,7 +40,7 @@ export function AttendanceDetailScreen({ navigation, route }: any) {
     };
 
     loadDetail().catch(() => undefined);
-  }, [attendanceId]);
+  }, [attendanceId, isAuthenticated, user?.isDemo]);
 
   if (!record) {
     return (

@@ -92,11 +92,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   tab: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.xs,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: "transparent",
     gap: SPACING.xs,

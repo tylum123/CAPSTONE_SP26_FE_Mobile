@@ -17,6 +17,7 @@ interface User {
   name: string;
   email: string;
   roleID: string;
+  isDemo?: boolean; // cờ đánh dấu tài khoản demo
 }
 
 interface AuthContextType {
@@ -24,6 +25,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (googleToken: string, roleId?: number) => Promise<void>;
+  demoLogin: () => void;
   fetchProfile: () => Promise<void>;
   register: (payload: {
     email: string;
@@ -46,12 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fullName?: string;
       email?: string;
       roleID?: string;
+      isDemo?: boolean;
     }) => {
       setUser({
         id: profile.id,
-        name: profile.fullName || profile.email || "",
+        name: profile.fullName || profile.email || "User",
         email: profile.email || "",
         roleID: profile.roleID || "worker",
+        isDemo: profile.isDemo,
       });
     },
     [],
@@ -117,7 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyUserProfile],
   );
 
+  const demoLogin = useCallback(() => {
+    applyUserProfile({
+      id: "demo",
+      fullName: "Tài khoản Demo",
+      email: "demo@agrotemp.vn",
+      roleID: "worker",
+      isDemo: true,
+    });
+  }, [applyUserProfile]);
+
   const fetchProfile = useCallback(async () => {
+    if (user?.isDemo) return; // Không fetch network nếu là user demo
     const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     if (!token) {
       setUser(null);
@@ -128,17 +143,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cachedProfile = cachedProfileRaw
       ? (JSON.parse(cachedProfileRaw) as { email?: string })
       : null;
-    const profile = await workerProfileService.getProfile();
-    const profileWithEmail = {
-      ...profile,
-      email: cachedProfile?.email,
-    };
-    await AsyncStorage.setItem(
-      STORAGE_KEYS.USER_DATA,
-      JSON.stringify(profileWithEmail),
-    );
-    applyUserProfile(profileWithEmail);
-  }, [applyUserProfile]);
+    try {
+      const profile = await workerProfileService.getProfile();
+      const profileWithEmail = {
+        ...profile,
+        email: cachedProfile?.email,
+      };
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(profileWithEmail),
+      );
+      applyUserProfile(profileWithEmail);
+    } catch {
+      // Giữ nguyên hiện trạng nếu lỗi mạng
+    }
+  }, [applyUserProfile, user?.isDemo]);
 
   const register = useCallback(
     async (payload: {
@@ -177,9 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await authService.logout();
+      if (!user?.isDemo) {
+        await authService.logout();
+      }
     } catch {
-      // ignore API logout failure and clear local session anyway
+      // ignore
     }
 
     setUser(null);
@@ -189,14 +210,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       STORAGE_KEYS.USER_DATA,
       STORAGE_KEYS.REFRESH_TOKEN,
     ]).catch(() => undefined);
-  }, []);
+  }, [user?.isDemo]);
 
   useEffect(() => {
     const initializeAuth = async () => {
+      if (user?.isDemo) return;
       const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       authTokenService.setTokenToMemory(token);
       if (!token) {
-        setUser(null);
+        // Only set null if there is no user currently (specifically handles demo user persistence briefly on reload before demo triggers)
         return;
       }
 
@@ -235,11 +257,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       login,
       loginWithGoogle,
+      demoLogin,
       fetchProfile,
       register,
       logout,
     }),
-    [user, login, loginWithGoogle, fetchProfile, register, logout],
+    [user, login, loginWithGoogle, demoLogin, fetchProfile, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

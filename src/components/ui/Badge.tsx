@@ -2,70 +2,55 @@ import React from "react";
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
 import { COLORS, BORDER_RADIUS, SPACING } from "../../constants/theme";
 
+type BadgeVariant =
+  | "default"
+  | "success"
+  | "warning"
+  | "danger"
+  | "secondary"
+  | "info";
+
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "danger" | "secondary";
+  variant?: BadgeVariant;
   style?: ViewStyle;
 }
 
+const CONFIG: Record<BadgeVariant, { bg: string; text: string }> = {
+  default: { bg: COLORS.emerald[50], text: COLORS.emerald[700] },
+  success: { bg: COLORS.emerald[50], text: COLORS.emerald[700] },
+  warning: { bg: COLORS.amber[50], text: COLORS.amber[600] },
+  danger: { bg: COLORS.rose[50], text: COLORS.rose[500] },
+  secondary: { bg: COLORS.slate[100], text: COLORS.slate[600] },
+  info: { bg: COLORS.blue[50], text: COLORS.blue[600] },
+};
+
 export function Badge({ children, variant = "default", style }: BadgeProps) {
-  const badgeStyles: ViewStyle[] = [
-    styles.badge,
-    styles[variant],
-    style,
-  ].filter(Boolean) as ViewStyle[];
-
-  const textStyles: TextStyle[] = [
-    styles.text,
-    styles[`text_${variant}`],
-  ].filter(Boolean) as TextStyle[];
-
+  const cfg = CONFIG[variant];
   return (
-    <View style={badgeStyles}>
-      <Text style={textStyles}>{children}</Text>
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: cfg.bg, borderColor: cfg.text + "22" },
+        style,
+      ]}
+    >
+      <Text style={[styles.text, { color: cfg.text }]}>{children}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.full,
     alignSelf: "flex-start",
-  },
-  default: {
-    backgroundColor: COLORS.emerald[50],
-  },
-  success: {
-    backgroundColor: COLORS.emerald[50],
-  },
-  warning: {
-    backgroundColor: COLORS.amber[400] + "20",
-  },
-  danger: {
-    backgroundColor: COLORS.rose[500] + "20",
-  },
-  secondary: {
-    backgroundColor: COLORS.gray[500] + "20",
+    borderWidth: 1,
   },
   text: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  text_default: {
-    color: COLORS.emerald[700],
-  },
-  text_success: {
-    color: COLORS.emerald[700],
-  },
-  text_warning: {
-    color: COLORS.amber[400],
-  },
-  text_danger: {
-    color: COLORS.rose[500],
-  },
-  text_secondary: {
-    color: COLORS.gray[600],
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
 });

@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
-import { PillTabs, ListItem, EmptyState } from "../components/ui";
-import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from "../constants/theme";
+import { Avatar } from "../components/ui/Avatar";
+import { PillTabs, EmptyState } from "../components/ui";
+import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from "../constants/theme";
 import {
   Clock,
   MapPin,
@@ -13,6 +20,9 @@ import {
   Calendar,
   CheckCircle2,
   Star,
+  MessageSquare,
+  ClipboardCheck,
+  ChevronRight,
 } from "lucide-react-native";
 import { jobService, JobPostDTO } from "../services";
 import { useAuth } from "../context/AuthContext";
@@ -21,8 +31,7 @@ type TabType = "applied" | "upcoming" | "completed";
 
 export function WorkerJobsScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabType>("applied");
-  const { isAuthenticated } = useAuth();
-
+  const { isAuthenticated, user } = useAuth();
   const [appliedJobs, setAppliedJobs] = useState<any[]>([]);
   const [upcomingJobs, setUpcomingJobs] = useState<any[]>([]);
   const [completedJobs, setCompletedJobs] = useState<any[]>([]);
@@ -51,7 +60,6 @@ export function WorkerJobsScreen({ navigation }: any) {
       appliedDate: "12/01/2026",
     },
   ];
-
   const demoUpcomingJobs = [
     {
       id: 3,
@@ -63,8 +71,17 @@ export function WorkerJobsScreen({ navigation }: any) {
       wage: 150000,
       status: "accepted",
     },
+    {
+      id: 7,
+      title: "Phun thuốc vườn cam",
+      farmer: "Trần Văn F",
+      location: "Cần Thơ",
+      date: "26/02/2026",
+      time: "07:00 - 11:00",
+      wage: 200000,
+      status: "accepted",
+    },
   ];
-
   const demoCompletedJobs = [
     {
       id: 1,
@@ -78,16 +95,39 @@ export function WorkerJobsScreen({ navigation }: any) {
       review: "Công việc tốt, người thuê nhiệt tình",
       paidAmount: 250000,
     },
+    {
+      id: 8,
+      title: "Thu hoạch lúa",
+      farmer: "Phạm Văn G",
+      location: "Đồng Tháp",
+      date: "10/01/2026",
+      completedDate: "10/01/2026",
+      wage: 300000,
+      rating: 4,
+      review: "Môi trường làm việc tốt, trả lương đúng hẹn",
+      paidAmount: 300000,
+    },
+    {
+      id: 9,
+      title: "Vận chuyển phân bón",
+      farmer: "Võ Thị H",
+      location: "An Giang",
+      date: "05/01/2026",
+      completedDate: "05/01/2026",
+      wage: 180000,
+      rating: 0,
+      review: "",
+      paidAmount: 180000,
+    },
   ];
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || user?.isDemo) {
       setAppliedJobs(demoAppliedJobs);
       setUpcomingJobs(demoUpcomingJobs);
       setCompletedJobs(demoCompletedJobs);
       return;
     }
-
     const loadJobs = async () => {
       try {
         const result = await jobService.getJobPosts();
@@ -115,78 +155,82 @@ export function WorkerJobsScreen({ navigation }: any) {
         setCompletedJobs([]);
       }
     };
-
     loadJobs().catch(() => undefined);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.isDemo]);
 
-  const renderAppliedJobItem = ({ item: job }: { item: any }) => (
-    <Card style={styles.jobCard}>
-      <CardContent>
-        <ListItem
-          title={job.title}
-          subtitle={job.farmer}
-          meta={`${job.date} • ${job.time}`}
-          leftSlot={
-            <View style={styles.iconCircle}>
-              <Calendar size={16} color={COLORS.emerald[600]} />
-            </View>
-          }
-          rightSlot={
-            <Badge variant={job.status === "accepted" ? "success" : "warning"}>
-              {job.status === "accepted" ? "Đã chấp nhận" : "Chờ xác nhận"}
-            </Badge>
-          }
-          onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
-        />
-
-        <View style={styles.metaRow}>
-          <View style={styles.metaChip}>
-            <MapPin size={14} color={COLORS.slate[500]} />
+  const renderApplied = (job: any) => (
+    <TouchableOpacity
+      key={job.id}
+      style={styles.jobCard}
+      activeOpacity={0.9}
+      onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
+    >
+      <View style={styles.jobCardInner}>
+        <View style={styles.jobTop}>
+          <Avatar fallback={job.farmer[0]} size={42} />
+          <View style={styles.jobInfo}>
+            <Text style={styles.jobTitle} numberOfLines={1}>
+              {job.title}
+            </Text>
+            <Text style={styles.jobFarmer}>{job.farmer}</Text>
+          </View>
+          <Badge variant={job.status === "accepted" ? "success" : "warning"}>
+            {job.status === "accepted" ? "Chấp nhận" : "Chờ xác nhận"}
+          </Badge>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.jobMeta}>
+          <View style={styles.metaItem}>
+            <MapPin size={13} color={COLORS.slate[400]} />
             <Text style={styles.metaText}>{job.location}</Text>
           </View>
-          <View style={styles.metaChip}>
-            <Banknote size={14} color={COLORS.emerald[600]} />
-            <Text style={styles.metaText}>
-              {job.wage.toLocaleString("vi-VN")} VNĐ
+          <View style={styles.metaItem}>
+            <Calendar size={13} color={COLORS.slate[400]} />
+            <Text style={styles.metaText}>{job.date}</Text>
+          </View>
+          <View style={[styles.metaItem, styles.wageChip]}>
+            <Banknote size={13} color={COLORS.emerald[600]} />
+            <Text style={styles.wageText}>
+              {job.wage.toLocaleString("vi-VN")}đ
             </Text>
           </View>
         </View>
-
-        <Text style={styles.metaNote}>Đã apply: {job.appliedDate}</Text>
-      </CardContent>
-    </Card>
+        <Text style={styles.appliedNote}>Đã apply: {job.appliedDate}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
-  const renderUpcomingJobItem = ({ item: job }: { item: any }) => (
-    <Card style={styles.jobCard}>
-      <CardContent>
-        <ListItem
-          title={job.title}
-          subtitle={job.farmer}
-          meta={`${job.date} • ${job.time}`}
-          leftSlot={
-            <View style={styles.iconCircle}>
-              <Clock size={16} color={COLORS.emerald[600]} />
+  const renderUpcoming = (job: any) => (
+    <View key={job.id} style={styles.jobCard}>
+      <View style={[styles.jobAccent, { backgroundColor: COLORS.teal[600] }]} />
+      <View style={styles.jobCardInner}>
+        <View style={styles.jobTop}>
+          <Avatar fallback={job.farmer[0]} size={42} />
+          <View style={styles.jobInfo}>
+            <Text style={styles.jobTitle}>{job.title}</Text>
+            <View style={styles.upcomingDate}>
+              <Calendar size={12} color={COLORS.teal[600]} />
+              <Text style={styles.upcomingDateText}>
+                {job.date} • {job.time}
+              </Text>
             </View>
-          }
-          rightSlot={<Badge variant="success">Đã xác nhận</Badge>}
-          onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
-        />
-
+          </View>
+          <Badge variant="success">Xác nhận</Badge>
+        </View>
+        <View style={styles.divider} />
         <View style={styles.metaRow}>
-          <View style={styles.metaChip}>
-            <MapPin size={14} color={COLORS.slate[500]} />
+          <View style={styles.metaItem}>
+            <MapPin size={13} color={COLORS.slate[400]} />
             <Text style={styles.metaText}>{job.location}</Text>
           </View>
-          <View style={styles.metaChip}>
-            <Banknote size={14} color={COLORS.emerald[600]} />
-            <Text style={styles.metaText}>
-              {job.wage.toLocaleString("vi-VN")} VNĐ
+          <View style={[styles.metaItem, styles.wageChip]}>
+            <Banknote size={13} color={COLORS.emerald[600]} />
+            <Text style={styles.wageText}>
+              {job.wage.toLocaleString("vi-VN")}đ
             </Text>
           </View>
         </View>
-
-        <View style={styles.actions}>
+        <View style={styles.actionRow}>
           <Button
             variant="outline"
             size="sm"
@@ -194,7 +238,7 @@ export function WorkerJobsScreen({ navigation }: any) {
               navigation.navigate("Chat", { farmerId: job.farmer })
             }
           >
-            Nhắn tin
+            <Text>💬 Nhắn tin</Text>
           </Button>
           <Button
             variant="outline"
@@ -205,287 +249,290 @@ export function WorkerJobsScreen({ navigation }: any) {
               })
             }
           >
-            Check in
+            <Text>📍 Check in</Text>
           </Button>
           <Button
             size="sm"
             onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
           >
-            Xem chi tiết
+            Chi tiết
           </Button>
         </View>
-      </CardContent>
-    </Card>
+      </View>
+    </View>
   );
 
-  const renderCompletedJobItem = ({ item: job }: { item: any }) => (
-    <Card style={styles.jobCard}>
-      <CardContent>
-        <ListItem
-          title={job.title}
-          subtitle={job.farmer}
-          meta={`Hoàn thành: ${job.completedDate}`}
-          leftSlot={
-            <View style={styles.iconCircle}>
-              <CheckCircle2 size={16} color={COLORS.emerald[600]} />
-            </View>
-          }
-          rightSlot={<Badge variant="success">Đã xong</Badge>}
-          onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
-        />
-
+  const renderCompleted = (job: any) => (
+    <View key={job.id} style={styles.jobCard}>
+      <View
+        style={[styles.jobAccent, { backgroundColor: COLORS.emerald[400] }]}
+      />
+      <View style={styles.jobCardInner}>
+        <View style={styles.jobTop}>
+          <View style={styles.completedIconWrap}>
+            <CheckCircle2 size={24} color={COLORS.emerald[600]} />
+          </View>
+          <View style={styles.jobInfo}>
+            <Text style={styles.jobTitle}>{job.title}</Text>
+            <Text style={styles.jobFarmer}>
+              {job.farmer} • {job.completedDate}
+            </Text>
+          </View>
+          <Badge variant="success">Xong</Badge>
+        </View>
+        <View style={styles.divider} />
         <View style={styles.metaRow}>
-          <View style={styles.metaChip}>
-            <MapPin size={14} color={COLORS.slate[500]} />
+          <View style={styles.metaItem}>
+            <MapPin size={13} color={COLORS.slate[400]} />
             <Text style={styles.metaText}>{job.location}</Text>
           </View>
-          <View style={styles.metaChip}>
-            <Banknote size={14} color={COLORS.emerald[600]} />
-            <Text style={styles.metaText}>
-              Đã thanh toán: {job.paidAmount.toLocaleString("vi-VN")} VNĐ
+          <View style={[styles.metaItem, styles.wageChip]}>
+            <Banknote size={13} color={COLORS.emerald[600]} />
+            <Text style={styles.wageText}>
+              {job.paidAmount.toLocaleString("vi-VN")}đ
             </Text>
           </View>
         </View>
-
         {job.rating && job.review ? (
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>Đánh giá của bạn:</Text>
-            <View style={styles.stars}>
+          <View style={styles.ratingBox}>
+            <View style={styles.starsRow}>
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  size={16}
+                  size={14}
                   color={COLORS.amber[400]}
-                  fill={i < job.rating! ? COLORS.amber[400] : "none"}
+                  fill={i < job.rating ? COLORS.amber[400] : "none"}
                 />
               ))}
             </View>
-            {job.review && <Text style={styles.reviewText}>{job.review}</Text>}
+            <Text style={styles.reviewText}>"{job.review}"</Text>
           </View>
         ) : (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onPress={() => navigation.navigate("Review", { jobId: job.id })}
           >
-            Đánh giá công việc
+            Đánh giá công việc ⭐
           </Button>
         )}
-      </CardContent>
-    </Card>
+      </View>
+    </View>
   );
 
-  const getListData = () => {
-    switch (activeTab) {
-      case "applied":
-        return appliedJobs;
-      case "upcoming":
-        return upcomingJobs;
-      case "completed":
-        return completedJobs;
-    }
-  };
-
-  const renderEmptyComponent = () => {
-    let title = "";
-    let description = "";
-    if (activeTab === "applied") {
-      title = "Chưa có đơn đã apply";
-      description = "Khi bạn apply công việc, chúng sẽ hiển thị tại đây.";
-    } else if (activeTab === "upcoming") {
-      title = "Chưa có lịch sắp tới";
-      description = "Lịch công việc đã xác nhận sẽ hiển thị ở đây.";
-    } else {
-      title = "Chưa có công việc hoàn thành";
-      description =
-        "Sau khi hoàn tất và thanh toán, công việc sẽ xuất hiện tại đây.";
-    }
-
-    return (
-      <Card style={styles.jobCard}>
-        <CardContent>
-          <EmptyState title={title} description={description} />
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const renderItem = ({ item }: { item: any }) => {
-    if (activeTab === "applied") return renderAppliedJobItem({ item });
-    if (activeTab === "upcoming") return renderUpcomingJobItem({ item });
-    return renderCompletedJobItem({ item });
-  };
+  const listData =
+    activeTab === "applied"
+      ? appliedJobs
+      : activeTab === "upcoming"
+        ? upcomingJobs
+        : completedJobs;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.heroTextGroup}>
-            <Text style={styles.title}>Công việc của bạn</Text>
-            <Text style={styles.subtitle}>
-              Theo dõi trạng thái apply, lịch làm và công việc đã xong.
-            </Text>
-          </View>
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={() => navigation.navigate("AttendanceHistory")}
-          >
-            Lịch sử chấm công
-          </Button>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Công việc của bạn</Text>
+          <Text style={styles.headerSub}>
+            Quản lý ứng tuyển và lịch làm việc
+          </Text>
         </View>
+        <TouchableOpacity
+          style={styles.historyBtn}
+          onPress={() => navigation.navigate("AttendanceHistory")}
+        >
+          <ClipboardCheck size={18} color={COLORS.emerald[600]} />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.tabWrap}>
-          <PillTabs
-            items={[
-              {
-                key: "applied",
-                label: "Đã apply",
-                badgeCount: appliedJobs.length,
-              },
-              {
-                key: "upcoming",
-                label: "Sắp tới",
-                badgeCount: upcomingJobs.length,
-              },
-              {
-                key: "completed",
-                label: "Đã hoàn thành",
-                badgeCount: completedJobs.length,
-              },
-            ]}
-            activeKey={activeTab}
-            onChange={(key) => setActiveTab(key as TabType)}
-          />
-        </View>
-
-        <FlatList
-          style={styles.content}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          data={getListData()}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
-          ListEmptyComponent={renderEmptyComponent}
+      {/* Tabs */}
+      <View style={styles.tabsWrap}>
+        <PillTabs
+          items={[
+            {
+              key: "applied",
+              label: "Đã apply",
+              badgeCount: appliedJobs.length,
+            },
+            {
+              key: "upcoming",
+              label: "Sắp tới",
+              badgeCount: upcomingJobs.length,
+            },
+            {
+              key: "completed",
+              label: "Hoàn thành",
+              badgeCount: completedJobs.length,
+            },
+          ]}
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as TabType)}
         />
       </View>
+
+      <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        data={listData}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) =>
+          activeTab === "applied"
+            ? renderApplied(item)
+            : activeTab === "upcoming"
+              ? renderUpcoming(item)
+              : renderCompleted(item)
+        }
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <Card variant="tinted" style={styles.emptyCard}>
+            <CardContent>
+              <EmptyState
+                title={
+                  activeTab === "applied"
+                    ? "Chưa có đơn apply"
+                    : activeTab === "upcoming"
+                      ? "Chưa có lịch sắp tới"
+                      : "Chưa có việc hoàn thành"
+                }
+                description={
+                  activeTab === "applied"
+                    ? "Tìm và apply công việc phù hợp với bạn."
+                    : activeTab === "upcoming"
+                      ? "Lịch làm đã xác nhận sẽ xuất hiện ở đây."
+                      : "Công việc hoàn tất sẽ hiển thị sau khi thanh toán."
+                }
+              />
+            </CardContent>
+          </Card>
+        }
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.slate[50],
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.slate[50],
-  },
-  hero: {
+  safeArea: { flex: 1, backgroundColor: COLORS.sage[50] },
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.lg,
+    paddingVertical: SPACING.md,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
-    gap: SPACING.md,
+    borderBottomColor: COLORS.slate[100],
   },
-  heroTextGroup: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  title: {
-    ...TYPOGRAPHY.title,
-    fontSize: 22,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
     color: COLORS.slate[900],
+    letterSpacing: -0.3,
   },
-  subtitle: {
-    ...TYPOGRAPHY.body1,
-    color: COLORS.slate[600],
-  },
-  tabWrap: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.md,
-  },
-  jobCard: {
-    marginBottom: SPACING.md,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerSub: { fontSize: 12, color: COLORS.slate[400], marginTop: 2 },
+  historyBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.emerald[50],
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.emerald[200],
+  },
+  tabsWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.slate[100],
+  },
+  list: { flex: 1 },
+  listContent: { padding: SPACING.md, paddingBottom: 110, gap: SPACING.sm },
+
+  jobCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.xl,
+    flexDirection: "row",
+    overflow: "hidden",
+    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.slate[100],
+  },
+  jobAccent: { width: 4 },
+  jobCardInner: { flex: 1, padding: SPACING.md },
+  jobTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  jobInfo: { flex: 1 },
+  jobTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.slate[800],
+    marginBottom: 2,
+  },
+  jobFarmer: { fontSize: 12, color: COLORS.slate[500] },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.slate[100],
+    marginBottom: SPACING.sm,
   },
   metaRow: {
     flexDirection: "row",
-    gap: SPACING.sm,
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: SPACING.sm,
+  },
+  jobMeta: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
+  metaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaText: { fontSize: 12, color: COLORS.slate[500] },
+  wageChip: {
+    backgroundColor: COLORS.emerald[50],
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.emerald[100],
+  },
+  wageText: { fontSize: 12, color: COLORS.emerald[700], fontWeight: "700" },
+  appliedNote: { fontSize: 11, color: COLORS.slate[400], marginTop: 4 },
+  upcomingDate: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  upcomingDateText: {
+    fontSize: 12,
+    color: COLORS.teal[600],
+    fontWeight: "600",
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
     marginTop: SPACING.sm,
     flexWrap: "wrap",
   },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    backgroundColor: COLORS.slate[100],
+  completedIconWrap: {
+    width: 42,
+    height: 42,
     borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.emerald[50],
+    justifyContent: "center",
+    alignItems: "center",
   },
-  metaText: {
-    fontSize: 12,
-    color: COLORS.slate[600],
-  },
-  metaNote: {
-    fontSize: 12,
-    color: COLORS.slate[500],
-    marginTop: SPACING.xs,
-  },
-  wageText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.emerald[700],
-  },
-  paidText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.emerald[600],
-  },
-  actions: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-  },
-  ratingSection: {
+  ratingBox: {
+    backgroundColor: COLORS.amber[50],
+    borderRadius: BORDER_RADIUS.md,
     padding: SPACING.sm,
-    backgroundColor: COLORS.slate[100],
-    gap: SPACING.xs,
     marginTop: SPACING.sm,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: COLORS.amber[200],
   },
-  ratingLabel: {
-    fontSize: 12,
-    color: COLORS.slate[600],
-  },
-  stars: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  reviewText: {
-    fontSize: 14,
-    color: COLORS.slate[700],
-    fontStyle: "italic",
-    marginTop: SPACING.xs,
-  },
+  starsRow: { flexDirection: "row", gap: 3 },
+  reviewText: { fontSize: 13, color: COLORS.slate[700], fontStyle: "italic" },
+  emptyCard: { marginTop: SPACING.md },
 });

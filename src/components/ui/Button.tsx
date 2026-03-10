@@ -6,17 +6,18 @@ import {
   ViewStyle,
   TextStyle,
   ActivityIndicator,
+  Animated,
+  Platform,
 } from "react-native";
-import { COLORS, BORDER_RADIUS, SPACING, SHADOWS } from "../../constants/theme";
+import { COLORS, BORDER_RADIUS } from "../../constants/theme";
 
 interface ButtonProps {
   onPress?: () => void;
   children: React.ReactNode;
-  variant?: "default" | "outline" | "ghost" | "gradient";
+  variant?: "default" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
-  className?: string;
   style?: ViewStyle;
   fullWidth?: boolean;
 }
@@ -31,43 +32,71 @@ export function Button({
   style,
   fullWidth = false,
 }: ButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      hitSlop={8}
-      style={({ pressed }) => {
-        const buttonStyles: ViewStyle[] = [
-          styles.base,
-          styles[variant],
-          styles[`size_${size}`],
-          fullWidth && styles.fullWidth,
-          pressed && styles.pressed,
-          disabled && styles.disabled,
-          style,
-        ].filter(Boolean) as ViewStyle[];
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
-        return buttonStyles;
-      }}
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 2,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 2,
+    }).start();
+  };
+
+  return (
+    <Animated.View
+      style={[
+        { transform: [{ scale: scaleAnim }] },
+        fullWidth && { alignSelf: "stretch" },
+      ]}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === "default" ? COLORS.white : COLORS.emerald[600]}
-        />
-      ) : (
-        <Text
-          style={
-            [
-              styles.text,
-              styles[`text_${variant}`],
-              styles[`text_${size}`],
-            ] as TextStyle[]
-          }
-        >
-          {children}
-        </Text>
-      )}
-    </Pressable>
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        hitSlop={4}
+        style={({ pressed }) =>
+          [
+            styles.base,
+            styles[variant],
+            styles[`size_${size}`],
+            fullWidth && styles.fullWidth,
+            (disabled || loading) && styles.disabled,
+            pressed && styles.pressed,
+            style,
+          ].filter(Boolean) as ViewStyle[]
+        }
+      >
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color={variant === "default" ? COLORS.white : COLORS.emerald[600]}
+          />
+        ) : (
+          <Text
+            style={
+              [
+                styles.text,
+                styles[`text_${variant}`],
+                styles[`textSize_${size}`],
+              ] as TextStyle[]
+            }
+          >
+            {children}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -75,49 +104,69 @@ const styles = StyleSheet.create({
   base: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: BORDER_RADIUS.lg,
     flexDirection: "row",
-    minHeight: 48,
-    ...SHADOWS.sm,
+    overflow: "hidden",
   },
+  /* Variants */
   default: {
     backgroundColor: COLORS.emerald[600],
+    // Only iOS shadow — no elevation to avoid Android border artifact
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.emerald[700],
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.28,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   outline: {
     backgroundColor: "transparent",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.emerald[600],
   },
   ghost: {
     backgroundColor: COLORS.emerald[50],
   },
-  gradient: {
-    backgroundColor: COLORS.emerald[700],
+  danger: {
+    backgroundColor: COLORS.rose[500],
   },
+  /* Sizes */
   size_sm: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minHeight: 38,
+    borderRadius: BORDER_RADIUS.md,
   },
   size_md: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    minHeight: 50,
   },
   size_lg: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    minHeight: 56,
+    borderRadius: BORDER_RADIUS.xl,
   },
   fullWidth: {
     alignSelf: "stretch",
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   pressed: {
-    transform: [{ translateY: 1 }],
-    ...SHADOWS.sm,
+    opacity: 0.88,
   },
+  /* Text */
   text: {
     fontWeight: "700",
+    letterSpacing: 0.1,
+    textAlign: "center",
   },
   text_default: {
     color: COLORS.white,
@@ -126,18 +175,18 @@ const styles = StyleSheet.create({
     color: COLORS.emerald[600],
   },
   text_ghost: {
-    color: COLORS.emerald[600],
+    color: COLORS.emerald[700],
   },
-  text_gradient: {
+  text_danger: {
     color: COLORS.white,
   },
-  text_sm: {
-    fontSize: 14,
+  textSize_sm: {
+    fontSize: 13,
   },
-  text_md: {
+  textSize_md: {
+    fontSize: 15,
+  },
+  textSize_lg: {
     fontSize: 16,
-  },
-  text_lg: {
-    fontSize: 18,
   },
 });

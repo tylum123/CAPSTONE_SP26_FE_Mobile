@@ -14,10 +14,53 @@ import { COLORS, SPACING } from "../constants/theme";
 import { attendanceService } from "../services";
 import { WorkerAttendanceDTO } from "../services/attendance.service";
 
+import { useAuth } from "../context/AuthContext";
+
+const mockAttendanceHistory: WorkerAttendanceDTO[] = [
+  {
+    id: "1",
+    jobApplicationId: "app1",
+    checkInTime: "06:00",
+    checkOutTime: "14:00",
+    workDate: "18/01/2026",
+    checkInNotes: "",
+    checkOutNotes: "",
+    isApproved: true,
+    createdAt: "2026-01-18T06:00:00Z",
+  },
+  {
+    id: "2",
+    jobApplicationId: "app2",
+    checkInTime: "07:30",
+    checkOutTime: "11:30",
+    workDate: "15/01/2026",
+    checkInNotes: "",
+    checkOutNotes: "",
+    isApproved: true,
+    createdAt: "2026-01-15T07:30:00Z",
+  },
+  {
+    id: "3",
+    jobApplicationId: "app2",
+    checkInTime: "13:00",
+    checkOutTime: "17:00",
+    workDate: "15/01/2026",
+    checkInNotes: "",
+    checkOutNotes: "",
+    isApproved: true,
+    createdAt: "2026-01-15T13:00:00Z",
+  },
+];
+
 export function AttendanceHistoryScreen({ navigation }: any) {
+  const { isAuthenticated, user } = useAuth();
   const [records, setRecords] = useState<WorkerAttendanceDTO[]>([]);
 
   useEffect(() => {
+    if (!isAuthenticated || user?.isDemo) {
+      setRecords(mockAttendanceHistory);
+      return;
+    }
     const loadHistory = async () => {
       try {
         const result = await attendanceService.getMyWorkerAttendance();
@@ -28,7 +71,7 @@ export function AttendanceHistoryScreen({ navigation }: any) {
     };
 
     loadHistory().catch(() => undefined);
-  }, []);
+  }, [isAuthenticated, user?.isDemo]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

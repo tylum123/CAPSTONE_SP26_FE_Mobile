@@ -15,7 +15,7 @@ import { attendanceService } from "../services";
 import { useAuth } from "../context/AuthContext";
 
 export function CheckInScreen({ navigation, route }: any) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // jobApplicationId bắt buộc phải được truyền qua navigation params
   const jobApplicationId: string = route?.params?.jobApplicationId ?? "";
@@ -55,8 +55,14 @@ export function CheckInScreen({ navigation, route }: any) {
   }
 
   const handleCheckIn = async () => {
-    if (!isAuthenticated) {
-      Alert.alert("Chưa đăng nhập", "Vui lòng đăng nhập để check in.");
+    if (!isAuthenticated || user?.isDemo) {
+      setLoading(true);
+      setTimeout(() => {
+        setAttendanceId("mock-attendance-123");
+        setCheckedIn(true);
+        Alert.alert("Thành công (Demo)", "Check in giả lập thành công!");
+        setLoading(false);
+      }, 1000);
       return;
     }
 
@@ -78,8 +84,13 @@ export function CheckInScreen({ navigation, route }: any) {
   };
 
   const handleCheckOut = async () => {
-    if (!isAuthenticated) {
-      Alert.alert("Chưa đăng nhập", "Vui lòng đăng nhập để check out.");
+    if (!isAuthenticated || user?.isDemo) {
+      setLoading(true);
+      setTimeout(() => {
+        setCheckedOut(true);
+        Alert.alert("Thành công (Demo)", "Check out giả lập thành công!");
+        setLoading(false);
+      }, 1000);
       return;
     }
     if (!attendanceId) {

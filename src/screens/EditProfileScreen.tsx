@@ -22,8 +22,10 @@ import { Button } from "../components/ui/Button";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { COLORS, SPACING } from "../constants/theme";
 import { mediaService, workerProfileService } from "../services";
+import { useAuth } from "../context/AuthContext";
 
 export function EditProfileScreen({ navigation, route }: any) {
+  const { isAuthenticated, user } = useAuth();
   const { currentProfile, onUpdated } = route.params || {};
 
   const [fullName, setFullName] = useState(currentProfile?.fullName || "");
@@ -103,6 +105,36 @@ export function EditProfileScreen({ navigation, route }: any) {
     }
 
     setLoading(true);
+    if (!isAuthenticated || user?.isDemo) {
+      setTimeout(() => {
+        onUpdated?.({
+          id: "demo",
+          userId: "demo",
+          fullName,
+          ageRange,
+          primaryLocation,
+          travelRadiusKmPreference: travelRadiusKmPreference
+            ? Number(travelRadiusKmPreference)
+            : null,
+          experienceLevelId: parsedExperienceLevelId,
+          experienceLevel: "Demo",
+          averageRating: 0,
+          availabilitySchedule,
+          totalJobsCompleted: 0,
+          avatarUrl: avatarUrl || "",
+          createdAt: "",
+          updatedAt: "",
+        });
+        showFeedback({
+          title: "Thành công (Demo)",
+          message: "Hồ sơ của bạn đã được cập nhật mô phỏng.",
+          variant: "success",
+          onConfirm: () => navigation.goBack(),
+        });
+        setLoading(false);
+      }, 1000);
+      return;
+    }
     try {
       const updatedProfile = await workerProfileService.updateProfile({
         fullName,
@@ -131,7 +163,7 @@ export function EditProfileScreen({ navigation, route }: any) {
         variant: "error",
       });
     } finally {
-      setLoading(false);
+      if (isAuthenticated) setLoading(false);
     }
   };
 
