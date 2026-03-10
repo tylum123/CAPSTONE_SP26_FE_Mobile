@@ -12,6 +12,7 @@ import {
   ERROR_MESSAGES,
   API_ENDPOINTS,
 } from "../constants/api";
+import { authTokenService } from "../services/auth-token.service";
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -26,8 +27,8 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      // Get token from AsyncStorage
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      // Get token from memory cache or AsyncStorage
+      const token = await authTokenService.getToken();
 
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -35,7 +36,7 @@ api.interceptors.request.use(
 
       return config;
     } catch (error) {
-      console.error("Error getting auth token:", error);
+      // Silent error in interceptor
       return config;
     }
   },
@@ -57,10 +58,11 @@ api.interceptors.response.use(
         requestUrl.includes(API_ENDPOINTS.AUTH.LOGIN) ||
         requestUrl.includes(API_ENDPOINTS.AUTH.REGISTER) ||
         requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN);
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const token = await authTokenService.getToken();
 
       if (!isAuthRequest && token) {
         // Clear token and redirect to login
+        authTokenService.setTokenToMemory(null);
         await AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
         // You can add navigation to login screen here
         // navigationRef.current?.navigate('Login');
@@ -70,12 +72,12 @@ api.interceptors.response.use(
 
     // Handle network errors
     if (error.message === "Network Error") {
-      console.error(ERROR_MESSAGES.NETWORK_ERROR);
+      // Handle network error UI directly if needed
     }
 
     // Handle timeout errors
     if (error.code === "ECONNABORTED") {
-      console.error(ERROR_MESSAGES.TIMEOUT_ERROR);
+      // Handle timeout error UI directly if needed
     }
 
     return Promise.reject(error);

@@ -1,10 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { View, Text, FlatList, StyleSheet } from "react-native";
 import { SectionHeader, ListItem, EmptyState } from "../components/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -134,170 +129,182 @@ export function WorkerHomeScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView
+      <FlatList
         style={styles.container}
         contentContainerStyle={{
           paddingBottom: 120,
           paddingHorizontal: SPACING.md,
         }}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-      >
-        {/* Welcome Section */}
-        <View style={styles.welcomeCard}>
-          <View style={styles.gradientOverlay} />
-          <View style={styles.welcomeContent}>
-            <View style={styles.welcomeLeft}>
-              <Text style={styles.welcomeGreeting}>Xin chào</Text>
-              <Text style={styles.welcomeName}>{user?.name || "Khách"}</Text>
-              <View style={styles.statsRow}>
-                <View style={styles.statBadge}>
-                  <Star
-                    size={14}
-                    color={COLORS.amber[400]}
-                    fill={COLORS.amber[400]}
-                  />
-                  <Text style={styles.statText}>{profileRating ?? "--"}</Text>
-                </View>
-                <View style={styles.statBadge}>
-                  <Briefcase size={14} color={COLORS.white} />
-                  <Text style={styles.statText}>
-                    {totalJobsCompleted ?? 0} việc
+        data={nearbyJobs}
+        keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={
+          <>
+            {/* Welcome Section */}
+            <View style={styles.welcomeCard}>
+              <View style={styles.gradientOverlay} />
+              <View style={styles.welcomeContent}>
+                <View style={styles.welcomeLeft}>
+                  <Text style={styles.welcomeGreeting}>Xin chào</Text>
+                  <Text style={styles.welcomeName}>
+                    {user?.name || "Khách"}
                   </Text>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statBadge}>
+                      <Star
+                        size={14}
+                        color={COLORS.amber[400]}
+                        fill={COLORS.amber[400]}
+                      />
+                      <Text style={styles.statText}>
+                        {profileRating ?? "--"}
+                      </Text>
+                    </View>
+                    <View style={styles.statBadge}>
+                      <Briefcase size={14} color={COLORS.white} />
+                      <Text style={styles.statText}>
+                        {totalJobsCompleted ?? 0} việc
+                      </Text>
+                    </View>
+                  </View>
                 </View>
+                <Avatar
+                  fallback={(user?.name || "Kh")[0]}
+                  size={64}
+                  style={styles.avatar}
+                />
               </View>
             </View>
-            <Avatar
-              fallback={(user?.name || "Kh")[0]}
-              size={64}
-              style={styles.avatar}
-            />
-          </View>
-        </View>
 
-        {/* Quick Stats */}
-        <View style={styles.quickStats}>
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View style={styles.statIcon}>
-                <Briefcase size={20} color={COLORS.white} />
-              </View>
-              <Text style={styles.statValue}>{totalJobsCompleted ?? 0}</Text>
-              <Text style={styles.statLabel}>Việc đã làm</Text>
-            </CardContent>
-          </Card>
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View
-                style={[
-                  styles.statIcon,
-                  { backgroundColor: COLORS.amber[400] },
-                ]}
-              >
-                <Star size={20} color={COLORS.white} />
-              </View>
-              <Text style={styles.statValue}>{profileRating ?? "--"}</Text>
-              <Text style={styles.statLabel}>Đánh giá</Text>
-            </CardContent>
-          </Card>
-          <Card style={styles.statCard}>
-            <CardContent style={styles.statContent}>
-              <View
-                style={[styles.statIcon, { backgroundColor: COLORS.teal[600] }]}
-              >
-                <TrendingUp size={20} color={COLORS.white} />
-              </View>
-              <Text style={styles.statValue}>--</Text>
-              <Text style={styles.statLabel}>Thu nhập</Text>
-            </CardContent>
-          </Card>
-        </View>
-
-        {/* Upcoming Jobs */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Việc sắp tới"
-            actionLabel={upcomingJobs.length > 0 ? "Xem tất cả" : undefined}
-            onPressAction={() => {}}
-          />
-          {upcomingJobs.length === 0 ? (
-            <Card>
-              <CardContent>
-                <EmptyState
-                  title="Chưa có việc sắp tới"
-                  description="Khi có lịch đã nhận, chúng tôi sẽ hiển thị ở đây."
-                />
-              </CardContent>
-            </Card>
-          ) : (
-            upcomingJobs.map((job) => (
-              <Card key={job.id} style={styles.upcomingCard}>
-                <CardContent>
-                  <ListItem
-                    title={job.title}
-                    subtitle={job.farmer}
-                    meta={job.time}
-                    leftSlot={
-                      <View style={styles.dateBox}>
-                        <Text style={styles.dateDay}>15</Text>
-                        <Text style={styles.dateMonth}>Th 1</Text>
-                      </View>
-                    }
-                    rightSlot={<Badge variant="success">Đã xác nhận</Badge>}
-                  />
+            {/* Quick Stats */}
+            <View style={styles.quickStats}>
+              <Card style={styles.statCard}>
+                <CardContent style={styles.statContent}>
+                  <View style={styles.statIcon}>
+                    <Briefcase size={20} color={COLORS.white} />
+                  </View>
+                  <Text style={styles.statValue}>
+                    {totalJobsCompleted ?? 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Việc đã làm</Text>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </View>
+              <Card style={styles.statCard}>
+                <CardContent style={styles.statContent}>
+                  <View
+                    style={[
+                      styles.statIcon,
+                      { backgroundColor: COLORS.amber[400] },
+                    ]}
+                  >
+                    <Star size={20} color={COLORS.white} />
+                  </View>
+                  <Text style={styles.statValue}>{profileRating ?? "--"}</Text>
+                  <Text style={styles.statLabel}>Đánh giá</Text>
+                </CardContent>
+              </Card>
+              <Card style={styles.statCard}>
+                <CardContent style={styles.statContent}>
+                  <View
+                    style={[
+                      styles.statIcon,
+                      { backgroundColor: COLORS.teal[600] },
+                    ]}
+                  >
+                    <TrendingUp size={20} color={COLORS.white} />
+                  </View>
+                  <Text style={styles.statValue}>--</Text>
+                  <Text style={styles.statLabel}>Thu nhập</Text>
+                </CardContent>
+              </Card>
+            </View>
 
-        {/* Nearby Jobs */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Việc gần bạn"
-            subtitle="Công việc gợi ý quanh khu vực"
-            actionLabel="Xem tất cả"
-            onPressAction={() => navigation.navigate("Search")}
-          />
-          {nearbyJobs.map((job) => (
-            <Card key={job.id} style={styles.jobCard}>
-              <CardContent>
-                <ListItem
-                  title={job.title}
-                  subtitle={`${job.farmer} • ${job.location}`}
-                  meta={`${job.distance} • ${job.duration}`}
-                  leftSlot={<Avatar fallback={job.farmer[0]} size={48} />}
-                  rightSlot={
-                    <View style={styles.jobMetaRight}>
-                      {job.urgent ? (
-                        <Badge variant="danger" style={styles.urgentBadge}>
-                          🔥 Cần gấp
-                        </Badge>
-                      ) : null}
-                      <Text style={styles.wageText}>{job.wage}đ</Text>
-                    </View>
-                  }
-                  onPress={() =>
-                    navigation.navigate("JobDetail", { jobId: job.id })
-                  }
-                />
-                <View style={styles.jobMetaRow}>
-                  <View style={styles.metaChip}>
-                    <MapPin size={14} color={COLORS.slate[500]} />
-                    <Text style={styles.metaChipText}>{job.location}</Text>
+            {/* Upcoming Jobs */}
+            <View style={styles.section}>
+              <SectionHeader
+                title="Việc sắp tới"
+                actionLabel={upcomingJobs.length > 0 ? "Xem tất cả" : undefined}
+                onPressAction={() => {}}
+              />
+              {upcomingJobs.length === 0 ? (
+                <Card>
+                  <CardContent>
+                    <EmptyState
+                      title="Chưa có việc sắp tới"
+                      description="Khi có lịch đã nhận, chúng tôi sẽ hiển thị ở đây."
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                upcomingJobs.map((job) => (
+                  <Card key={job.id} style={styles.upcomingCard}>
+                    <CardContent>
+                      <ListItem
+                        title={job.title}
+                        subtitle={job.farmer}
+                        meta={job.time}
+                        leftSlot={
+                          <View style={styles.dateBox}>
+                            <Text style={styles.dateDay}>15</Text>
+                            <Text style={styles.dateMonth}>Th 1</Text>
+                          </View>
+                        }
+                        rightSlot={<Badge variant="success">Đã xác nhận</Badge>}
+                      />
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </View>
+
+            {/* Nearby Jobs */}
+            <View style={styles.section}>
+              <SectionHeader
+                title="Việc gần bạn"
+                subtitle="Công việc gợi ý quanh khu vực"
+                actionLabel="Xem tất cả"
+                onPressAction={() => navigation.navigate("Search")}
+              />
+            </View>
+          </>
+        }
+        renderItem={({ item: job }) => (
+          <Card style={styles.jobCard}>
+            <CardContent>
+              <ListItem
+                title={job.title}
+                subtitle={`${job.farmer} • ${job.location}`}
+                meta={`${job.distance} • ${job.duration}`}
+                leftSlot={<Avatar fallback={job.farmer[0]} size={48} />}
+                rightSlot={
+                  <View style={styles.jobMetaRight}>
+                    {job.urgent ? (
+                      <Badge variant="danger" style={styles.urgentBadge}>
+                        🔥 Cần gấp
+                      </Badge>
+                    ) : null}
+                    <Text style={styles.wageText}>{job.wage}đ</Text>
                   </View>
-                  <View style={styles.metaChip}>
-                    <Banknote size={14} color={COLORS.emerald[600]} />
-                    <Text style={styles.metaChipText}>{job.duration}</Text>
-                  </View>
+                }
+                onPress={() =>
+                  navigation.navigate("JobDetail", { jobId: job.id })
+                }
+              />
+              <View style={styles.jobMetaRow}>
+                <View style={styles.metaChip}>
+                  <MapPin size={14} color={COLORS.slate[500]} />
+                  <Text style={styles.metaChipText}>{job.location}</Text>
                 </View>
-              </CardContent>
-            </Card>
-          ))}
-        </View>
-
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+                <View style={styles.metaChip}>
+                  <Banknote size={14} color={COLORS.emerald[600]} />
+                  <Text style={styles.metaChipText}>{job.duration}</Text>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+        )}
+        ListFooterComponent={<View style={styles.bottomSpacing} />}
+      />
     </SafeAreaView>
   );
 }

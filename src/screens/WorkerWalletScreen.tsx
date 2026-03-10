@@ -241,7 +241,6 @@ export function WorkerWalletScreen({ navigation }: any) {
                       setSelectedPaymentMethod(method.id as any);
                     }
                   }}
-                  isLast={index === paymentMethods.length - 1}
                 />
               ))}
             </Card>
@@ -302,7 +301,6 @@ export function WorkerWalletScreen({ navigation }: any) {
                       {getStatusBadge(transaction.status)}
                     </View>
                   }
-                  isLast={index === transactions.length - 1}
                 />
               ))}
             </Card>
@@ -464,7 +462,7 @@ const styles = StyleSheet.create({
   escrowCard: {
     backgroundColor: COLORS.amber[50],
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.amber[500],
+    borderLeftColor: COLORS.amber[600],
   },
   escrowContent: {
     flexDirection: "row",
@@ -484,7 +482,7 @@ const styles = StyleSheet.create({
   },
   escrowTitle: {
     ...TYPOGRAPHY.subtitle2,
-    color: COLORS.amber[700],
+    color: COLORS.amber[600],
     marginBottom: 2,
   },
   escrowDescription: {

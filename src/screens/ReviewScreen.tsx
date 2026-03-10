@@ -64,7 +64,7 @@ export function ReviewScreen({ navigation, route }: any) {
       tags: selectedTags,
     };
 
-    console.log("Submitting review:", reviewData);
+    // }
     alert("Đánh giá của bạn đã được gửi thành công!");
     navigation.goBack();
   };

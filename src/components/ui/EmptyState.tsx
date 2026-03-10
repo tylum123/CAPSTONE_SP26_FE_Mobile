@@ -46,12 +46,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   title: {
-    ...TYPOGRAPHY.subtitle,
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.slate[800],
     textAlign: "center",
   },
   description: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
     textAlign: "center",
     marginBottom: SPACING.sm,
