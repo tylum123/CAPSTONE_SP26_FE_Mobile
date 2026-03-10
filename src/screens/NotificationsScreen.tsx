@@ -219,7 +219,6 @@ export function NotificationsScreen({ navigation }: any) {
                     </View>
                   }
                   onPress={() => handleNotificationPress(notification)}
-                  isLast={index === notifications.length - 1}
                   style={!notification.read ? styles.unreadItem : undefined}
                 />
               ))}

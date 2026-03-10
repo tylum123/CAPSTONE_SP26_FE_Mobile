@@ -54,12 +54,12 @@ const styles = StyleSheet.create({
     color: COLORS.slate[800],
   },
   subtitle: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
     marginTop: SPACING.xs,
   },
   action: {
-    ...TYPOGRAPHY.subtitle,
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.emerald[600],
   },
 });

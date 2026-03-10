@@ -4,11 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Home, Search, Briefcase, Wallet, User } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
 
-import { HomeStackNavigator } from "./HomeStackNavigator";
-import { SearchStackNavigator } from "./SearchStackNavigator";
-import { JobsStackNavigator } from "./JobsStackNavigator";
+import { WorkerHomeScreen } from "../screens/WorkerHomeScreen";
+import { WorkerSearchScreen } from "../screens/WorkerSearchScreen";
+import { WorkerJobsScreen } from "../screens/WorkerJobsScreen";
 import { WorkerWalletScreen } from "../screens/WorkerWalletScreen";
-import { ProfileStackNavigator } from "./ProfileStackNavigator";
+import { WorkerProfileScreen } from "../screens/WorkerProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -58,7 +58,7 @@ export function WorkerTabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeStackNavigator}
+        component={WorkerHomeScreen}
         options={{
           title: "Trang chủ",
           headerShown: false,
@@ -67,17 +67,19 @@ export function WorkerTabNavigator() {
       />
       <Tab.Screen
         name="Search"
-        component={SearchStackNavigator}
+        component={WorkerSearchScreen}
         options={{
           title: "Tìm việc",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
         }}
       />
       <Tab.Screen
         name="Jobs"
-        component={JobsStackNavigator}
+        component={WorkerJobsScreen}
         options={{
           title: "Công việc",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Briefcase size={size} color={color} />
           ),
@@ -94,9 +96,10 @@ export function WorkerTabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileStackNavigator}
+        component={WorkerProfileScreen}
         options={{
           title: "Tài khoản",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />

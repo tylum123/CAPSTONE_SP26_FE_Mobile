@@ -55,6 +55,4 @@ export const CONFIG = {
   CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
 } as const;
 
-console.log("App Configuration:", CONFIG);
-
 export type ConfigType = typeof CONFIG;

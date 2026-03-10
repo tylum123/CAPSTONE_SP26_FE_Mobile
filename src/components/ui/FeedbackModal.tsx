@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   message: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     textAlign: "center",
     marginBottom: SPACING.lg,
   },

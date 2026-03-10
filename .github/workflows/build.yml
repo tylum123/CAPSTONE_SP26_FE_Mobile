@@ -21,6 +21,8 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # cần để tạo GitHub Release
 
     steps:
       - name: Checkout repository
@@ -54,6 +56,80 @@ jobs:
           fi
 
       - name: Build on EAS
+        id: eas_build
         # Env vars (API_BASE_URL, GOOGLE_*) được quản lý trên EAS Dashboard
         # GitHub chỉ cần EXPO_TOKEN để authenticate
-        run: eas build --platform android --profile ${{ steps.profile.outputs.profile }} --non-interactive
+        run: |
+          BUILD_JSON=$(eas build --platform android --profile ${{ steps.profile.outputs.profile }} --non-interactive --json)
+          echo "$BUILD_JSON"
+          BUILD_ID=$(echo "$BUILD_JSON" | jq -r '.[0].id')
+          ARTIFACT_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl // empty')
+          DETAILS_URL="https://expo.dev/accounts/tylum123/projects/$(jq -r '.expo.slug' app.json)/builds/${BUILD_ID}"
+          echo "build_id=${BUILD_ID}" >> $GITHUB_OUTPUT
+          echo "artifact_url=${ARTIFACT_URL}" >> $GITHUB_OUTPUT
+          echo "details_url=${DETAILS_URL}" >> $GITHUB_OUTPUT
+
+      - name: Post build summary
+        if: always()
+        run: |
+          PROFILE="${{ steps.profile.outputs.profile }}"
+          BUILD_ID="${{ steps.eas_build.outputs.build_id }}"
+          ARTIFACT_URL="${{ steps.eas_build.outputs.artifact_url }}"
+          DETAILS_URL="${{ steps.eas_build.outputs.details_url }}"
+
+          echo "## Android EAS Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Profile | \`${PROFILE}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build ID | \`${BUILD_ID}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "$ARTIFACT_URL" ] && [ "$ARTIFACT_URL" != "null" ] && [ "$ARTIFACT_URL" != "" ]; then
+            echo "### Download APK" >> $GITHUB_STEP_SUMMARY
+            echo "[**Click here to download APK**](${ARTIFACT_URL})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+            echo "[View build on Expo]($DETAILS_URL)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> APK link sẽ có khi build hoàn thành trên EAS." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Download APK from EAS
+        id: download_apk
+        if: steps.eas_build.outputs.artifact_url != '' && steps.profile.outputs.profile != 'development'
+        run: |
+          ARTIFACT_URL="${{ steps.eas_build.outputs.artifact_url }}"
+          if [ -n "$ARTIFACT_URL" ] && [ "$ARTIFACT_URL" != "null" ]; then
+            APP_VERSION=$(jq -r '.expo.version' app.json)
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            PROFILE="${{ steps.profile.outputs.profile }}"
+            APK_NAME="app-${APP_VERSION}-${PROFILE}-${SHORT_SHA}.apk"
+            curl -L "$ARTIFACT_URL" -o "$APK_NAME"
+            echo "apk_name=${APK_NAME}" >> $GITHUB_OUTPUT
+            echo "app_version=${APP_VERSION}" >> $GITHUB_OUTPUT
+            echo "APK downloaded: $APK_NAME"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.download_apk.outputs.apk_name != '' && steps.profile.outputs.profile != 'development'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.download_apk.outputs.app_version }}-${{ steps.profile.outputs.profile }}-${{ github.run_number }}"
+          name: "v${{ steps.download_apk.outputs.app_version }} (${{ steps.profile.outputs.profile }}) - ${{ github.ref_name }}"
+          body: |
+            ## Android Build - ${{ steps.profile.outputs.profile }}
+
+            | Field | Value |
+            |-------|-------|
+            | Version | `${{ steps.download_apk.outputs.app_version }}` |
+            | Profile | `${{ steps.profile.outputs.profile }}` |
+            | Branch | `${{ github.ref_name }}` |
+            | Commit | `${{ github.sha }}` |
+            | Build ID | `${{ steps.eas_build.outputs.build_id }}` |
+
+            [View build on Expo](${{ steps.eas_build.outputs.details_url }})
+          files: ${{ steps.download_apk.outputs.apk_name }}
+          prerelease: ${{ steps.profile.outputs.profile == 'preview' }}

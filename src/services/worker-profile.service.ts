@@ -30,45 +30,22 @@ export interface UpdateWorkerProfileRequest {
   avatarUrl: string;
 }
 
-const resolveCurrentUserId = async (): Promise<string | null> => {
-  return authTokenService.getCurrentUserId();
-};
-
+// Use JWT token directly for worker profile APIs
 export const workerProfileService = {
-  getProfile: async (userId?: string): Promise<WorkerProfileDTO> => {
-    const resolvedUserId = userId || (await resolveCurrentUserId());
-
-    if (resolvedUserId) {
-      const response = await api.get<ApiResponse<WorkerProfileDTO>>(
-        API_ENDPOINTS.WORKER_PROFILE.BY_USER_ID(resolvedUserId),
-      );
-      return response.data.data;
-    }
-
-    const fallbackResponse = await api.get<ApiResponse<WorkerProfileDTO>>(
+  getProfile: async (): Promise<WorkerProfileDTO> => {
+    const response = await api.get<ApiResponse<WorkerProfileDTO>>(
       API_ENDPOINTS.WORKER_PROFILE.BASE,
     );
-    return fallbackResponse.data.data;
+    return response.data.data;
   },
 
   updateProfile: async (
     data: UpdateWorkerProfileRequest,
-    userId?: string,
   ): Promise<WorkerProfileDTO> => {
-    const resolvedUserId = userId || (await resolveCurrentUserId());
-
-    if (resolvedUserId) {
-      const response = await api.put<ApiResponse<WorkerProfileDTO>>(
-        API_ENDPOINTS.WORKER_PROFILE.BY_USER_ID(resolvedUserId),
-        data,
-      );
-      return response.data.data;
-    }
-
-    const fallbackResponse = await api.put<ApiResponse<WorkerProfileDTO>>(
+    const response = await api.put<ApiResponse<WorkerProfileDTO>>(
       API_ENDPOINTS.WORKER_PROFILE.BASE,
       data,
     );
-    return fallbackResponse.data.data;
+    return response.data.data;
   },
 };
