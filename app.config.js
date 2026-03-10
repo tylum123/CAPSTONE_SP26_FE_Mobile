@@ -10,7 +10,7 @@ const apiBaseUrl =
 
 export default {
   expo: {
-    name: "CAPSTONE_SP26_FE_Mobile",
+    name: "ArgoTemp",
     slug: "CAPSTONE_SP26_FE_Mobile",
     owner: "tylum123",
     scheme: "agrotemp",
