@@ -4,10 +4,13 @@ import React, {
   useContext,
   ReactNode,
   useEffect,
+  useCallback,
+  useMemo,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { authService, workerProfileService } from "../services";
+import { authTokenService } from "../services/auth-token.service";
 import { STORAGE_KEYS } from "../constants/api";
 
 interface User {
@@ -38,73 +41,84 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  const applyUserProfile = (profile: {
-    id: string;
-    fullName?: string;
-    email?: string;
-    roleID?: string;
-  }) => {
-    setUser({
-      id: profile.id,
-      name: profile.fullName || profile.email || "",
-      email: profile.email || "",
-      roleID: profile.roleID || "worker",
-    });
-  };
-
-  const login = async (email: string, password: string) => {
-    const loginRequest = email.includes("@")
-      ? { email, password }
-      : { phoneNumber: email, password };
-    const response = await authService.login(loginRequest);
-    await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
-    try {
-      const profile = await workerProfileService.getProfile();
-      const profileWithEmail = {
-        ...profile,
-        email: response.email || (email.includes("@") ? email : undefined),
-      };
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(profileWithEmail),
-      );
-      applyUserProfile(profileWithEmail);
-    } catch {
-      applyUserProfile({
-        id: "me",
-        fullName: response.email || email,
-        email: response.email || email,
-        roleID: "worker",
+  const applyUserProfile = useCallback(
+    (profile: {
+      id: string;
+      fullName?: string;
+      email?: string;
+      roleID?: string;
+    }) => {
+      setUser({
+        id: profile.id,
+        name: profile.fullName || profile.email || "",
+        email: profile.email || "",
+        roleID: profile.roleID || "worker",
       });
-    }
-  };
+    },
+    [],
+  );
 
-  const loginWithGoogle = async (googleToken: string, roleId = 3) => {
-    const response = await authService.googleLogin({ googleToken, roleId });
-    await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const loginRequest = email.includes("@")
+        ? { email, password }
+        : { phoneNumber: email, password };
+      const response = await authService.login(loginRequest);
+      await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+      authTokenService.setTokenToMemory(response.token);
+      try {
+        const profile = await workerProfileService.getProfile();
+        const profileWithEmail = {
+          ...profile,
+          email: response.email || (email.includes("@") ? email : undefined),
+        };
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_DATA,
+          JSON.stringify(profileWithEmail),
+        );
+        applyUserProfile(profileWithEmail);
+      } catch {
+        applyUserProfile({
+          id: "me",
+          fullName: response.email || email,
+          email: response.email || email,
+          roleID: "worker",
+        });
+      }
+    },
+    [applyUserProfile],
+  );
 
-    try {
-      const profile = await workerProfileService.getProfile();
-      const profileWithEmail = {
-        ...profile,
-        email: response.email,
-      };
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(profileWithEmail),
-      );
-      applyUserProfile(profileWithEmail);
-    } catch {
-      applyUserProfile({
-        id: "me",
-        fullName: response.email,
-        email: response.email,
-        roleID: "worker",
-      });
-    }
-  };
+  const loginWithGoogle = useCallback(
+    async (googleToken: string, roleId = 3) => {
+      const response = await authService.googleLogin({ googleToken, roleId });
+      await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+      authTokenService.setTokenToMemory(response.token);
 
-  const fetchProfile = async () => {
+      try {
+        const profile = await workerProfileService.getProfile();
+        const profileWithEmail = {
+          ...profile,
+          email: response.email,
+        };
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_DATA,
+          JSON.stringify(profileWithEmail),
+        );
+        applyUserProfile(profileWithEmail);
+      } catch {
+        applyUserProfile({
+          id: "me",
+          fullName: response.email,
+          email: response.email,
+          roleID: "worker",
+        });
+      }
+    },
+    [applyUserProfile],
+  );
+
+  const fetchProfile = useCallback(async () => {
     const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     if (!token) {
       setUser(null);
@@ -125,40 +139,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       JSON.stringify(profileWithEmail),
     );
     applyUserProfile(profileWithEmail);
-  };
+  }, [applyUserProfile]);
 
-  const register = async (payload: {
-    email: string;
-    phoneNumber: string;
-    password: string;
-    address: string;
-    roleId: number;
-  }) => {
-    const response = await authService.register(payload);
-    await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+  const register = useCallback(
+    async (payload: {
+      email: string;
+      phoneNumber: string;
+      password: string;
+      address: string;
+      roleId: number;
+    }) => {
+      const response = await authService.register(payload);
+      await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
+      authTokenService.setTokenToMemory(response.token);
 
-    try {
-      const profile = await workerProfileService.getProfile();
-      const profileWithEmail = {
-        ...profile,
-        email: response.email || payload.email,
-      };
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(profileWithEmail),
-      );
-      applyUserProfile(profileWithEmail);
-    } catch {
-      applyUserProfile({
-        id: "me",
-        fullName: response.email || payload.email,
-        email: response.email || payload.email,
-        roleID: String(payload.roleId),
-      });
-    }
-  };
+      try {
+        const profile = await workerProfileService.getProfile();
+        const profileWithEmail = {
+          ...profile,
+          email: response.email || payload.email,
+        };
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_DATA,
+          JSON.stringify(profileWithEmail),
+        );
+        applyUserProfile(profileWithEmail);
+      } catch {
+        applyUserProfile({
+          id: "me",
+          fullName: response.email || payload.email,
+          email: response.email || payload.email,
+          roleID: String(payload.roleId),
+        });
+      }
+    },
+    [applyUserProfile],
+  );
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authService.logout();
     } catch {
@@ -172,16 +190,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(null);
+    authTokenService.setTokenToMemory(null);
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_DATA,
       STORAGE_KEYS.REFRESH_TOKEN,
     ]).catch(() => undefined);
-  };
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      authTokenService.setTokenToMemory(token);
       if (!token) {
         setUser(null);
         return;
@@ -214,23 +234,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initializeAuth().catch(() => undefined);
-  }, []);
+  }, [applyUserProfile]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        login,
-        loginWithGoogle,
-        fetchProfile,
-        register,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      login,
+      loginWithGoogle,
+      fetchProfile,
+      register,
+      logout,
+    }),
+    [user, login, loginWithGoogle, fetchProfile, register, logout],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

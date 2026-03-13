@@ -32,7 +32,6 @@ export const API_ENDPOINTS = {
   // Worker profile
   WORKER_PROFILE: {
     BASE: `${API_PREFIX}/worker-profile`,
-    BY_USER_ID: (userId: string) => `${API_PREFIX}/worker-profile/${userId}`,
   },
   // User
   USER: {

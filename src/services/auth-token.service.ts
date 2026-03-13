@@ -62,9 +62,21 @@ const extractStringClaim = (
   return null;
 };
 
+let memoryToken: string | null = null;
+let isMemoryTokenSet: boolean = false;
+
 export const authTokenService = {
+  setTokenToMemory: (token: string | null) => {
+    memoryToken = token;
+    isMemoryTokenSet = true;
+  },
+
   getToken: async (): Promise<string | null> => {
-    return AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    if (isMemoryTokenSet) return memoryToken;
+    const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    memoryToken = token;
+    isMemoryTokenSet = true;
+    return token;
   },
 
   getTokenPayload: async (): Promise<JwtClaims | null> => {

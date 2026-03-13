@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   resultsCount: {
-    ...TYPOGRAPHY.body,
+    ...TYPOGRAPHY.body1,
     color: COLORS.slate[600],
     fontWeight: "500",
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     color: COLORS.slate[600],
   },
   wageText: {
-    ...TYPOGRAPHY.subtitle,
+    ...TYPOGRAPHY.subtitle2,
     color: COLORS.emerald[700],
   },
 });

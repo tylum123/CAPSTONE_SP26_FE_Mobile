@@ -2,7 +2,7 @@
 
 Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase.
 
-Cập nhật lần cuối: **2026-03-05**
+Cập nhật lần cuối: **2026-03-10**
 
 ## 1) Thông tin chung
 
@@ -149,12 +149,12 @@ Validation chính:
 
 ## 3) Worker Profile APIs
 
-### 3.1 GET `/worker-profile/{userId}`
+### 3.1 GET `/worker-profile`
 
 Mục đích:
 
-- Lấy profile worker theo `userId`.
-- Chỉ worker sở hữu profile đó được truy cập.
+- Lấy profile worker của user hiện tại.
+- Lấy thông tin worker qua claim của token hiện hành (không cần truyền userId).
 
 Auth/Role:
 
@@ -162,20 +162,20 @@ Auth/Role:
 
 Path params:
 
-- `userId` (guid, required)
+- Không có.
 
 Response:
 
 - `200`: `ApiResponse<WorkerProfileDTO>`
-- `403`: `ApiResponse<object>` (userId route không khớp claim `NameIdentifier`)
+- `404`: `ApiResponse<object>` (Không tìm thấy profile)
 - `500`: `ApiResponse<object>`
 
-### 3.2 PUT `/worker-profile/{userId}`
+### 3.2 PUT `/worker-profile`
 
 Mục đích:
 
 - Tạo profile lần đầu hoặc cập nhật profile hiện có.
-- Chỉ worker sở hữu profile đó được cập nhật.
+- Thông tin user sẽ được trích xuất từ JWT Claims.
 
 Auth/Role:
 
@@ -183,7 +183,7 @@ Auth/Role:
 
 Path params:
 
-- `userId` (guid, required)
+- Không có.
 
 Request body:
 
@@ -193,7 +193,6 @@ Response:
 
 - `200`: `ApiResponse<WorkerProfileDTO>`
 - `400`: `ApiResponse<object>` (ModelState invalid)
-- `403`: `ApiResponse<object>` (userId route không khớp claim `NameIdentifier`)
 - `500`: `ApiResponse<object>`
 
 ---
@@ -486,6 +485,7 @@ Response:
 
 ## 7) Ghi chú nghiệp vụ quan trọng
 
+- WorkerProfile APIs (GET/PUT) đã loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
 - Attendance APIs yêu cầu claim tuỳ biến:
   - `WorkerProfileId` cho luồng worker
   - `FarmerProfileId` cho luồng farmer

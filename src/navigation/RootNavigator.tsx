@@ -9,6 +9,16 @@ import { OnboardingProfileScreen } from "../screens/OnboardingProfileScreen";
 import { useAuth } from "../context/AuthContext";
 import { workerProfileService } from "../services";
 
+// Standalone screens
+import { JobDetailScreen } from "../screens/JobDetailScreen";
+import { ChatScreen } from "../screens/ChatScreen";
+import { NotificationsScreen } from "../screens/NotificationsScreen";
+import { ReviewScreen } from "../screens/ReviewScreen";
+import { CheckInScreen } from "../screens/CheckInScreen";
+import { AttendanceHistoryScreen } from "../screens/AttendanceHistoryScreen";
+import { AttendanceDetailScreen } from "../screens/AttendanceDetailScreen";
+import { EditProfileScreen } from "../screens/EditProfileScreen";
+
 const Stack = createStackNavigator();
 
 export function RootNavigator() {
@@ -39,6 +49,20 @@ export function RootNavigator() {
     checkProfile().catch(() => undefined);
   }, [isAuthenticated]);
 
+  const renderAuthenticatedScreens = () => (
+    <>
+      <Stack.Screen name="Worker" component={WorkerTabNavigator} />
+      <Stack.Screen name="JobDetail" component={JobDetailScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="Review" component={ReviewScreen} />
+      <Stack.Screen name="CheckIn" component={CheckInScreen} />
+      <Stack.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} />
+      <Stack.Screen name="AttendanceDetail" component={AttendanceDetailScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+    </>
+  );
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -63,11 +87,11 @@ export function RootNavigator() {
             name="OnboardingProfile"
             component={OnboardingProfileScreen}
           />
-          <Stack.Screen name="Worker" component={WorkerTabNavigator} />
+          {renderAuthenticatedScreens()}
         </>
       ) : (
         // Main App Stack - Đã đăng nhập (Worker only)
-        <Stack.Screen name="Worker" component={WorkerTabNavigator} />
+        renderAuthenticatedScreens()
       )}
     </Stack.Navigator>
   );
