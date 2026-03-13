@@ -1,54 +1,37 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Clock, CheckCircle } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { attendanceService } from "../services";
 import { useAuth } from "../context/AuthContext";
 
 export function CheckInScreen({ navigation, route }: any) {
   const { isAuthenticated, user } = useAuth();
-
-  // jobApplicationId bắt buộc phải được truyền qua navigation params
   const jobApplicationId: string = route?.params?.jobApplicationId ?? "";
 
-  const [checkInNotes, setCheckInNotes] = useState("");
-  // attendanceId: nhận từ params (nếu đã check-in trước đó) hoặc set sau khi check-in thành công
-  const [attendanceId, setAttendanceId] = useState<string>(
-    route?.params?.attendanceId ?? "",
-  );
+  const [checkInNotes, setCheckInNotes]   = useState("");
+  const [attendanceId, setAttendanceId]   = useState<string>(route?.params?.attendanceId ?? "");
   const [checkOutNotes, setCheckOutNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checkedIn, setCheckedIn] = useState(!!route?.params?.attendanceId);
-  const [checkedOut, setCheckedOut] = useState(false);
+  const [loading, setLoading]             = useState(false);
+  const [checkedIn, setCheckedIn]         = useState(!!route?.params?.attendanceId);
+  const [checkedOut, setCheckedOut]       = useState(false);
 
-  // Nếu không có jobApplicationId từ params thì hiển thị lỗi
   if (!jobApplicationId) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.header}>
+      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+        <View className="flex-row items-center justify-between px-4 py-2">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <ArrowLeft size={22} color={COLORS.gray[900]} />
+            <ArrowLeft size={22} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chấm công</Text>
+          <Text className="text-lg font-bold text-slate-900">Chấm công</Text>
           <View style={{ width: 22 }} />
         </View>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            Không tìm thấy thông tin đơn ứng tuyển.{"\n"}Vui lòng mở màn hình
-            này từ danh sách công việc của bạn.
+        <View className="flex-1 justify-center items-center p-8 gap-4">
+          <Text className="text-[15px] text-slate-600 text-center leading-[22px]">
+            Không tìm thấy thông tin đơn ứng tuyển.{"\n"}Vui lòng mở màn hình này từ danh sách công việc.
           </Text>
-          <Button variant="outline" onPress={() => navigation.goBack()}>
-            Quay lại
-          </Button>
+          <Button variant="outline" onPress={() => navigation.goBack()}>Quay lại</Button>
         </View>
       </SafeAreaView>
     );
@@ -57,295 +40,101 @@ export function CheckInScreen({ navigation, route }: any) {
   const handleCheckIn = async () => {
     if (!isAuthenticated || user?.isDemo) {
       setLoading(true);
-      setTimeout(() => {
-        setAttendanceId("mock-attendance-123");
-        setCheckedIn(true);
-        Alert.alert("Thành công (Demo)", "Check in giả lập thành công!");
-        setLoading(false);
-      }, 1000);
+      setTimeout(() => { setAttendanceId("mock-attendance-123"); setCheckedIn(true); Alert.alert("Thành công (Demo)", "Check in giả lập thành công!"); setLoading(false); }, 1000);
       return;
     }
-
     setLoading(true);
     try {
-      const response = await attendanceService.checkIn({
-        jobApplicationId,
-        checkInTime: new Date().toISOString(),
-        checkInNotes: checkInNotes || undefined,
-      });
-      setAttendanceId(response.id);
-      setCheckedIn(true);
-      Alert.alert("Thành công", "Check in thành công!");
-    } catch {
-      Alert.alert("Lỗi", "Không thể check in. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
+      const response = await attendanceService.checkIn({ jobApplicationId, checkInTime: new Date().toISOString(), checkInNotes: checkInNotes || undefined });
+      setAttendanceId(response.id); setCheckedIn(true); Alert.alert("Thành công", "Check in thành công!");
+    } catch { Alert.alert("Lỗi", "Không thể check in. Vui lòng thử lại."); }
+    finally { setLoading(false); }
   };
 
   const handleCheckOut = async () => {
     if (!isAuthenticated || user?.isDemo) {
       setLoading(true);
-      setTimeout(() => {
-        setCheckedOut(true);
-        Alert.alert("Thành công (Demo)", "Check out giả lập thành công!");
-        setLoading(false);
-      }, 1000);
+      setTimeout(() => { setCheckedOut(true); Alert.alert("Thành công (Demo)", "Check out giả lập thành công!"); setLoading(false); }, 1000);
       return;
     }
-    if (!attendanceId) {
-      Alert.alert("Chưa check in", "Bạn cần check in trước khi check out.");
-      return;
-    }
-
+    if (!attendanceId) { Alert.alert("Chưa check in", "Bạn cần check in trước khi check out."); return; }
     setLoading(true);
     try {
-      await attendanceService.checkOut({
-        attendanceId,
-        checkOutTime: new Date().toISOString(),
-        checkOutNotes: checkOutNotes || undefined,
-      });
-      setCheckedOut(true);
-      Alert.alert("Thành công", "Check out thành công!");
-    } catch {
-      Alert.alert("Lỗi", "Không thể check out. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
+      await attendanceService.checkOut({ attendanceId, checkOutTime: new Date().toISOString(), checkOutNotes: checkOutNotes || undefined });
+      setCheckedOut(true); Alert.alert("Thành công", "Check out thành công!");
+    } catch { Alert.alert("Lỗi", "Không thể check out. Vui lòng thử lại."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.header}>
+    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      <View className="flex-row items-center justify-between px-4 py-2">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={22} color={COLORS.gray[900]} />
+          <ArrowLeft size={22} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chấm công</Text>
+        <Text className="text-lg font-bold text-slate-900">Chấm công</Text>
         <View style={{ width: 22 }} />
       </View>
 
-      <View style={styles.container}>
-        {/* Thông tin đơn ứng tuyển (read-only, từ navigation params) */}
-        <View style={styles.infoChip}>
-          <Text style={styles.infoChipLabel}>Đơn ứng tuyển</Text>
-          <Text style={styles.infoChipValue} numberOfLines={1}>
-            {jobApplicationId}
-          </Text>
+      <View className="flex-1 p-4 gap-4">
+        {/* Info chip */}
+        <View className="bg-slate-50 rounded-xl border border-slate-200 p-2 gap-0.5">
+          <Text className="text-[11px] font-semibold text-slate-500 uppercase" style={{ letterSpacing: 0.5 }}>Đơn ứng tuyển</Text>
+          <Text className="text-[13px] text-slate-700" numberOfLines={1}>{jobApplicationId}</Text>
         </View>
 
-        {/* Card Check in */}
-        <View style={[styles.card, checkedIn && styles.cardDone]}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Check in</Text>
-            {checkedIn && <CheckCircle size={18} color={COLORS.emerald[600]} />}
+        {/* Check in card */}
+        <View className={["bg-white rounded-2xl p-4 border gap-2", checkedIn ? "border-primary-600 bg-primary-50" : "border-slate-200"].join(" ")}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-base font-bold text-slate-900">Check in</Text>
+            {checkedIn && <CheckCircle size={18} color="#059669" />}
           </View>
-
           {checkedIn ? (
-            <View style={styles.doneChip}>
-              <Text style={styles.doneChipLabel}>Attendance ID</Text>
-              <Text style={styles.doneChipValue} numberOfLines={1}>
-                {attendanceId}
-              </Text>
+            <View className="bg-white rounded-xl border border-primary-600 p-2 gap-0.5">
+              <Text className="text-[11px] font-semibold text-primary-600 uppercase" style={{ letterSpacing: 0.5 }}>Attendance ID</Text>
+              <Text className="text-[13px] text-slate-700" numberOfLines={1}>{attendanceId}</Text>
             </View>
           ) : (
             <>
-              <Text style={styles.label}>Ghi chú (tuỳ chọn)</Text>
+              <Text className="text-sm font-semibold text-slate-700">Ghi chú (tuỳ chọn)</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Nhập ghi chú check in..."
-                placeholderTextColor={COLORS.gray[400]}
-                value={checkInNotes}
-                onChangeText={setCheckInNotes}
-                multiline
+                className="border border-slate-200 rounded-xl px-2 py-2 text-slate-900 min-h-[80px]"
+                placeholder="Nhập ghi chú check in..." placeholderTextColor="#9ca3af"
+                value={checkInNotes} onChangeText={setCheckInNotes} multiline
+                textAlignVertical="top"
               />
-              <Button onPress={handleCheckIn} loading={loading}>
-                Check in ngay
-              </Button>
+              <Button onPress={handleCheckIn} loading={loading}>Check in ngay</Button>
             </>
           )}
         </View>
 
-        {/* Card Check out */}
-        <View style={[styles.card, checkedOut && styles.cardDone]}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Check out</Text>
-            {checkedOut && (
-              <CheckCircle size={18} color={COLORS.emerald[600]} />
-            )}
+        {/* Check out card */}
+        <View className={["bg-white rounded-2xl p-4 border gap-2", checkedOut ? "border-primary-600 bg-primary-50" : "border-slate-200"].join(" ")}>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-base font-bold text-slate-900">Check out</Text>
+            {checkedOut && <CheckCircle size={18} color="#059669" />}
           </View>
-
           {checkedOut ? (
-            <Text style={styles.doneText}>Đã check out thành công.</Text>
+            <Text className="text-sm text-primary-600 font-semibold">Đã check out thành công.</Text>
           ) : (
             <>
-              {!checkedIn && (
-                <Text style={styles.hintText}>
-                  Hãy check in trước để mở chức năng này.
-                </Text>
-              )}
-              <Text style={styles.label}>Ghi chú (tuỳ chọn)</Text>
+              {!checkedIn && <Text className="text-xs text-slate-500">Hãy check in trước để mở chức năng này.</Text>}
+              <Text className="text-sm font-semibold text-slate-700">Ghi chú (tuỳ chọn)</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Nhập ghi chú check out..."
-                placeholderTextColor={COLORS.gray[400]}
-                value={checkOutNotes}
-                onChangeText={setCheckOutNotes}
-                multiline
-                editable={checkedIn}
+                className="border border-slate-200 rounded-xl px-2 py-2 text-slate-900 min-h-[80px]"
+                placeholder="Nhập ghi chú check out..." placeholderTextColor="#9ca3af"
+                value={checkOutNotes} onChangeText={setCheckOutNotes} multiline
+                textAlignVertical="top" editable={checkedIn}
               />
-              <Button
-                variant="outline"
-                onPress={handleCheckOut}
-                loading={loading}
-                disabled={!checkedIn}
-              >
-                Check out
-              </Button>
+              <Button variant="outline" onPress={handleCheckOut} loading={loading} disabled={!checkedIn}>Check out</Button>
             </>
           )}
-
-          <View style={styles.hintRow}>
-            <Clock size={14} color={COLORS.gray[500]} />
-            <Text style={styles.hintText}>
-              Thời gian lấy theo đồng hồ thiết bị.
-            </Text>
+          <View className="flex-row items-center gap-1.5 mt-1">
+            <Clock size={14} color="#6b7280" />
+            <Text className="text-xs text-slate-500">Thời gian lấy theo đồng hồ thiết bị.</Text>
           </View>
         </View>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.gray[900],
-  },
-  container: {
-    flex: 1,
-    padding: SPACING.md,
-    gap: SPACING.md,
-  },
-  // Info chip hiện jobApplicationId (read-only)
-  infoChip: {
-    backgroundColor: COLORS.gray[50] ?? "#f9fafb",
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-    padding: SPACING.sm,
-    gap: 2,
-  },
-  infoChipLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: COLORS.gray[500],
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  infoChipValue: {
-    fontSize: 13,
-    color: COLORS.gray[700],
-    fontFamily: "monospace" as any,
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-    gap: SPACING.sm,
-  },
-  cardDone: {
-    borderColor: COLORS.emerald[600],
-    backgroundColor: "#f0fdf4",
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.gray[900],
-  },
-  // Attendance ID chip sau khi check-in thành công
-  doneChip: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.emerald[600],
-    padding: SPACING.sm,
-    gap: 2,
-  },
-  doneChipLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: COLORS.emerald[600],
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  doneChipValue: {
-    fontSize: 13,
-    color: COLORS.gray[700],
-    fontFamily: "monospace" as any,
-  },
-  doneText: {
-    fontSize: 14,
-    color: COLORS.emerald[600],
-    fontWeight: "600",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.gray[700],
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-    borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    color: COLORS.gray[900],
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  hintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: SPACING.xs,
-  },
-  hintText: {
-    fontSize: 12,
-    color: COLORS.gray[500],
-  },
-  // Error state khi không có jobApplicationId từ params
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: SPACING.xl ?? 32,
-    gap: SPACING.md,
-  },
-  errorText: {
-    fontSize: 15,
-    color: COLORS.gray[600],
-    textAlign: "center",
-    lineHeight: 22,
-  },
-});

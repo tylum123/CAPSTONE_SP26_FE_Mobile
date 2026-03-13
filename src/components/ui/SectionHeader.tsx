@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-} from "react-native";
-import { COLORS, SPACING, TYPOGRAPHY } from "../../constants/theme";
+import { View, Text, TouchableOpacity, ViewStyle } from "react-native";
 
 interface SectionHeaderProps {
   title: string;
@@ -24,42 +17,21 @@ export function SectionHeader({
   style,
 }: SectionHeaderProps) {
   return (
-    <View style={[styles.container, style]}>
-      <View style={styles.textGroup}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <View
+      className="flex-row items-center justify-between px-4 mb-2"
+      style={style}
+    >
+      <View className="flex-1">
+        <Text className="text-xl font-bold text-slate-800">{title}</Text>
+        {subtitle ? (
+          <Text className="text-[15px] text-slate-600 mt-1">{subtitle}</Text>
+        ) : null}
       </View>
       {actionLabel && onPressAction ? (
         <TouchableOpacity onPress={onPressAction} hitSlop={8}>
-          <Text style={styles.action}>{actionLabel}</Text>
+          <Text className="text-base font-semibold text-primary-600">{actionLabel}</Text>
         </TouchableOpacity>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  textGroup: {
-    flex: 1,
-  },
-  title: {
-    ...TYPOGRAPHY.title,
-    color: COLORS.slate[800],
-  },
-  subtitle: {
-    ...TYPOGRAPHY.body1,
-    color: COLORS.slate[600],
-    marginTop: SPACING.xs,
-  },
-  action: {
-    ...TYPOGRAPHY.subtitle2,
-    color: COLORS.emerald[600],
-  },
-});

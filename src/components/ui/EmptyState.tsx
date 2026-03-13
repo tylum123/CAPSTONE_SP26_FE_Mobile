@@ -1,6 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ViewStyle } from "react-native";
-import { COLORS, SPACING, TYPOGRAPHY } from "../../constants/theme";
+import { View, Text, ViewStyle } from "react-native";
 import { Button } from "./Button";
 
 interface EmptyStateProps {
@@ -21,11 +20,11 @@ export function EmptyState({
   style,
 }: EmptyStateProps) {
   return (
-    <View style={[styles.container, style]}>
-      {icon ? <View style={styles.icon}>{icon}</View> : null}
-      <Text style={styles.title}>{title}</Text>
+    <View className="items-center p-6 gap-2" style={style}>
+      {icon ? <View className="mb-1">{icon}</View> : null}
+      <Text className="text-base font-semibold text-slate-800 text-center">{title}</Text>
       {description ? (
-        <Text style={styles.description}>{description}</Text>
+        <Text className="text-[15px] text-slate-600 text-center mb-2">{description}</Text>
       ) : null}
       {actionLabel && onAction ? (
         <Button onPress={onAction} variant="outline" fullWidth>
@@ -35,25 +34,3 @@ export function EmptyState({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    padding: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  icon: {
-    marginBottom: SPACING.xs,
-  },
-  title: {
-    ...TYPOGRAPHY.subtitle2,
-    color: COLORS.slate[800],
-    textAlign: "center",
-  },
-  description: {
-    ...TYPOGRAPHY.body1,
-    color: COLORS.slate[600],
-    textAlign: "center",
-    marginBottom: SPACING.sm,
-  },
-});

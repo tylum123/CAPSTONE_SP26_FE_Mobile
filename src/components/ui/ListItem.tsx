@@ -1,19 +1,6 @@
 import React from "react";
-import {
-  Pressable,
-  View,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from "react-native";
+import { Pressable, View, Text, ViewStyle } from "react-native";
 import { ChevronRight } from "lucide-react-native";
-import {
-  COLORS,
-  SPACING,
-  BORDER_RADIUS,
-  TYPOGRAPHY,
-} from "../../constants/theme";
 
 interface ListItemProps {
   title: string;
@@ -37,15 +24,15 @@ export function ListItem({
   disabled,
 }: ListItemProps) {
   const content = (
-    <View style={[styles.container, style]}>
-      {leftSlot ? <View style={styles.left}>{leftSlot}</View> : null}
-      <View style={styles.body}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+    <View className="flex-row items-center p-4 gap-2" style={style}>
+      {leftSlot ? <View className="mr-2">{leftSlot}</View> : null}
+      <View className="flex-1">
+        <Text className="text-base font-semibold text-slate-800">{title}</Text>
+        {subtitle ? <Text className="text-sm text-slate-600 mt-1">{subtitle}</Text> : null}
+        {meta ? <Text className="text-[12px] font-medium text-slate-500 mt-1">{meta}</Text> : null}
       </View>
-      <View style={styles.right}>
-        {rightSlot ?? <ChevronRight size={18} color={COLORS.slate[400]} />}
+      <View className="ml-2">
+        {rightSlot ?? <ChevronRight size={18} color="#94a3b8" />}
       </View>
     </View>
   );
@@ -56,55 +43,11 @@ export function ListItem({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.pressable,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
+      className={["rounded-2xl", disabled ? "opacity-60" : ""].filter(Boolean).join(" ")}
+      style={({ pressed }) => pressed ? { backgroundColor: "#f1f5f9" } : {}}
       hitSlop={8}
     >
       {content}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  pressable: {
-    borderRadius: BORDER_RADIUS.lg,
-  },
-  pressed: {
-    backgroundColor: COLORS.slate[100],
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  left: {
-    marginRight: SPACING.sm,
-  },
-  body: {
-    flex: 1,
-  },
-  right: {
-    marginLeft: SPACING.sm,
-  },
-  title: {
-    ...TYPOGRAPHY.subtitle2,
-    color: COLORS.slate[800],
-  },
-  subtitle: {
-    ...TYPOGRAPHY.body2,
-    color: COLORS.slate[600],
-    marginTop: SPACING.xs,
-  },
-  meta: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.slate[500],
-    marginTop: SPACING.xs,
-  },
-});

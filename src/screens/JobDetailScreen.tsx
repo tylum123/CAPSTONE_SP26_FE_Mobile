@@ -1,29 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  MapPin,
-  Clock,
-  Banknote,
-  Star,
-  Calendar,
-  Users,
-  Wrench,
-  Briefcase,
-  MessageCircle,
-  ArrowLeft,
-  CheckCircle,
-} from "lucide-react-native";
+import { MapPin, Clock, Banknote, Star, Calendar, Users, Wrench, Briefcase, MessageCircle, ArrowLeft, CheckCircle } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from "../constants/theme";
 import { jobService, JobPostDTO } from "../services";
 import { useAuth } from "../context/AuthContext";
 
@@ -36,34 +17,14 @@ export function JobDetailScreen({ navigation, route }: any) {
   const demoJobDetail = {
     id: jobId,
     title: "Thu hoạch lúa mùa",
-    description:
-      "Cần tuyển người thu hoạch lúa cho 5 mẫu ruộng. Công việc bao gồm: gặt lúa, phơi lúa, và vận chuyển vào kho. Yêu cầu có kinh nghiệm làm việc ngoài trời và chịu khó.",
-    farmer: {
-      name: "Nguyễn Văn A",
-      avatar: "https://i.pravatar.cc/150?img=12",
-      rating: 4.8,
-      totalJobs: 45,
-    },
-    location: {
-      address: "Ấp Tân Thạnh, xã Tân Lộc, huyện Thốt Nốt, TP. Cần Thơ",
-      distance: 2.5,
-    },
-    wage: 250000,
-    duration: "1 ngày",
-    workload: "5 mẫu ruộng (~2000m²)",
-    requiredWorkers: 5,
-    appliedWorkers: 2,
-    requiredSkills: "Thu hoạch, Vận chuyển",
-    genderPreference: "Không yêu cầu",
-    ageRequirement: "18-55",
-    wageTypeId: "Theo ngày",
-    paymentMethodId: "Tiền mặt",
-    requiredTools: [
-      "Liềm cắt lúa",
-      "Găng tay bảo hộ",
-      "Nón lá",
-      "Bao tải đựng lúa",
-    ],
+    description: "Cần tuyển người thu hoạch lúa cho 5 mẫu ruộng. Công việc bao gồm: gặt lúa, phơi lúa, và vận chuyển vào kho. Yêu cầu có kinh nghiệm làm việc ngoài trời và chịu khó.",
+    farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12", rating: 4.8, totalJobs: 45 },
+    location: { address: "Ấp Tân Thạnh, xã Tân Lộc, huyện Thốt Nốt, TP. Cần Thơ", distance: 2.5 },
+    wage: 250000, duration: "1 ngày", workload: "5 mẫu ruộng (~2000m²)",
+    requiredWorkers: 5, appliedWorkers: 2, requiredSkills: "Thu hoạch, Vận chuyển",
+    genderPreference: "Không yêu cầu", ageRequirement: "18-55",
+    wageTypeId: "Theo ngày", paymentMethodId: "Tiền mặt",
+    requiredTools: ["Liềm cắt lúa", "Găng tay bảo hộ", "Nón lá", "Bao tải đựng lúa"],
     providedTools: ["Máy gặt lúa", "Xe vận chuyển"],
     timeSlots: [
       { id: 1, date: "22/01/2026", time: "06:00 - 12:00", available: true },
@@ -71,347 +32,174 @@ export function JobDetailScreen({ navigation, route }: any) {
       { id: 3, date: "23/01/2026", time: "06:00 - 12:00", available: true },
       { id: 4, date: "23/01/2026", time: "13:00 - 18:00", available: false },
     ],
-    jobType: "Thu hoạch",
-    urgent: true,
-    postedDate: "20/01/2026",
+    jobType: "Thu hoạch", urgent: true, postedDate: "20/01/2026",
   };
-
-  const emptyJobDetail = {
-    ...demoJobDetail,
-    title: "",
-    description: "",
-    location: { ...demoJobDetail.location, address: "", distance: 0 },
-    wage: 0,
-    duration: "",
-    workload: "",
-    requiredWorkers: 0,
-    appliedWorkers: 0,
-    requiredSkills: "",
-    genderPreference: "",
-    ageRequirement: "",
-    wageTypeId: "",
-    paymentMethodId: "",
-    jobType: "",
-    urgent: false,
-    postedDate: "",
-  };
+  const emptyJobDetail = { ...demoJobDetail, title: "", description: "", location: { ...demoJobDetail.location, address: "", distance: 0 }, wage: 0, duration: "", workload: "", requiredWorkers: 0, appliedWorkers: 0, requiredSkills: "", genderPreference: "", ageRequirement: "", wageTypeId: "", paymentMethodId: "", jobType: "", urgent: false, postedDate: "" };
 
   const [jobDetail, setJobDetail] = useState(demoJobDetail);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.isDemo) {
-      setJobDetail(demoJobDetail);
-      return;
-    }
-    const loadJobDetail = async () => {
+    if (!isAuthenticated || user?.isDemo) { setJobDetail(demoJobDetail); return; }
+    (async () => {
       try {
         const data = await jobService.getJobPostDetail(String(jobId));
-        setJobDetail({
-          ...demoJobDetail,
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          jobType: data.jobCategoryId,
-          location: {
-            ...demoJobDetail.location,
-            address: data.address,
-            distance: 0,
-          },
-          wage: data.wageAmount,
-          duration: data.estimatedHours ? `${data.estimatedHours} giờ` : "N/A",
-          requiredWorkers: data.workersNeeded,
-          appliedWorkers: data.workersAccepted,
-          workload: data.estimatedHours
-            ? `${data.estimatedHours} giờ`
-            : demoJobDetail.workload,
-          farmer: { ...demoJobDetail.farmer, name: data.farmerProfileId },
-          requiredSkills: data.requiredSkills,
-          genderPreference: data.genderPreference,
-          ageRequirement: data.ageRequirement,
-          wageTypeId: data.wageTypeId,
-          paymentMethodId: data.paymentMethodId,
-          urgent: data.isUrgent,
-          postedDate: data.publishedAt
-            ? new Date(data.publishedAt).toLocaleDateString("vi-VN")
-            : demoJobDetail.postedDate,
-        });
-      } catch {
-        setJobDetail(emptyJobDetail);
-      }
-    };
-    loadJobDetail().catch(() => undefined);
+        setJobDetail({ ...demoJobDetail, id: data.id, title: data.title, description: data.description, jobType: data.jobCategoryId, location: { ...demoJobDetail.location, address: data.address, distance: 0 }, wage: data.wageAmount, duration: data.estimatedHours ? `${data.estimatedHours} giờ` : "N/A", requiredWorkers: data.workersNeeded, appliedWorkers: data.workersAccepted, workload: data.estimatedHours ? `${data.estimatedHours} giờ` : demoJobDetail.workload, farmer: { ...demoJobDetail.farmer, name: data.farmerProfileId }, requiredSkills: data.requiredSkills, genderPreference: data.genderPreference, ageRequirement: data.ageRequirement, wageTypeId: data.wageTypeId, paymentMethodId: data.paymentMethodId, urgent: data.isUrgent, postedDate: data.publishedAt ? new Date(data.publishedAt).toLocaleDateString("vi-VN") : demoJobDetail.postedDate });
+      } catch { setJobDetail(emptyJobDetail); }
+    })().catch(() => undefined);
   }, [isAuthenticated, user?.isDemo, jobId]);
 
   const toggleTimeSlot = (slotId: number) => {
     const slot = jobDetail.timeSlots.find((s) => s.id === slotId);
     if (!slot?.available) return;
     const key = `${slot.date}-${slot.time}`;
-    setSelectedTimeSlots((prev) =>
-      prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key],
-    );
+    setSelectedTimeSlots((p) => p.includes(key) ? p.filter((s) => s !== key) : [...p, key]);
   };
 
   const handleQuickApply = () => {
-    if (selectedTimeSlots.length === 0) {
-      alert("Vui lòng chọn ít nhất một khung giờ");
-      return;
-    }
+    if (selectedTimeSlots.length === 0) { alert("Vui lòng chọn ít nhất một khung giờ"); return; }
     alert(`Đã apply thành công cho ${selectedTimeSlots.length} khung giờ!`);
     navigation.goBack();
   };
 
   const infoRows = [
-    {
-      icon: MapPin,
-      label: "Địa điểm",
-      value: jobDetail.location.address,
-      hint: `Cách bạn ${jobDetail.location.distance} km`,
-    },
-    { icon: Clock, label: "Thời gian", value: jobDetail.duration },
-    { icon: Briefcase, label: "Khối lượng", value: jobDetail.workload },
-    {
-      icon: Users,
-      label: "Số người tuyển",
-      value: `${jobDetail.requiredWorkers} người (đã có ${jobDetail.appliedWorkers})`,
-    },
-    {
-      icon: Wrench,
-      label: "Kỹ năng yêu cầu",
-      value: jobDetail.requiredSkills || "Không yêu cầu",
-    },
-    {
-      icon: Users,
-      label: "Giới tính",
-      value: jobDetail.genderPreference || "Không yêu cầu",
-    },
-    {
-      icon: Calendar,
-      label: "Độ tuổi",
-      value: jobDetail.ageRequirement || "Không yêu cầu",
-    },
-    {
-      icon: Banknote,
-      label: "Hình thức lương",
-      value: jobDetail.wageTypeId || "N/A",
-    },
-    {
-      icon: Briefcase,
-      label: "Thanh toán",
-      value: jobDetail.paymentMethodId || "N/A",
-    },
+    { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location.address, hint: `Cách bạn ${jobDetail.location.distance} km` },
+    { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
+    { Icon: Briefcase, label: "Khối lượng",       value: jobDetail.workload },
+    { Icon: Users,     label: "Số người tuyển",   value: `${jobDetail.requiredWorkers} người (đã có ${jobDetail.appliedWorkers})` },
+    { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
+    { Icon: Users,     label: "Giới tính",         value: jobDetail.genderPreference || "Không yêu cầu" },
+    { Icon: Calendar,  label: "Độ tuổi",           value: jobDetail.ageRequirement || "Không yêu cầu" },
+    { Icon: Banknote,  label: "Hình thức lương",   value: jobDetail.wageTypeId || "N/A" },
+    { Icon: Briefcase, label: "Thanh toán",        value: jobDetail.paymentMethodId || "N/A" },
   ];
 
   return (
-    <View style={styles.root}>
-      {/* ── HEADER ── */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <ArrowLeft size={20} color={COLORS.slate[700]} />
+    <View className="flex-1 bg-primary-50">
+      {/* Top bar */}
+      <View className="flex-row items-center justify-between px-4 pb-2 bg-white border-b border-slate-100" style={{ paddingTop: insets.top + 8 }}>
+        <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 justify-center items-center" onPress={() => navigation.goBack()}>
+          <ArrowLeft size={20} color="#334155" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Chi tiết công việc</Text>
-        <View style={{ width: 40 }} />
+        <Text className="text-base font-bold text-slate-800">Chi tiết công việc</Text>
+        <View className="w-10" />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── JOB HERO ── */}
-        <View style={styles.jobHero}>
-          {/* type tag */}
+      <ScrollView contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+        {/* JOB HERO */}
+        <View className="bg-white rounded-[20px] p-6 mb-4 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
           {jobDetail.jobType ? (
-            <Badge
-              variant={jobDetail.urgent ? "danger" : "success"}
-              style={styles.heroTag}
-            >
-              {jobDetail.urgent ? "🔥 Cần gấp" : jobDetail.jobType}
-            </Badge>
+            <View className="self-start mb-2">
+              <Badge variant={jobDetail.urgent ? "danger" : "success"}>{jobDetail.urgent ? "🔥 Cần gấp" : jobDetail.jobType}</Badge>
+            </View>
           ) : null}
-
-          <Text style={styles.heroTitle}>{jobDetail.title}</Text>
-          <Text style={styles.heroLocation}>
-            <MapPin size={14} color={COLORS.emerald[600]} />{" "}
-            {jobDetail.location.address}
-          </Text>
-
-          {/* wage highlight */}
-          <View style={styles.wageRow}>
-            <View style={styles.wagePill}>
-              <Banknote size={20} color={COLORS.emerald[600]} />
-              <Text style={styles.wageAmount}>
-                {jobDetail.wage.toLocaleString("vi-VN")}
-                <Text style={styles.wageCurrency}> đ</Text>
+          <Text className="text-[22px] font-extrabold text-slate-900 mb-1" style={{ letterSpacing: -0.4 }}>{jobDetail.title}</Text>
+          <Text className="text-[13px] text-slate-500 mb-4">{jobDetail.location.address}</Text>
+          <View className="flex-row items-center gap-2 bg-primary-50 rounded-2xl p-4 border border-primary-100">
+            <View className="flex-row items-center gap-2">
+              <Banknote size={20} color="#059669" />
+              <Text className="text-[28px] font-extrabold text-primary-700" style={{ letterSpacing: -0.5 }}>
+                {jobDetail.wage.toLocaleString("vi-VN")}<Text className="text-lg font-semibold"> đ</Text>
               </Text>
             </View>
-            <Text style={styles.wageType}>
-              / {jobDetail.wageTypeId || "ngày"}
-            </Text>
+            <Text className="text-sm text-slate-500">/ {jobDetail.wageTypeId || "ngày"}</Text>
           </View>
         </View>
 
-        {/* ── FARMER CARD ── */}
-        {!isAuthenticated || user?.isDemo ? (
-          <View style={styles.farmerCard}>
+        {/* FARMER CARD */}
+        {(!isAuthenticated || user?.isDemo) ? (
+          <View className="bg-white rounded-[20px] flex-row items-center p-4 mb-4 gap-4 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
             <Avatar source={{ uri: jobDetail.farmer.avatar }} size={50} />
-            <View style={styles.farmerInfo}>
-              <Text style={styles.farmerName}>{jobDetail.farmer.name}</Text>
-              <View style={styles.farmerRating}>
-                <Star
-                  size={14}
-                  color={COLORS.amber[400]}
-                  fill={COLORS.amber[400]}
-                />
-                <Text style={styles.farmerRatingText}>
-                  {jobDetail.farmer.rating}
-                </Text>
-                <Text style={styles.farmerJobs}>
-                  • {jobDetail.farmer.totalJobs} công việc
-                </Text>
+            <View className="flex-1">
+              <Text className="text-[15px] font-bold text-slate-800 mb-1">{jobDetail.farmer.name}</Text>
+              <View className="flex-row items-center gap-1">
+                <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                <Text className="text-[13px] font-bold text-slate-700">{jobDetail.farmer.rating}</Text>
+                <Text className="text-[13px] text-slate-500">• {jobDetail.farmer.totalJobs} công việc</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.chatBtn}
-              onPress={() =>
-                navigation.navigate("Chat", { farmerId: jobDetail.farmer.name })
-              }
-            >
-              <MessageCircle size={18} color={COLORS.emerald[600]} />
+            <TouchableOpacity className="w-[42px] h-[42px] rounded-full bg-primary-50 border border-primary-200 justify-center items-center" onPress={() => navigation.navigate("Chat", { farmerId: jobDetail.farmer.name })}>
+              <MessageCircle size={18} color="#059669" />
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.farmerCard}>
+          <View className="bg-white rounded-[20px] flex-row items-center p-4 mb-4 gap-4 border border-slate-100">
             <Avatar fallback="#" size={50} />
-            <View style={styles.farmerInfo}>
-              <Text style={styles.farmerName}>
-                Farmer ID: {jobDetail.farmer?.name || "N/A"}
-              </Text>
-            </View>
+            <View className="flex-1"><Text className="text-[15px] font-bold text-slate-800">Farmer ID: {jobDetail.farmer?.name || "N/A"}</Text></View>
           </View>
         )}
 
-        {/* ── DESCRIPTION ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mô tả công việc</Text>
-          <Text style={styles.descText}>{jobDetail.description}</Text>
+        {/* DESCRIPTION */}
+        <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+          <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Mô tả công việc</Text>
+          <Text className="text-sm text-slate-600 leading-[22px]">{jobDetail.description}</Text>
         </View>
 
-        {/* ── INFO GRID ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin chi tiết</Text>
-          <View style={styles.infoGrid}>
-            {infoRows.map((row, i) => {
-              const IconComp = row.icon;
-              return (
-                <View key={i} style={styles.infoItem}>
-                  <View style={styles.infoIconWrap}>
-                    <IconComp size={16} color={COLORS.emerald[600]} />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>{row.label}</Text>
-                    <Text style={styles.infoValue}>{row.value}</Text>
-                    {row.hint && (
-                      <Text style={styles.infoHint}>{row.hint}</Text>
-                    )}
-                  </View>
+        {/* INFO GRID */}
+        <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+          <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Thông tin chi tiết</Text>
+          <View className="gap-3">
+            {infoRows.map((row, i) => (
+              <View key={i} className="flex-row items-start gap-2">
+                <View className="w-[34px] h-[34px] rounded-lg bg-primary-50 justify-center items-center flex-shrink-0">
+                  <row.Icon size={16} color="#059669" />
                 </View>
-              );
-            })}
+                <View className="flex-1">
+                  <Text className="text-[11px] text-slate-400 font-semibold uppercase mb-0.5" style={{ letterSpacing: 0.4 }}>{row.label}</Text>
+                  <Text className="text-sm text-slate-700 font-semibold">{row.value}</Text>
+                  {row.hint && <Text className="text-xs text-primary-600 mt-0.5">{row.hint}</Text>}
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* ── TOOLS ── */}
+        {/* TOOLS */}
         {(!isAuthenticated || user?.isDemo) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Dụng cụ</Text>
-            <View style={styles.toolsGrid}>
+          <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+            <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Dụng cụ</Text>
+            <View className="gap-2">
               {jobDetail.requiredTools.map((tool, i) => (
-                <View
-                  key={`r-${i}`}
-                  style={[styles.toolChip, styles.toolChipRequired]}
-                >
-                  <Wrench size={13} color={COLORS.amber[600]} />
-                  <Text style={styles.toolChipText}>{tool}</Text>
-                  <Text style={styles.toolTag}>Tự mang</Text>
+                <View key={`r-${i}`} className="flex-row items-center gap-2 p-2 bg-rice-50 border border-rice-200 rounded-xl">
+                  <Wrench size={13} color="#d97706" />
+                  <Text className="flex-1 text-[13px] text-slate-700">{tool}</Text>
+                  <Text className="text-[11px] font-bold text-rice-600">Tự mang</Text>
                 </View>
               ))}
               {jobDetail.providedTools.map((tool, i) => (
-                <View
-                  key={`p-${i}`}
-                  style={[styles.toolChip, styles.toolChipProvided]}
-                >
-                  <CheckCircle size={13} color={COLORS.emerald[600]} />
-                  <Text style={styles.toolChipText}>{tool}</Text>
-                  <Text
-                    style={[styles.toolTag, { color: COLORS.emerald[600] }]}
-                  >
-                    Có sẵn
-                  </Text>
+                <View key={`p-${i}`} className="flex-row items-center gap-2 p-2 bg-primary-50 border border-primary-200 rounded-xl">
+                  <CheckCircle size={13} color="#059669" />
+                  <Text className="flex-1 text-[13px] text-slate-700">{tool}</Text>
+                  <Text className="text-[11px] font-bold text-primary-600">Có sẵn</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
 
-        {/* ── TIME SLOTS ── */}
+        {/* TIME SLOTS */}
         {(!isAuthenticated || user?.isDemo) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Chọn khung giờ</Text>
-            <Text style={styles.slotHint}>
-              Chọn các khung giờ bạn có thể làm việc
-            </Text>
-            <View style={styles.slotsGrid}>
+          <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Chọn khung giờ</Text>
+            <Text className="text-[13px] text-slate-400 mb-4">Chọn các khung giờ bạn có thể làm việc</Text>
+            <View className="gap-2.5">
               {jobDetail.timeSlots.map((slot) => {
                 const key = `${slot.date}-${slot.time}`;
                 const selected = selectedTimeSlots.includes(key);
                 return (
                   <TouchableOpacity
                     key={slot.id}
-                    style={[
-                      styles.slotCard,
-                      !slot.available && styles.slotDisabled,
-                      selected && styles.slotSelected,
-                    ]}
+                    className={["flex-row items-center gap-2 p-4 rounded-2xl border-2", !slot.available ? "bg-slate-50 border-slate-100" : selected ? "bg-primary-600 border-primary-700" : "bg-white border-slate-200"].join(" ")}
                     onPress={() => toggleTimeSlot(slot.id)}
                     disabled={!slot.available}
                     activeOpacity={0.85}
                   >
-                    <Calendar
-                      size={18}
-                      color={
-                        selected
-                          ? COLORS.white
-                          : slot.available
-                            ? COLORS.emerald[600]
-                            : COLORS.slate[300]
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.slotDate,
-                        selected && styles.slotTextSelected,
-                        !slot.available && styles.slotTextDisabled,
-                      ]}
-                    >
-                      {slot.date}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.slotTime,
-                        selected && styles.slotTextSelected,
-                        !slot.available && styles.slotTextDisabled,
-                      ]}
-                    >
-                      {slot.time}
-                    </Text>
-                    {!slot.available && (
-                      <Badge variant="secondary">Đã đủ</Badge>
-                    )}
+                    <Calendar size={18} color={selected ? "#ffffff" : slot.available ? "#059669" : "#cbd5e1"} />
+                    <Text className={["text-[15px] font-bold", selected ? "text-white" : !slot.available ? "text-slate-300" : "text-slate-800"].join(" ")}>{slot.date}</Text>
+                    <Text className={["text-[13px]", selected ? "text-white" : !slot.available ? "text-slate-300" : "text-slate-500"].join(" ")}>{slot.time}</Text>
+                    {!slot.available && <Badge variant="secondary">Đã đủ</Badge>}
                     {selected && slot.available && (
-                      <View style={styles.slotCheck}>
-                        <Text style={styles.slotCheckMark}>✓</Text>
+                      <View className="ml-auto w-6 h-6 rounded-full bg-white justify-center items-center">
+                        <Text className="text-sm font-extrabold text-primary-600">✓</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -420,275 +208,20 @@ export function JobDetailScreen({ navigation, route }: any) {
             </View>
           </View>
         )}
-
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* ── FOOTER / APPLY ── */}
+      {/* FOOTER */}
       {(!isAuthenticated || user?.isDemo) && (
-        <View
-          style={[styles.footer, { paddingBottom: insets.bottom + SPACING.sm }]}
-        >
-          <View style={styles.footerLeft}>
-            <Text style={styles.footerLabel}>Thu nhập dự kiến</Text>
-            <Text style={styles.footerAmount}>
-              {(jobDetail.wage * selectedTimeSlots.length).toLocaleString(
-                "vi-VN",
-              )}{" "}
-              đ
-            </Text>
-            {selectedTimeSlots.length > 0 && (
-              <Text style={styles.footerSlots}>
-                {selectedTimeSlots.length} khung giờ
-              </Text>
-            )}
+        <View className="flex-row items-center gap-4 px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 8, shadowColor: "#0f172a", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8 }}>
+          <View className="flex-1">
+            <Text className="text-xs text-slate-500">Thu nhập dự kiến</Text>
+            <Text className="text-[22px] font-extrabold text-primary-700">{(jobDetail.wage * selectedTimeSlots.length).toLocaleString("vi-VN")} đ</Text>
+            {selectedTimeSlots.length > 0 && <Text className="text-xs text-slate-400">{selectedTimeSlots.length} khung giờ</Text>}
           </View>
-          <Button
-            onPress={handleQuickApply}
-            disabled={selectedTimeSlots.length === 0}
-            size="lg"
-            style={styles.applyBtn}
-          >
-            Ứng tuyển ngay
-          </Button>
+          <Button onPress={handleQuickApply} disabled={selectedTimeSlots.length === 0} size="lg">Ứng tuyển ngay</Button>
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.sage[50] },
-
-  /* Top bar */
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate[100],
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.slate[50],
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
-  },
-  topBarTitle: { fontSize: 16, fontWeight: "700", color: COLORS.slate[800] },
-
-  scrollContent: { padding: SPACING.md },
-
-  /* Job hero */
-  jobHero: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-  },
-  heroTag: { marginBottom: SPACING.sm, alignSelf: "flex-start" },
-  heroTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: COLORS.slate[900],
-    letterSpacing: -0.4,
-    marginBottom: SPACING.xs,
-  },
-  heroLocation: {
-    fontSize: 13,
-    color: COLORS.slate[500],
-    marginBottom: SPACING.md,
-  },
-  wageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    backgroundColor: COLORS.emerald[50],
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.emerald[100],
-  },
-  wagePill: { flexDirection: "row", alignItems: "center", gap: 8 },
-  wageAmount: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: COLORS.emerald[700],
-    letterSpacing: -0.5,
-  },
-  wageCurrency: { fontSize: 18, fontWeight: "600" },
-  wageType: { fontSize: 14, color: COLORS.slate[500] },
-
-  /* Farmer card */
-  farmerCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    gap: SPACING.md,
-    ...SHADOWS.xs,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-  },
-  farmerInfo: { flex: 1 },
-  farmerName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.slate[800],
-    marginBottom: 4,
-  },
-  farmerRating: { flexDirection: "row", alignItems: "center", gap: 4 },
-  farmerRatingText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.slate[700],
-  },
-  farmerJobs: { fontSize: 13, color: COLORS.slate[500] },
-  chatBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.emerald[200],
-  },
-
-  /* Section */
-  section: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.xs,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.slate[800],
-    marginBottom: SPACING.md,
-    letterSpacing: -0.2,
-  },
-  descText: { fontSize: 14, color: COLORS.slate[600], lineHeight: 22 },
-
-  /* Info grid */
-  infoGrid: { gap: 12 },
-  infoItem: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm },
-  infoIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  infoContent: { flex: 1 },
-  infoLabel: {
-    fontSize: 11,
-    color: COLORS.slate[400],
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    marginBottom: 2,
-  },
-  infoValue: { fontSize: 14, color: COLORS.slate[700], fontWeight: "600" },
-  infoHint: { fontSize: 12, color: COLORS.emerald[600], marginTop: 2 },
-
-  /* Tools */
-  toolsGrid: { gap: 8 },
-  toolChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-  },
-  toolChipRequired: {
-    backgroundColor: COLORS.amber[50],
-    borderColor: COLORS.amber[200],
-  },
-  toolChipProvided: {
-    backgroundColor: COLORS.emerald[50],
-    borderColor: COLORS.emerald[200],
-  },
-  toolChipText: { flex: 1, fontSize: 13, color: COLORS.slate[700] },
-  toolTag: { fontSize: 11, fontWeight: "700", color: COLORS.amber[600] },
-
-  /* Time slots */
-  slotHint: {
-    fontSize: 13,
-    color: COLORS.slate[400],
-    marginBottom: SPACING.md,
-  },
-  slotsGrid: { gap: 10 },
-  slotCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 2,
-    borderColor: COLORS.slate[200],
-  },
-  slotDisabled: {
-    backgroundColor: COLORS.slate[50],
-    borderColor: COLORS.slate[100],
-  },
-  slotSelected: {
-    backgroundColor: COLORS.emerald[600],
-    borderColor: COLORS.emerald[700],
-  },
-  slotDate: { fontSize: 15, fontWeight: "700", color: COLORS.slate[800] },
-  slotTime: { fontSize: 13, color: COLORS.slate[500] },
-  slotTextSelected: { color: COLORS.white },
-  slotTextDisabled: { color: COLORS.slate[300] },
-  slotCheck: {
-    marginLeft: "auto",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  slotCheckMark: {
-    fontSize: 14,
-    color: COLORS.emerald[600],
-    fontWeight: "800",
-  },
-
-  /* Footer */
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.slate[100],
-    ...SHADOWS.lg,
-  },
-  footerLeft: { flex: 1 },
-  footerLabel: { fontSize: 12, color: COLORS.slate[500] },
-  footerAmount: { fontSize: 22, fontWeight: "800", color: COLORS.emerald[700] },
-  footerSlots: { fontSize: 12, color: COLORS.slate[400] },
-  applyBtn: { flexShrink: 0 },
-});

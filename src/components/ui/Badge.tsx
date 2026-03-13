@@ -1,14 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native";
-import { COLORS, BORDER_RADIUS, SPACING } from "../../constants/theme";
+import { View, Text, ViewStyle } from "react-native";
 
-type BadgeVariant =
-  | "default"
-  | "success"
-  | "warning"
-  | "danger"
-  | "secondary"
-  | "info";
+type BadgeVariant = "default" | "success" | "warning" | "danger" | "secondary" | "info";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -16,41 +9,26 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const CONFIG: Record<BadgeVariant, { bg: string; text: string }> = {
-  default: { bg: COLORS.emerald[50], text: COLORS.emerald[700] },
-  success: { bg: COLORS.emerald[50], text: COLORS.emerald[700] },
-  warning: { bg: COLORS.amber[50], text: COLORS.amber[600] },
-  danger: { bg: COLORS.rose[50], text: COLORS.rose[500] },
-  secondary: { bg: COLORS.slate[100], text: COLORS.slate[600] },
-  info: { bg: COLORS.blue[50], text: COLORS.blue[600] },
+// Using inline style for dynamic border-color since Tailwind can't do hex+alpha dynamically
+const CONFIG: Record<BadgeVariant, { container: string; text: string; borderColor: string }> = {
+  default:   { container: "bg-primary-50",  text: "text-primary-700", borderColor: "#05966933" },
+  success:   { container: "bg-primary-50",  text: "text-primary-700", borderColor: "#05966933" },
+  warning:   { container: "bg-rice-50",     text: "text-rice-600",    borderColor: "#d9770633" },
+  danger:    { container: "bg-rose-50",     text: "text-rose-500",    borderColor: "#f43f5e33" },
+  secondary: { container: "bg-slate-100",   text: "text-slate-600",   borderColor: "#47556933" },
+  info:      { container: "bg-blue-50",     text: "text-blue-600",    borderColor: "#2563eb33" },
 };
 
 export function Badge({ children, variant = "default", style }: BadgeProps) {
   const cfg = CONFIG[variant];
   return (
     <View
-      style={[
-        styles.badge,
-        { backgroundColor: cfg.bg, borderColor: cfg.text + "22" },
-        style,
-      ]}
+      className={["px-2.5 py-0.5 rounded-full self-start border", cfg.container].join(" ")}
+      style={[{ borderColor: cfg.borderColor }, style]}
     >
-      <Text style={[styles.text, { color: cfg.text }]}>{children}</Text>
+      <Text className={["text-[11px] font-bold tracking-wide", cfg.text].join(" ")}>
+        {children}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.full,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-  },
-  text: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-});

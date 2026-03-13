@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Image, Text, StyleSheet, ViewStyle } from "react-native";
-import { COLORS, SHADOWS } from "../../constants/theme";
+import { View, Image, Text, ViewStyle } from "react-native";
+import { COLORS } from "../../constants/theme";
 
 interface AvatarProps {
   source?: { uri: string } | number;
@@ -15,36 +15,32 @@ export function Avatar({
   size = 40,
   style,
 }: AvatarProps) {
-  const containerStyle: ViewStyle = {
+  const dynamicStyle: ViewStyle = {
     width: size,
     height: size,
     borderRadius: size / 2,
-  };
-
-  const imageStyle = {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-  };
-
-  const fallbackStyle: ViewStyle = {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    backgroundColor: COLORS.emerald[500],
-    justifyContent: "center",
-    alignItems: "center",
   };
 
   return (
-    <View style={[styles.container, containerStyle, style]}>
+    <View
+      className="overflow-hidden shadow-sm"
+      style={[dynamicStyle, style]}
+    >
       {source ? (
-        <Image source={source} style={imageStyle} resizeMode="cover" />
+        <Image
+          source={source}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          resizeMode="cover"
+        />
       ) : (
-        <View style={fallbackStyle}>
-          <Text style={[styles.fallbackText, { fontSize: size / 2.5 }]}>
+        <View
+          className="items-center justify-center"
+          style={[dynamicStyle, { backgroundColor: COLORS.primary[500] }]}
+        >
+          <Text
+            className="text-white font-semibold"
+            style={{ fontSize: size / 2.5 }}
+          >
             {fallback}
           </Text>
         </View>
@@ -52,14 +48,3 @@ export function Avatar({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    overflow: "hidden",
-    ...SHADOWS.sm,
-  },
-  fallbackText: {
-    color: COLORS.white,
-    fontWeight: "600",
-  },
-});

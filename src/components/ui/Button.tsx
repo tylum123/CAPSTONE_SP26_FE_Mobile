@@ -2,14 +2,11 @@ import React from "react";
 import {
   Pressable,
   Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
   ActivityIndicator,
   Animated,
   Platform,
+  ViewStyle,
 } from "react-native";
-import { COLORS, BORDER_RADIUS } from "../../constants/theme";
 
 interface ButtonProps {
   onPress?: () => void;
@@ -21,6 +18,43 @@ interface ButtonProps {
   style?: ViewStyle;
   fullWidth?: boolean;
 }
+
+const variantStyles = {
+  default: {
+    container: "bg-primary-600 overflow-hidden",
+    text: "text-white",
+    shadow: Platform.select({
+      ios: {
+        shadowColor: "#047857",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.28,
+        shadowRadius: 6,
+      },
+      android: { elevation: 0 },
+    }),
+  },
+  outline: {
+    container: "bg-transparent border border-primary-600 overflow-hidden",
+    text: "text-primary-600",
+    shadow: {},
+  },
+  ghost: {
+    container: "bg-primary-50 overflow-hidden",
+    text: "text-primary-700",
+    shadow: {},
+  },
+  danger: {
+    container: "bg-rose-500 overflow-hidden",
+    text: "text-white",
+    shadow: {},
+  },
+};
+
+const sizeStyles = {
+  sm: { container: "px-3.5 py-2 min-h-[38px] rounded-xl", text: "text-[13px]" },
+  md: { container: "px-5 py-3.5 min-h-[50px] rounded-2xl", text: "text-[15px]" },
+  lg: { container: "px-7 py-4 min-h-[56px] rounded-[20px]", text: "text-base" },
+};
 
 export function Button({
   onPress,
@@ -52,11 +86,15 @@ export function Button({
     }).start();
   };
 
+  const vStyle = variantStyles[variant];
+  const sStyle = sizeStyles[size];
+
   return (
     <Animated.View
       style={[
         { transform: [{ scale: scaleAnim }] },
         fullWidth && { alignSelf: "stretch" },
+        vStyle.shadow,
       ]}
     >
       <Pressable
@@ -65,32 +103,29 @@ export function Button({
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         hitSlop={4}
-        style={({ pressed }) =>
-          [
-            styles.base,
-            styles[variant],
-            styles[`size_${size}`],
-            fullWidth && styles.fullWidth,
-            (disabled || loading) && styles.disabled,
-            pressed && styles.pressed,
-            style,
-          ].filter(Boolean) as ViewStyle[]
-        }
+        className={[
+          "items-center justify-center flex-row",
+          vStyle.container,
+          sStyle.container,
+          fullWidth ? "self-stretch" : "",
+          disabled || loading ? "opacity-45" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={style}
       >
         {loading ? (
           <ActivityIndicator
             size="small"
-            color={variant === "default" ? COLORS.white : COLORS.emerald[600]}
+            color={variant === "default" ? "#ffffff" : "#059669"}
           />
         ) : (
           <Text
-            style={
-              [
-                styles.text,
-                styles[`text_${variant}`],
-                styles[`textSize_${size}`],
-              ] as TextStyle[]
-            }
+            className={[
+              "font-bold tracking-tight text-center",
+              vStyle.text,
+              sStyle.text,
+            ].join(" ")}
           >
             {children}
           </Text>
@@ -99,94 +134,3 @@ export function Button({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: BORDER_RADIUS.lg,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  /* Variants */
-  default: {
-    backgroundColor: COLORS.emerald[600],
-    // Only iOS shadow — no elevation to avoid Android border artifact
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.emerald[700],
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.28,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  outline: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: COLORS.emerald[600],
-  },
-  ghost: {
-    backgroundColor: COLORS.emerald[50],
-  },
-  danger: {
-    backgroundColor: COLORS.rose[500],
-  },
-  /* Sizes */
-  size_sm: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    minHeight: 38,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  size_md: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    minHeight: 50,
-  },
-  size_lg: {
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    minHeight: 56,
-    borderRadius: BORDER_RADIUS.xl,
-  },
-  fullWidth: {
-    alignSelf: "stretch",
-  },
-  disabled: {
-    opacity: 0.45,
-  },
-  pressed: {
-    opacity: 0.88,
-  },
-  /* Text */
-  text: {
-    fontWeight: "700",
-    letterSpacing: 0.1,
-    textAlign: "center",
-  },
-  text_default: {
-    color: COLORS.white,
-  },
-  text_outline: {
-    color: COLORS.emerald[600],
-  },
-  text_ghost: {
-    color: COLORS.emerald[700],
-  },
-  text_danger: {
-    color: COLORS.white,
-  },
-  textSize_sm: {
-    fontSize: 13,
-  },
-  textSize_md: {
-    fontSize: 15,
-  },
-  textSize_lg: {
-    fontSize: 16,
-  },
-});
