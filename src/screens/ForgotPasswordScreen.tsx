@@ -1,18 +1,10 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
+  View, Text, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react-native";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 
 export function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -20,122 +12,77 @@ export function ForgotPasswordScreen({ navigation }: any) {
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSendResetLink = async () => {
-    if (!email) {
-      Alert.alert("Lỗi", "Vui lòng nhập địa chỉ email");
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Lỗi", "Địa chỉ email không hợp lệ");
-      return;
-    }
-
+    if (!email) { Alert.alert("Lỗi", "Vui lòng nhập địa chỉ email"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Alert.alert("Lỗi", "Địa chỉ email không hợp lệ"); return; }
     setIsLoading(true);
-
     try {
-      // TODO: Call API to send reset password link
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
       setIsSuccess(true);
-
-      // Show success and navigate back after 3 seconds
-      setTimeout(() => {
-        navigation.goBack();
-      }, 3000);
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể gửi email. Vui lòng thử lại.");
-    } finally {
-      setIsLoading(false);
-    }
+      setTimeout(() => navigation.goBack(), 3000);
+    } catch { Alert.alert("Lỗi", "Không thể gửi email. Vui lòng thử lại."); }
+    finally { setIsLoading(false); }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Custom Header with Back Button */}
-      <View style={styles.headerContainer}>
+    <SafeAreaView className="flex-1 bg-primary-600">
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-4 py-4 border-b border-white/10">
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
+          className="w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+          onPress={() => navigation.goBack()} activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={COLORS.white} strokeWidth={2.5} />
+          <ArrowLeft size={24} color="#ffffff" strokeWidth={2.5} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Quên mật khẩu</Text>
-        <View style={styles.headerSpacer} />
+        <Text className="text-lg font-semibold text-white">Quên mật khẩu</Text>
+        <View className="w-10" />
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.content}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 32 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!isSuccess ? (
             <>
-              {/* Instructions */}
-              <View style={styles.instructionsContainer}>
-                <View style={styles.iconCircle}>
-                  <Mail size={32} color={COLORS.emerald[600]} />
+              <View className="items-center mb-20 mt-10">
+                <View className="w-20 h-20 rounded-full bg-white items-center justify-center mb-6">
+                  <Mail size={32} color="#059669" />
                 </View>
-                <Text style={styles.instructionsTitle}>Đặt lại mật khẩu</Text>
-                <Text style={styles.instructionsText}>
-                  Nhập địa chỉ email của bạn và chúng tôi sẽ gửi liên kết để đặt
-                  lại mật khẩu
+                <Text className="text-[28px] font-bold text-white mb-2 text-center">Đặt lại mật khẩu</Text>
+                <Text className="text-base text-white/90 text-center leading-6 px-4">
+                  Nhập địa chỉ email của bạn và chúng tôi sẽ gửi liên kết để đặt lại mật khẩu
                 </Text>
               </View>
-
-              {/* Email Input */}
-              <View style={styles.form}>
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Mail size={20} color={COLORS.gray[500]} />
+              <View className="mb-8">
+                <View className="flex-row items-center bg-white rounded-2xl px-4 mb-4 h-14">
+                  <View className="mr-2">
+                    <Mail size={20} color="#6b7280" />
                   </View>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Email của bạn"
-                    placeholderTextColor={COLORS.gray[400]}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
+                    className="flex-1 text-base text-slate-900"
+                    placeholder="Email của bạn" placeholderTextColor="#9ca3af"
+                    value={email} onChangeText={setEmail}
+                    keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
                     editable={!isLoading}
                   />
                 </View>
               </View>
-
-              {/* Submit Button */}
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  isLoading && styles.submitButtonDisabled,
-                ]}
-                onPress={handleSendResetLink}
-                disabled={isLoading}
-                activeOpacity={0.8}
+                className={["bg-white rounded-2xl items-center justify-center h-14", isLoading ? "opacity-60" : ""].join(" ")}
+                onPress={handleSendResetLink} disabled={isLoading} activeOpacity={0.8}
               >
-                <Text style={styles.submitButtonText}>
-                  {isLoading ? "Đang gửi..." : "Gửi liên kết"}
-                </Text>
+                <Text className="text-primary-600 text-lg font-bold">{isLoading ? "Đang gửi..." : "Gửi liên kết"}</Text>
               </TouchableOpacity>
             </>
           ) : (
-            // Success State
-            <View style={styles.successContainer}>
-              <View style={styles.successIconCircle}>
-                <CheckCircle size={64} color={COLORS.emerald[500]} />
+            <View className="flex-1 items-center justify-center py-20">
+              <View className="w-[120px] h-[120px] rounded-full bg-white items-center justify-center mb-8">
+                <CheckCircle size={64} color="#10b981" />
               </View>
-              <Text style={styles.successTitle}>Email đã được gửi!</Text>
-              <Text style={styles.successText}>
-                Vui lòng kiểm tra hộp thư của bạn và làm theo hướng dẫn để đặt
-                lại mật khẩu
+              <Text className="text-[28px] font-bold text-white mb-4 text-center">Email đã được gửi!</Text>
+              <Text className="text-base text-white/90 text-center leading-6 px-4 mb-6">
+                Vui lòng kiểm tra hộp thư của bạn và làm theo hướng dẫn để đặt lại mật khẩu
               </Text>
-              <Text style={styles.emailSent}>{email}</Text>
+              <Text className="text-sm text-white font-semibold px-6 py-2 rounded-xl" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
+                {email}
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -143,147 +90,3 @@ export function ForgotPasswordScreen({ navigation }: any) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.emerald[600],
-  },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.white,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: SPACING.xl,
-  },
-  instructionsContainer: {
-    alignItems: "center",
-    marginBottom: SPACING.xl * 2,
-    marginTop: SPACING.xl,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.white,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.lg,
-  },
-  instructionsTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: COLORS.white,
-    marginBottom: SPACING.sm,
-    textAlign: "center",
-  },
-  instructionsText: {
-    fontSize: 16,
-    color: COLORS.white,
-    opacity: 0.9,
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: SPACING.md,
-  },
-  form: {
-    marginBottom: SPACING.xl,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    height: 56,
-  },
-  inputIcon: {
-    marginRight: SPACING.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.gray[900],
-  },
-  submitButton: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.md,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 56,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: COLORS.emerald[600],
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  successContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: SPACING.xl * 2,
-  },
-  successIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.white,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.xl,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: COLORS.white,
-    marginBottom: SPACING.md,
-    textAlign: "center",
-  },
-  successText: {
-    fontSize: 16,
-    color: COLORS.white,
-    opacity: 0.9,
-    textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  emailSent: {
-    fontSize: 14,
-    color: COLORS.white,
-    fontWeight: "600",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-  },
-});

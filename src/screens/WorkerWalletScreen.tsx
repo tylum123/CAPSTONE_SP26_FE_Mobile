@@ -1,493 +1,157 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Clock,
-  XCircle,
-  CreditCard,
-  Download,
-  History,
-  ChevronRight,
-} from "lucide-react-native";
-import { Card, CardContent } from "../components/ui/Card";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Clock, XCircle, TrendingDown, CreditCard, Download, History, ChevronRight } from "lucide-react-native";
+import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { ListItem } from "../components/ui/ListItem";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Button } from "../components/ui/Button";
-import {
-  COLORS,
-  SPACING,
-  BORDER_RADIUS,
-  TYPOGRAPHY,
-  SHADOWS,
-} from "../constants/theme";
 
-type TransactionType = "income" | "withdraw" | "escrow" | "refund";
-type TransactionStatus = "completed" | "pending" | "failed" | "processing";
+type TxType   = "income" | "withdraw" | "escrow" | "refund";
+type TxStatus = "completed" | "pending" | "failed" | "processing";
+interface Transaction { id: number; type: TxType; amount: number; description: string; date: string; status: TxStatus; jobTitle?: string; }
 
-interface Transaction {
-  id: number;
-  type: TransactionType;
-  amount: number;
-  description: string;
-  date: string;
-  status: TransactionStatus;
-  jobTitle?: string;
-}
+const TX_ICON_MAP: Record<TxType, { color: string; bg: string }> = {
+  income:   { color: "#059669", bg: "#d1fae5" },
+  withdraw: { color: "#2563eb", bg: "#dbeafe" },
+  escrow:   { color: "#f59e0b", bg: "#fef3c7" },
+  refund:   { color: "#64748b", bg: "#f1f5f9" },
+};
 
-export function WorkerWalletScreen({ navigation }: any) {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
-    "vnpay" | "momo" | null
-  >(null);
+export function WorkerWalletScreen() {
+  const [_sel, setSel] = useState<"vnpay" | "momo" | null>(null);
 
-  const walletBalance = 1250000;
-  const escrowBalance = 450000;
+  const walletBalance  = 1250000;
+  const escrowBalance  = 450000;
 
   const paymentMethods = [
-    {
-      id: "vnpay",
-      name: "VNPay",
-      logo: "https://vnpay.vn/s1/statics.vnpay.vn/2023/6/0oxhzjmxbksr1686814746087.png",
-      connected: true,
-    },
-    {
-      id: "momo",
-      name: "MoMo",
-      logo: "https://developers.momo.vn/v3/img/logo.png",
-      connected: false,
-    },
+    { id: "vnpay", name: "VNPay", logo: "https://vnpay.vn/s1/statics.vnpay.vn/2023/6/0oxhzjmxbksr1686814746087.png", connected: true  },
+    { id: "momo",  name: "MoMo",  logo: "https://developers.momo.vn/v3/img/logo.png",                               connected: false },
   ];
 
   const transactions: Transaction[] = [
-    {
-      id: 1,
-      type: "income",
-      amount: 250000,
-      description: "Thu hoạch lúa",
-      date: "20/01/2026",
-      status: "completed",
-      jobTitle: "Thu hoạch lúa - Nguyễn Văn A",
-    },
-    {
-      id: 2,
-      type: "escrow",
-      amount: 200000,
-      description: "Chăm sóc vườn cam",
-      date: "19/01/2026",
-      status: "pending",
-      jobTitle: "Chăm sóc vườn cam - Trần Thị B",
-    },
-    {
-      id: 3,
-      type: "withdraw",
-      amount: 500000,
-      description: "Rút tiền về VNPay",
-      date: "18/01/2026",
-      status: "completed",
-    },
-    {
-      id: 4,
-      type: "income",
-      amount: 180000,
-      description: "Làm đất trồng rau",
-      date: "17/01/2026",
-      status: "completed",
-      jobTitle: "Làm đất trồng rau - Phạm Thị D",
-    },
-    {
-      id: 5,
-      type: "escrow",
-      amount: 250000,
-      description: "Phun thuốc sâu",
-      date: "16/01/2026",
-      status: "processing",
-      jobTitle: "Phun thuốc sâu - Lê Văn C",
-    },
+    { id: 1, type: "income",   amount: 250000, description: "Thu hoạch lúa",       date: "20/01/2026", status: "completed", jobTitle: "Thu hoạch lúa - Nguyễn Văn A"    },
+    { id: 2, type: "escrow",   amount: 200000, description: "Chăm sóc vườn cam",   date: "19/01/2026", status: "pending",   jobTitle: "Chăm sóc vườn cam - Trần Thị B"  },
+    { id: 3, type: "withdraw", amount: 500000, description: "Rút tiền về VNPay",   date: "18/01/2026", status: "completed"                                               },
+    { id: 4, type: "income",   amount: 180000, description: "Làm đất trồng rau",   date: "17/01/2026", status: "completed", jobTitle: "Làm đất trồng rau - Phạm Thị D"  },
+    { id: 5, type: "escrow",   amount: 250000, description: "Phun thuốc sâu",      date: "16/01/2026", status: "processing", jobTitle: "Phun thuốc sâu - Lê Văn C"      },
   ];
 
-  const getTransactionIcon = (
-    type: TransactionType,
-    status: TransactionStatus,
-  ) => {
+  const getTxIcon = (type: TxType, status: TxStatus) => {
     const size = 20;
-    if (status === "failed") {
-      return <XCircle size={size} color={COLORS.red[600]} />;
-    }
+    if (status === "failed") return <XCircle size={size} color="#dc2626" />;
     switch (type) {
-      case "income":
-        return <ArrowDownLeft size={size} color={COLORS.emerald[600]} />;
-      case "withdraw":
-        return <ArrowUpRight size={size} color={COLORS.blue[600]} />;
-      case "escrow":
-        return <Clock size={size} color={COLORS.amber[500]} />;
-      case "refund":
-        return <TrendingDown size={size} color={COLORS.slate[500]} />;
-      default:
-        return <Wallet size={size} color={COLORS.slate[500]} />;
+      case "income":   return <ArrowDownLeft size={size} color="#059669" />;
+      case "withdraw": return <ArrowUpRight  size={size} color="#2563eb" />;
+      case "escrow":   return <Clock         size={size} color="#f59e0b" />;
+      default:         return <TrendingDown  size={size} color="#64748b" />;
     }
   };
 
-  const getTransactionColor = (type: TransactionType) => {
-    switch (type) {
-      case "income":
-        return COLORS.emerald[600];
-      case "withdraw":
-        return COLORS.blue[600];
-      case "escrow":
-        return COLORS.amber[500];
-      default:
-        return COLORS.slate[500];
-    }
-  };
-
-  const getTransactionBg = (type: TransactionType) => {
-    switch (type) {
-      case "income":
-        return COLORS.emerald[50];
-      case "withdraw":
-        return COLORS.blue[50];
-      case "escrow":
-        return COLORS.amber[50];
-      default:
-        return COLORS.slate[100];
-    }
-  };
-
-  const getStatusBadge = (status: TransactionStatus) => {
+  const getStatusBadge = (status: TxStatus) => {
     switch (status) {
-      case "completed":
-        return <Badge variant="success">Hoàn thành</Badge>;
-      case "pending":
-        return <Badge variant="warning">Chờ xử lý</Badge>;
-      case "processing":
-        return <Badge variant="secondary">Đang xử lý</Badge>;
-      case "failed":
-        return <Badge variant="danger">Thất bại</Badge>;
-      default:
-        return null;
+      case "completed":  return <Badge variant="success">Hoàn thành</Badge>;
+      case "pending":    return <Badge variant="warning">Chờ xử lý</Badge>;
+      case "processing": return <Badge variant="secondary">Đang xử lý</Badge>;
+      case "failed":     return <Badge variant="danger">Thất bại</Badge>;
+      default:           return null;
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* ── BALANCE CARD ── */}
-        <View style={styles.balanceCard}>
-          {/* Decorative bubbles */}
-          <View style={styles.bubble1} />
-          <View style={styles.bubble2} />
+    <SafeAreaView className="flex-1 bg-primary-50" edges={["top"]}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* BALANCE CARD */}
+        <View className="bg-primary-600 px-6 pt-6 pb-10 rounded-b-[28px] overflow-hidden relative mb-6" style={{ shadowColor: "#059669", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}>
+          <View className="absolute w-[220px] h-[220px] rounded-full top-[-80px] right-[-70px]" style={{ backgroundColor: "rgba(255,255,255,0.06)" }} />
+          <View className="absolute w-[120px] h-[120px] rounded-full bottom-[30px] left-[-30px]" style={{ backgroundColor: "rgba(16,185,129,0.35)" }} />
 
-          <View style={styles.balanceHeader}>
+          <View className="flex-row justify-between items-start mb-4">
             <View>
-              <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-              <Text style={styles.balanceAmount}>
-                {walletBalance.toLocaleString("vi-VN")}
-                <Text style={styles.balanceCurrency}>₫</Text>
+              <Text className="text-primary-200 text-[13px] font-medium mb-1">Số dư khả dụng</Text>
+              <Text className="text-white text-[36px] font-extrabold" style={{ letterSpacing: -1 }}>
+                {walletBalance.toLocaleString("vi-VN")}<Text className="text-[22px] font-semibold">₫</Text>
               </Text>
             </View>
-            <View style={styles.walletIconContainer}>
-              <Wallet size={28} color={COLORS.white} />
+            <View className="w-14 h-14 rounded-full justify-center items-center" style={{ backgroundColor: "rgba(255,255,255,0.18)" }}>
+              <Wallet size={28} color="#ffffff" />
             </View>
           </View>
 
-          {/* Escrow pill */}
           {escrowBalance > 0 && (
-            <View style={styles.escrowPill}>
-              <Clock size={13} color={COLORS.amber[300]} />
-              <Text style={styles.escrowPillText}>
-                Đang giữ: {escrowBalance.toLocaleString("vi-VN")}₫
-              </Text>
+            <View className="flex-row items-center gap-1.5 self-start rounded-full px-3 py-1.5 mb-4" style={{ backgroundColor: "rgba(255,255,255,0.14)" }}>
+              <Clock size={13} color="#fcd34d" />
+              <Text className="text-rice-300 text-xs font-semibold">Đang giữ: {escrowBalance.toLocaleString("vi-VN")}₫</Text>
             </View>
           )}
 
-          {/* Quick Actions */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={styles.actionIcon}>
-                <Download size={20} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Rút tiền</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={styles.actionIcon}>
-                <History size={20} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Lịch sử</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <View style={styles.actionIcon}>
-                <CreditCard size={20} color={COLORS.emerald[600]} />
-              </View>
-              <Text style={styles.actionText}>Liên kết</Text>
-            </TouchableOpacity>
+          {/* Quick actions */}
+          <View className="flex-row gap-3">
+            {[{ Icon: Download, label: "Rút tiền" }, { Icon: History, label: "Lịch sử" }, { Icon: CreditCard, label: "Liên kết" }].map(({ Icon, label }) => (
+              <TouchableOpacity key={label} className="flex-1 bg-white rounded-2xl py-3 items-center gap-1.5" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 2 }}>
+                <View className="w-[42px] h-[42px] rounded-full bg-primary-50 justify-center items-center">
+                  <Icon size={20} color="#059669" />
+                </View>
+                <Text className="text-xs font-semibold text-slate-700">{label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        {/* ── PAYMENT METHODS ── */}
-        <View style={styles.section}>
+        {/* PAYMENT METHODS */}
+        <View className="px-4 mb-4">
           <SectionHeader title="Phương thức thanh toán" />
           <Card variant="elevated">
-            {paymentMethods.map((method, index) => (
+            {paymentMethods.map((m, i) => (
               <ListItem
-                key={method.id}
-                title={method.name}
-                subtitle={method.connected ? "✓ Đã kết nối" : "Chưa kết nối"}
+                key={m.id}
+                title={m.name}
+                subtitle={m.connected ? "✓ Đã kết nối" : "Chưa kết nối"}
                 leftSlot={
-                  <View style={styles.paymentLogo}>
-                    <Image
-                      source={{ uri: method.logo }}
-                      style={styles.paymentLogoImg}
-                      resizeMode="contain"
-                    />
+                  <View className="w-12 h-12 bg-slate-50 rounded-xl justify-center items-center p-1.5 border border-slate-100">
+                    <Image source={{ uri: m.logo }} style={{ width: 32, height: 32 }} resizeMode="contain" />
                   </View>
                 }
                 rightSlot={
-                  method.connected ? (
-                    <ChevronRight size={18} color={COLORS.slate[300]} />
-                  ) : (
-                    <Button variant="outline" size="sm">
-                      Kết nối
-                    </Button>
-                  )
+                  m.connected
+                    ? <ChevronRight size={18} color="#cbd5e1" />
+                    : <Button variant="outline" size="sm">Kết nối</Button>
                 }
-                onPress={() => {
-                  if (method.connected)
-                    setSelectedPaymentMethod(method.id as any);
-                }}
-                style={
-                  index < paymentMethods.length - 1
-                    ? styles.listDivider
-                    : undefined
-                }
+                onPress={() => { if (m.connected) setSel(m.id as any); }}
+                style={i < paymentMethods.length - 1 ? { borderBottomWidth: 1, borderBottomColor: "#f8fafc" } : undefined}
               />
             ))}
           </Card>
         </View>
 
-        {/* ── TRANSACTIONS ── */}
-        <View style={styles.section}>
+        {/* TRANSACTIONS */}
+        <View className="px-4 mb-4">
           <SectionHeader title="Giao dịch gần đây" actionLabel="Xem tất cả" />
           <Card variant="elevated">
-            {transactions.map((tx, index) => (
-              <ListItem
-                key={tx.id}
-                title={tx.description}
-                subtitle={tx.jobTitle || tx.date}
-                leftSlot={
-                  <View
-                    style={[
-                      styles.txIcon,
-                      { backgroundColor: getTransactionBg(tx.type) },
-                    ]}
-                  >
-                    {getTransactionIcon(tx.type, tx.status)}
-                  </View>
-                }
-                rightSlot={
-                  <View style={styles.txRight}>
-                    <Text
-                      style={[
-                        styles.txAmount,
-                        { color: getTransactionColor(tx.type) },
-                      ]}
-                    >
-                      {tx.type === "withdraw" ? "-" : "+"}
-                      {tx.amount.toLocaleString("vi-VN")}₫
-                    </Text>
-                    {getStatusBadge(tx.status)}
-                  </View>
-                }
-                style={
-                  index < transactions.length - 1
-                    ? styles.listDivider
-                    : undefined
-                }
-              />
-            ))}
+            {transactions.map((tx, i) => {
+              const meta = TX_ICON_MAP[tx.type];
+              return (
+                <ListItem
+                  key={tx.id}
+                  title={tx.description}
+                  subtitle={tx.jobTitle || tx.date}
+                  leftSlot={<View className="w-11 h-11 rounded-full justify-center items-center" style={{ backgroundColor: meta.bg }}>{getTxIcon(tx.type, tx.status)}</View>}
+                  rightSlot={
+                    <View className="items-end gap-1">
+                      <Text className="text-[15px] font-bold" style={{ color: meta.color }}>
+                        {tx.type === "withdraw" ? "-" : "+"}{tx.amount.toLocaleString("vi-VN")}₫
+                      </Text>
+                      {getStatusBadge(tx.status)}
+                    </View>
+                  }
+                  style={i < transactions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: "#f8fafc" } : undefined}
+                />
+              );
+            })}
           </Card>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.sage[50],
-  },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-
-  /* ── BALANCE CARD ── */
-  balanceCard: {
-    backgroundColor: COLORS.emerald[600],
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xl + SPACING.md,
-    borderBottomLeftRadius: BORDER_RADIUS.xxl,
-    borderBottomRightRadius: BORDER_RADIUS.xxl,
-    overflow: "hidden",
-    position: "relative",
-    ...SHADOWS.emerald,
-    marginBottom: SPACING.lg,
-  },
-  bubble1: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    top: -80,
-    right: -70,
-  },
-  bubble2: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(16,185,129,0.35)",
-    bottom: 30,
-    left: -30,
-  },
-  balanceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: SPACING.md,
-  },
-  balanceLabel: {
-    color: COLORS.emerald[200],
-    fontSize: 13,
-    fontWeight: "500",
-    marginBottom: SPACING.xs,
-  },
-  balanceAmount: {
-    color: COLORS.white,
-    fontSize: 36,
-    fontWeight: "800",
-    letterSpacing: -1,
-  },
-  balanceCurrency: {
-    fontSize: 22,
-    fontWeight: "600",
-  },
-  walletIconContainer: {
-    width: 56,
-    height: 56,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderRadius: BORDER_RADIUS.full,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  escrowPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    alignSelf: "flex-start",
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: SPACING.md,
-  },
-  escrowPillText: {
-    color: COLORS.amber[200],
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  quickActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: SPACING.sm + 4,
-    alignItems: "center",
-    gap: 6,
-    ...SHADOWS.sm,
-  },
-  actionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.slate[700],
-  },
-
-  /* ── SECTION ── */
-  section: {
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-
-  /* ── PAYMENT ── */
-  paymentLogo: {
-    width: 48,
-    height: 48,
-    backgroundColor: COLORS.slate[50],
-    borderRadius: BORDER_RADIUS.md,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 6,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-  },
-  paymentLogoImg: {
-    width: 32,
-    height: 32,
-  },
-
-  /* ── LIST DIVIDER ── */
-  listDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate[50],
-  },
-
-  /* ── TRANSACTIONS ── */
-  txIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: BORDER_RADIUS.full,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  txRight: {
-    alignItems: "flex-end",
-    gap: SPACING.xs,
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-});

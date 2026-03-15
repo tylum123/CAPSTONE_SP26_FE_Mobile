@@ -1,18 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  ViewStyle,
-} from "react-native";
-import {
-  COLORS,
-  BORDER_RADIUS,
-  SPACING,
-  TYPOGRAPHY,
-} from "../../constants/theme";
+import { View, Text, Pressable, ScrollView, ViewStyle } from "react-native";
 
 interface TabItem {
   key: string;
@@ -36,23 +23,53 @@ export function PillTabs({
   scrollable,
 }: PillTabsProps) {
   const content = (
-    <View style={[styles.container, style]}>
+    <View
+      className="flex-row bg-slate-100 rounded-full p-1 gap-1 self-stretch"
+      style={style}
+    >
       {items.map((item) => {
         const isActive = item.key === activeKey;
         return (
           <Pressable
             key={item.key}
             onPress={() => onChange(item.key)}
-            style={[styles.tab, isActive && styles.tabActive]}
+            className={[
+              "flex-1 flex-row items-center justify-center py-2 px-1 rounded-full gap-1",
+              isActive ? "bg-white" : "bg-transparent",
+            ].join(" ")}
+            style={
+              isActive
+                ? {
+                    shadowColor: "#0f172a",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.08,
+                    shadowRadius: 6,
+                    elevation: 2,
+                  }
+                : {}
+            }
             hitSlop={8}
           >
-            <Text style={[styles.label, isActive && styles.labelActive]}>
+            <Text
+              className={[
+                "text-[15px]",
+                isActive ? "text-slate-900 font-bold" : "text-slate-600",
+              ].join(" ")}
+            >
               {item.label}
             </Text>
             {typeof item.badgeCount === "number" ? (
-              <View style={[styles.badge, isActive && styles.badgeActive]}>
+              <View
+                className={[
+                  "min-w-6 px-1 py-0.5 rounded-full items-center",
+                  isActive ? "bg-primary-50" : "bg-slate-200",
+                ].join(" ")}
+              >
                 <Text
-                  style={[styles.badgeText, isActive && styles.badgeTextActive]}
+                  className={[
+                    "text-[12px] font-medium",
+                    isActive ? "text-primary-700" : "text-slate-600",
+                  ].join(" ")}
                 >
                   {item.badgeCount}
                 </Text>
@@ -69,7 +86,7 @@ export function PillTabs({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollWrap}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
       >
         {content}
       </ScrollView>
@@ -78,62 +95,3 @@ export function PillTabs({
 
   return content;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    backgroundColor: COLORS.slate[100],
-    borderRadius: BORDER_RADIUS.full,
-    padding: SPACING.xs,
-    gap: SPACING.xs,
-    alignSelf: "stretch",
-  },
-  scrollWrap: {
-    paddingHorizontal: SPACING.md,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: "transparent",
-    gap: SPACING.xs,
-  },
-  tabActive: {
-    backgroundColor: COLORS.white,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  label: {
-    ...TYPOGRAPHY.body1,
-    color: COLORS.slate[600],
-  },
-  labelActive: {
-    color: COLORS.slate[900],
-    fontWeight: "700",
-  },
-  badge: {
-    minWidth: 24,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.slate[200],
-    alignItems: "center",
-  },
-  badgeActive: {
-    backgroundColor: COLORS.emerald[50],
-  },
-  badgeText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.slate[600],
-  },
-  badgeTextActive: {
-    color: COLORS.emerald[700],
-  },
-});

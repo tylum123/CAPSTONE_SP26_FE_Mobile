@@ -37,6 +37,10 @@ module.exports = {
     web: {
       favicon: "./assets/favicon.png",
     },
+    plugins: [
+      "@react-native-google-signin/google-signin",
+      "expo-dev-client",
+    ],
     extra: {
       API_BASE_URL: apiBaseUrl,
       API_BASE_URL_TEST: process.env.API_BASE_URL_TEST,

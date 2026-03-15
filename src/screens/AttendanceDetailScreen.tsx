@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui";
-import { COLORS, SPACING, BORDER_RADIUS } from "../constants/theme";
 import { attendanceService } from "../services";
 import { WorkerAttendanceDTO } from "../services/attendance.service";
-
 import { useAuth } from "../context/AuthContext";
 
-const mockAttendanceDetails: Record<string, WorkerAttendanceDTO> = {
+const MOCK: Record<string, WorkerAttendanceDTO> = {
   "1": { id: "1", jobApplicationId: "app1", checkInTime: "06:00", checkOutTime: "14:00", workDate: "18/01/2026", checkInNotes: "Đủ thiết bị", checkOutNotes: "Hoàn thiện 100%", totalHoursWorked: 8, isApproved: true, createdAt: "2026-01-18T06:00:00Z" },
   "2": { id: "2", jobApplicationId: "app2", checkInTime: "07:30", checkOutTime: "11:30", workDate: "15/01/2026", checkInNotes: "", checkOutNotes: "Kết thúc sớm do mưa", totalHoursWorked: 4, isApproved: false, createdAt: "2026-01-15T07:30:00Z" },
   "3": { id: "3", jobApplicationId: "app2", checkInTime: "13:00", checkOutTime: "17:00", workDate: "15/01/2026", checkInNotes: "", checkOutNotes: "", totalHoursWorked: 4, isApproved: false, createdAt: "2026-01-15T13:00:00Z" },
@@ -22,32 +20,28 @@ export function AttendanceDetailScreen({ navigation, route }: any) {
 
   useEffect(() => {
     if (!isAuthenticated || user?.isDemo) {
-      if (attendanceId && mockAttendanceDetails[attendanceId]) {
-        setRecord(mockAttendanceDetails[attendanceId]);
-      } else {
-        setRecord(mockAttendanceDetails["1"]);
-      }
-      return;
+      setRecord(MOCK[attendanceId] ?? MOCK["1"]); return;
     }
-    const loadDetail = async () => {
+    (async () => {
       if (!attendanceId) return;
-      try {
-        const data = await attendanceService.getAttendance(attendanceId);
-        setRecord(data);
-      } catch {
-        setRecord(null);
-      }
-    };
-
-    loadDetail().catch(() => undefined);
+      try { setRecord(await attendanceService.getAttendance(attendanceId)); }
+      catch { setRecord(null); }
+    })().catch(() => undefined);
   }, [attendanceId, isAuthenticated, user?.isDemo]);
+
+  const Row = ({ label, value }: { label: string; value?: string | number | null }) => (
+    <View className="gap-0.5">
+      <Text className="text-[13px] font-semibold text-slate-600">{label}</Text>
+      <Text className="text-slate-700">{value ?? "--"}</Text>
+    </View>
+  );
 
   if (!record) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Chi tiết chấm công</Text>
-          <View style={styles.card}>
+      <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
+        <View className="flex-1 p-4 gap-4">
+          <Text className="text-xl font-bold text-slate-900">Chi tiết chấm công</Text>
+          <View className="bg-white rounded-2xl p-4 border border-slate-200">
             <EmptyState
               title="Không tìm thấy dữ liệu chấm công"
               description="Vui lòng quay lại danh sách và chọn một bản ghi hợp lệ."
@@ -61,78 +55,20 @@ export function AttendanceDetailScreen({ navigation, route }: any) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Chi tiết chấm công</Text>
-        <View style={styles.card}>
-          <Text style={styles.label}>Ngày làm việc</Text>
-          <Text style={styles.text}>{record.workDate}</Text>
-
-          <Text style={styles.label}>Giờ check in</Text>
-          <Text style={styles.text}>{record.checkInTime}</Text>
-
-          <Text style={styles.label}>Giờ check out</Text>
-          <Text style={styles.text}>{record.checkOutTime || "--"}</Text>
-
-          <Text style={styles.label}>Ghi chú check in</Text>
-          <Text style={styles.text}>{record.checkInNotes || "--"}</Text>
-
-          <Text style={styles.label}>Ghi chú check out</Text>
-          <Text style={styles.text}>{record.checkOutNotes || "--"}</Text>
-
-          <Text style={styles.label}>Tổng giờ làm</Text>
-          <Text style={styles.text}>{record.totalHoursWorked ?? "--"}</Text>
-
-          <Text style={styles.label}>Trạng thái duyệt</Text>
-          <Text style={styles.text}>
-            {record.isApproved ? "Đã duyệt" : "Chưa duyệt"}
-          </Text>
+    <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
+      <View className="flex-1 p-4 gap-4">
+        <Text className="text-xl font-bold text-slate-900">Chi tiết chấm công</Text>
+        <View className="bg-white rounded-2xl p-4 border border-slate-200 gap-1">
+          <Row label="Ngày làm việc"   value={record.workDate} />
+          <Row label="Giờ check in"    value={record.checkInTime} />
+          <Row label="Giờ check out"   value={record.checkOutTime} />
+          <Row label="Ghi chú check in"  value={record.checkInNotes} />
+          <Row label="Ghi chú check out" value={record.checkOutNotes} />
+          <Row label="Tổng giờ làm"    value={record.totalHoursWorked} />
+          <Row label="Trạng thái duyệt" value={record.isApproved ? "Đã duyệt" : "Chưa duyệt"} />
         </View>
-        <Button
-          style={styles.button}
-          onPress={() =>
-            navigation.navigate("CheckIn", { attendanceId: record.id })
-          }
-        >
-          Check out
-        </Button>
+        <Button onPress={() => navigation.navigate("CheckIn", { attendanceId: record.id })}>Check out</Button>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.slate[50],
-  },
-  container: {
-    flex: 1,
-    padding: SPACING.md,
-    gap: SPACING.md,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.gray[900],
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-    gap: SPACING.xs,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: COLORS.gray[600],
-  },
-  text: {
-    color: COLORS.gray[700],
-  },
-  button: {
-    marginTop: SPACING.md,
-  },
-});

@@ -1,33 +1,13 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  Bell,
-  CheckCircle2,
-  Clock,
-  Banknote,
-  Briefcase,
-  AlertCircle,
-  X,
-  ChevronLeft,
-  CheckCheck,
+  Bell, CheckCircle2, Clock, Banknote, Briefcase, AlertCircle,
+  X, ChevronLeft, CheckCheck,
 } from "lucide-react-native";
-import { Badge } from "../components/ui/Badge";
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from "../constants/theme";
+import { COLORS } from "../constants/theme";
 
-type NotificationType =
-  | "job_accepted"
-  | "job_rejected"
-  | "payment_received"
-  | "reminder"
-  | "new_job"
-  | "job_cancelled";
+type NotificationType = "job_accepted" | "job_rejected" | "payment_received" | "reminder" | "new_job" | "job_cancelled";
 
 interface Notification {
   id: number;
@@ -40,131 +20,67 @@ interface Notification {
   jobId?: number;
 }
 
-const TYPE_CONFIG: Record<
-  NotificationType,
-  { icon: any; color: string; bg: string }
-> = {
-  job_accepted: {
-    icon: CheckCircle2,
-    color: COLORS.emerald[600],
-    bg: COLORS.emerald[50],
-  },
-  job_rejected: { icon: X, color: COLORS.rose[500], bg: COLORS.rose[50] },
-  payment_received: {
-    icon: Banknote,
-    color: COLORS.emerald[600],
-    bg: COLORS.emerald[50],
-  },
-  reminder: { icon: Clock, color: COLORS.amber[500], bg: COLORS.amber[50] },
-  new_job: { icon: Briefcase, color: COLORS.blue[600], bg: COLORS.blue[50] },
-  job_cancelled: {
-    icon: AlertCircle,
-    color: COLORS.rose[500],
-    bg: COLORS.rose[50],
-  },
+const TYPE_CONFIG: Record<NotificationType, { icon: any; color: string; bg: string }> = {
+  job_accepted:    { icon: CheckCircle2,  color: COLORS.primary[600], bg: COLORS.primary[50]  },
+  job_rejected:    { icon: X,             color: COLORS.rose[500],    bg: COLORS.rose[50]     },
+  payment_received:{ icon: Banknote,      color: COLORS.primary[600], bg: COLORS.primary[50]  },
+  reminder:        { icon: Clock,         color: COLORS.rice[500],    bg: COLORS.rice[50]     },
+  new_job:         { icon: Briefcase,     color: COLORS.blue[600],    bg: COLORS.blue[50]     },
+  job_cancelled:   { icon: AlertCircle,   color: COLORS.rose[500],    bg: COLORS.rose[50]     },
 };
 
-export function NotificationsScreen({ navigation }: any) {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      type: "job_accepted",
-      title: "Ứng tuyển được chấp nhận",
-      message:
-        "Nguyễn Văn A đã chấp nhận ứng tuyển của bạn cho công việc 'Thu hoạch lúa'",
-      timestamp: "5 phút trước",
-      read: false,
-      actionable: true,
-      jobId: 1,
-    },
-    {
-      id: 2,
-      type: "payment_received",
-      title: "Đã nhận thanh toán 💰",
-      message: "Bạn đã nhận 250,000 VNĐ cho công việc 'Làm đất trồng rau'",
-      timestamp: "2 giờ trước",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "reminder",
-      title: "Nhắc nhở công việc ⏰",
-      message:
-        "Bạn có công việc 'Chăm sóc vườn cam' bắt đầu vào ngày mai lúc 07:00",
-      timestamp: "1 ngày trước",
-      read: true,
-      actionable: true,
-      jobId: 2,
-    },
-    {
-      id: 4,
-      type: "new_job",
-      title: "Việc mới gần bạn 📍",
-      message: "Có việc 'Phun thuốc sâu' cách 3km, lương 300,000 VNĐ",
-      timestamp: "1 ngày trước",
-      read: true,
-      actionable: true,
-      jobId: 3,
-    },
-    {
-      id: 5,
-      type: "job_rejected",
-      title: "Ứng tuyển không thành công",
-      message: "Trần Thị B đã từ chối ứng tuyển của bạn cho 'Tưới tiêu'",
-      timestamp: "2 ngày trước",
-      read: true,
-    },
-  ]);
+const INITIAL: Notification[] = [
+  { id: 1, type: "job_accepted",     title: "Ứng tuyển được chấp nhận", message: "Nguyễn Văn A đã chấp nhận ứng tuyển của bạn cho công việc 'Thu hoạch lúa'", timestamp: "5 phút trước",  read: false, actionable: true,  jobId: 1 },
+  { id: 2, type: "payment_received", title: "Đã nhận thanh toán 💰",     message: "Bạn đã nhận 250,000 VNĐ cho công việc 'Làm đất trồng rau'",                timestamp: "2 giờ trước",   read: false },
+  { id: 3, type: "reminder",         title: "Nhắc nhở công việc ⏰",      message: "Bạn có công việc 'Chăm sóc vườn cam' bắt đầu vào ngày mai lúc 07:00",      timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 2 },
+  { id: 4, type: "new_job",          title: "Việc mới gần bạn 📍",        message: "Có việc 'Phun thuốc sâu' cách 3km, lương 300,000 VNĐ",                       timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 3 },
+  { id: 5, type: "job_rejected",     title: "Ứng tuyển không thành công", message: "Trần Thị B đã từ chối ứng tuyển của bạn cho 'Tưới tiêu'",                   timestamp: "2 ngày trước",  read: true },
+];
 
+export function NotificationsScreen({ navigation }: any) {
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: number) =>
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-
-  const deleteNotification = (id: number) =>
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-
-  const markAllAsRead = () =>
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const markAsRead   = (id: number) => setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  const deleteItem   = (id: number) => setNotifications((p) => p.filter((n) => n.id !== id));
+  const markAllRead  = ()           => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
 
   const handlePress = (notif: Notification) => {
     markAsRead(notif.id);
-    if (notif.actionable && notif.jobId) {
-      navigation.navigate("JobDetail", { jobId: notif.jobId });
-    }
+    if (notif.actionable && notif.jobId) navigation.navigate("JobDetail", { jobId: notif.jobId });
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-primary-50" edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View className="flex-row items-center px-4 py-3 bg-white border-b border-slate-100">
         <TouchableOpacity
-          style={styles.backBtn}
+          className="w-[38px] h-[38px] rounded-full bg-slate-50 border border-slate-200 justify-center items-center mr-2"
           onPress={() => navigation.goBack()}
         >
-          <ChevronLeft size={22} color={COLORS.slate[700]} />
+          <ChevronLeft size={22} color="#334155" />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Thông báo</Text>
+        <View className="flex-1 flex-row items-center gap-2">
+          <Text className="text-[20px] font-extrabold text-slate-900" style={{ letterSpacing: -0.3 }}>Thông báo</Text>
           {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+            <View className="bg-rose-500 rounded-full min-w-5 h-5 justify-center items-center px-1">
+              <Text className="text-[11px] font-bold text-white">{unreadCount}</Text>
             </View>
           )}
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity style={styles.markAllBtn} onPress={markAllAsRead}>
-            <CheckCheck size={18} color={COLORS.emerald[600]} />
+          <TouchableOpacity
+            className="w-[38px] h-[38px] rounded-full bg-primary-50 border border-primary-200 justify-center items-center"
+            onPress={markAllRead}
+          >
+            <CheckCheck size={18} color="#059669" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* List */}
       <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         data={notifications}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={false}
@@ -173,198 +89,43 @@ export function NotificationsScreen({ navigation }: any) {
           const IconComp = cfg.icon;
           return (
             <TouchableOpacity
-              style={[styles.card, !notif.read && styles.cardUnread]}
-              onPress={() => handlePress(notif)}
-              activeOpacity={0.88}
+              className={["flex-row items-start p-4 gap-2 rounded-[20px] border relative overflow-hidden", notif.read ? "bg-white border-slate-100" : "border-primary-100"].join(" ")}
+              style={notif.read ? { shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 } : { backgroundColor: "#f8fffe", shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 }}
+              onPress={() => handlePress(notif)} activeOpacity={0.88}
             >
-              {/* Unread indicator */}
-              {!notif.read && <View style={styles.unreadBar} />}
-
-              <View style={[styles.iconWrap, { backgroundColor: cfg.bg }]}>
+              {!notif.read && (
+                <View className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary-500 rounded-l-[20px]" />
+              )}
+              <View className="w-[46px] h-[46px] rounded-full justify-center items-center shrink-0" style={{ backgroundColor: cfg.bg }}>
                 <IconComp size={22} color={cfg.color} />
               </View>
-
-              <View style={styles.cardContent}>
-                <View style={styles.cardTop}>
-                  <Text
-                    style={[
-                      styles.cardTitle,
-                      !notif.read && styles.cardTitleUnread,
-                    ]}
-                    numberOfLines={1}
-                  >
+              <View className="flex-1">
+                <View className="flex-row items-start justify-between mb-1">
+                  <Text className={["text-sm flex-1 leading-[18px]", notif.read ? "font-semibold text-slate-700" : "font-bold text-slate-900"].join(" ")} numberOfLines={1}>
                     {notif.title}
                   </Text>
-                  <Text style={styles.timestamp}>{notif.timestamp}</Text>
+                  <Text className="text-[11px] text-slate-400 font-medium shrink-0 ml-2">{notif.timestamp}</Text>
                 </View>
-                <Text style={styles.cardMessage} numberOfLines={2}>
-                  {notif.message}
-                </Text>
-                {notif.actionable && (
-                  <Text style={styles.tapHint}>Nhấn để xem chi tiết →</Text>
-                )}
+                <Text className="text-[13px] text-slate-500 leading-[18px] mb-1" numberOfLines={2}>{notif.message}</Text>
+                {notif.actionable && <Text className="text-xs text-primary-600 font-semibold">Nhấn để xem chi tiết →</Text>}
               </View>
-
-              <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={() => deleteNotification(notif.id)}
-                hitSlop={8}
-              >
-                <X size={14} color={COLORS.slate[300]} />
+              <TouchableOpacity className="p-1 shrink-0" onPress={() => deleteItem(notif.id)} hitSlop={8}>
+                <X size={14} color="#cbd5e1" />
               </TouchableOpacity>
             </TouchableOpacity>
           );
         }}
         ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <View style={styles.emptyIconBox}>
-              <Bell size={40} color={COLORS.slate[300]} />
+          <View className="items-center pt-20 gap-2">
+            <View className="w-20 h-20 rounded-full bg-slate-100 justify-center items-center">
+              <Bell size={40} color="#cbd5e1" />
             </View>
-            <Text style={styles.emptyTitle}>Không có thông báo</Text>
-            <Text style={styles.emptyText}>
-              Chúng tôi sẽ thông báo khi có việc mới!
-            </Text>
+            <Text className="text-base font-bold text-slate-600">Không có thông báo</Text>
+            <Text className="text-sm text-slate-400 text-center">Chúng tôi sẽ thông báo khi có việc mới!</Text>
           </View>
         }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View className="h-2" />}
       />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.sage[50] },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.slate[100],
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.slate[50],
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.slate[200],
-  },
-  headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.slate[900],
-    letterSpacing: -0.3,
-  },
-  unreadBadge: {
-    backgroundColor: COLORS.rose[500],
-    borderRadius: BORDER_RADIUS.full,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 5,
-  },
-  unreadBadgeText: { fontSize: 11, fontWeight: "700", color: COLORS.white },
-  markAllBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.emerald[50],
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.emerald[200],
-  },
-  list: { flex: 1 },
-  listContent: { padding: SPACING.md, paddingBottom: 110 },
-
-  /* Card */
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    ...SHADOWS.xs,
-    borderWidth: 1,
-    borderColor: COLORS.slate[100],
-    position: "relative",
-    overflow: "hidden",
-  },
-  cardUnread: {
-    backgroundColor: "#f8fffe",
-    borderColor: COLORS.emerald[100],
-  },
-  unreadBar: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: COLORS.emerald[500],
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderBottomLeftRadius: BORDER_RADIUS.xl,
-  },
-  iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: BORDER_RADIUS.full,
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  cardContent: { flex: 1 },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.slate[700],
-    flex: 1,
-    lineHeight: 18,
-  },
-  cardTitleUnread: { fontWeight: "700", color: COLORS.slate[900] },
-  timestamp: {
-    fontSize: 11,
-    color: COLORS.slate[400],
-    fontWeight: "500",
-    flexShrink: 0,
-    marginLeft: 8,
-  },
-  cardMessage: {
-    fontSize: 13,
-    color: COLORS.slate[500],
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  tapHint: { fontSize: 12, color: COLORS.emerald[600], fontWeight: "600" },
-  deleteBtn: {
-    padding: 4,
-    flexShrink: 0,
-  },
-  separator: { height: SPACING.sm },
-
-  /* Empty */
-  emptyWrap: { alignItems: "center", paddingTop: 80, gap: SPACING.sm },
-  emptyIconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.slate[100],
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyTitle: { fontSize: 16, fontWeight: "700", color: COLORS.slate[600] },
-  emptyText: { fontSize: 14, color: COLORS.slate[400], textAlign: "center" },
-});
