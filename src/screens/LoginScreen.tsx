@@ -66,10 +66,14 @@ export function LoginScreen({ navigation }: any) {
       if (!idToken) { Alert.alert("Lỗi", "Không lấy được Google ID token."); return; }
       await loginWithGoogle(idToken, 3);
     } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       else if (error.code === statusCodes.IN_PROGRESS) return;
       else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) Alert.alert("Lỗi", "Google Play Services không khả dụng.");
-      else Alert.alert("Lỗi", "Đăng nhập Google thất bại.");
+      else {
+        // Hiển thị chi tiết lỗi để debug
+        Alert.alert("Lỗi Đăng Nhập", `Chi tiết: ${error.message || "Unknown error"}\nCode: ${error.code || "No code"}`);
+      }
     } finally { setLoading(false); }
   };
 

@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { User, MapPin, Briefcase, Calendar, Clock, Camera } from "lucide-react-native";
+import { User, MapPin, Briefcase, Calendar, Clock, Camera, ChevronLeft, Check } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { mediaService, workerProfileService } from "../services";
 import { useAuth } from "../context/AuthContext";
+import { COLORS, TYPOGRAPHY } from "../constants/theme";
 
 export function EditProfileScreen({ navigation, route }: any) {
   const { isAuthenticated, user } = useAuth();
   const { currentProfile, onUpdated } = route.params || {};
-
+  const insets = useSafeAreaInsets();
   const [fullName, setFullName]                             = useState(currentProfile?.fullName || "");
   const [ageRange, setAgeRange]                             = useState(currentProfile?.ageRange || "");
   const [primaryLocation, setPrimaryLocation]               = useState(currentProfile?.primaryLocation || "");
@@ -79,53 +81,91 @@ export function EditProfileScreen({ navigation, route }: any) {
 
   return (
     <>
-      <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-        <View className="flex-1 bg-slate-50">
+      <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
+        <View className="flex-1 bg-slate-50/50">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
-            <Text className="text-xl font-bold text-slate-900">Chỉnh sửa hồ sơ</Text>
+          <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
+            <View className="flex-row items-center gap-3">
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                className="w-10 h-10 items-center justify-center rounded-full bg-slate-50"
+              >
+                <ChevronLeft size={24} color={COLORS.slate[900]} />
+              </TouchableOpacity>
+              <Text style={TYPOGRAPHY.title} className="text-slate-900">Chỉnh sửa hồ sơ</Text>
+            </View>
+            <TouchableOpacity onPress={handleSave} disabled={loading}>
+              <Text className="text-primary-600 font-bold text-base">Lưu</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-            {/* Avatar */}
-            <View className="items-center py-8 bg-white border-b border-slate-200">
-              <View className="relative">
-                <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} fallback={fullName[0] || "M"} size={80} />
+            {/* Avatar Section */}
+            <View className="items-center py-10 bg-white border-b border-slate-100 mb-2">
+              <View className="relative shadow-md">
+                <View className="p-1 bg-rice-100 rounded-full">
+                  <Avatar source={avatarUrl ? { uri: avatarUrl } : undefined} fallback={fullName[0] || "M"} size={100} />
+                </View>
                 <TouchableOpacity
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full justify-center items-center border-2 border-slate-200"
+                  className="absolute bottom-1 right-1 w-9 h-9 bg-primary-600 rounded-full justify-center items-center border-4 border-white shadow-lg"
                   onPress={handlePickAvatar} disabled={avatarUploading}
                 >
-                  <Camera size={18} color="#111827" />
+                  <Camera size={18} color="white" />
                 </TouchableOpacity>
               </View>
-              {avatarUploading && <Text className="mt-2 text-[13px] text-slate-500">Đang tải ảnh lên...</Text>}
+              {avatarUploading ? (
+                <Text className="mt-4 text-[13px] text-primary-600 font-medium">Đang tải ảnh lên...</Text>
+              ) : (
+                <Text className="mt-4 text-[13px] text-slate-500 font-medium uppercase tracking-wider">Cập nhật ảnh đại diện</Text>
+              )}
             </View>
 
             {/* Form */}
-            <View className="p-6">
-              {formFields.map((field, i) => (
-                <View key={i} className="mb-6">
-                  <Text className="text-sm font-semibold text-slate-700 mb-2">
-                    {field.label} {(field as any).required && <Text className="text-red-600">*</Text>}
-                  </Text>
-                  <View className="flex-row items-center bg-white px-4 border border-slate-200 min-h-[48px] gap-2">
-                    <field.Icon size={18} color="#9ca3af" />
-                    <TextInput
-                      className="flex-1 text-[15px] text-slate-900 py-2"
-                      value={field.value} onChangeText={field.onChangeText}
-                      placeholder={field.placeholder} placeholderTextColor="#9ca3af"
-                      keyboardType={(field as any).keyboardType}
-                    />
+            <View className="p-5">
+              <View className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100">
+                {formFields.map((field, i) => (
+                  <View key={i} className={i === formFields.length - 1 ? "" : "mb-6"}>
+                    <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">
+                      {field.label} {(field as any).required && <Text className="text-rose-500">*</Text>}
+                    </Text>
+                    <View className="flex-row items-center bg-slate-50/80 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3 focus:border-primary-500">
+                      <field.Icon size={18} color={COLORS.slate[400]} />
+                      <TextInput
+                        className="flex-1 text-[15px] text-slate-900 py-2 font-medium"
+                        value={field.value} onChangeText={field.onChangeText}
+                        placeholder={field.placeholder} placeholderTextColor={COLORS.slate[400]}
+                        keyboardType={(field as any).keyboardType}
+                      />
+                      {field.value.length > 0 && <Check size={16} color={COLORS.primary[500]} />}
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
+            
+            {/* Multi-edge bottom padding for scroll content */}
+            <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Footer */}
-          <View className="flex-row gap-4 p-6 bg-white border-t border-slate-200">
-            <Button variant="outline" style={{ flex: 1 }} onPress={() => navigation.goBack()}>Hủy</Button>
-            <Button style={{ flex: 2 }} onPress={handleSave} loading={loading || avatarUploading}>Lưu thay đổi</Button>
+          {/* Footer - Fixed Safe Area Issue */}
+          <View 
+            className="flex-row gap-4 px-6 pt-4 bg-white border-t border-slate-100 shadow-lg"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
+            <Button 
+              variant="outline" 
+              style={{ flex: 1 }} 
+              onPress={() => navigation.goBack()}
+            >
+              Hủy
+            </Button>
+            <Button 
+              style={{ flex: 2 }} 
+              onPress={handleSave} 
+              loading={loading || avatarUploading}
+            >
+              Lưu thay đổi
+            </Button>
           </View>
         </View>
       </SafeAreaView>
