@@ -31,7 +31,8 @@ export const API_ENDPOINTS = {
   },
   // Worker profile
   WORKER_PROFILE: {
-    BASE: `${API_PREFIX}/worker-profile`,
+    BASE: `${API_PREFIX}/worker`,
+    UPLOAD_AVATAR: `${API_PREFIX}/worker/upload-avatar`,
   },
   // User
   USER: {
@@ -46,6 +47,8 @@ export const API_ENDPOINTS = {
     CATEGORY_DETAIL: (id: string) => `${API_PREFIX}/job/category/${id}`,
     POST_LIST: `${API_PREFIX}/job/post`,
     POST_DETAIL: (id: string) => `${API_PREFIX}/job/post/${id}`,
+    APPLICATION: `${API_PREFIX}/job/application`,
+    APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
   },
   // Attendance
   ATTENDANCE: {
@@ -73,10 +76,12 @@ export const API_ENDPOINTS = {
   },
   // Notifications
   NOTIFICATIONS: {
-    LIST: `${API_PREFIX}/notifications`,
-    READ: (id: string) => `${API_PREFIX}/notifications/${id}/read`,
-    READ_ALL: `${API_PREFIX}/notifications/read-all`,
-    DELETE: (id: string) => `${API_PREFIX}/notifications/${id}`,
+    LIST: `${API_PREFIX}/notification`,
+    UNREAD: `${API_PREFIX}/notification/unread`,
+    READ: `${API_PREFIX}/notification/read`, // Note: use PATCH { notificationId: string }
+    READ_ALL: `${API_PREFIX}/notification/read-all`,
+    DELETE: (id: string) => `${API_PREFIX}/notification/${id}`,
+    REGISTER_TOKEN: `${API_PREFIX}/notification/register-token`,
   },
   // Wallet
   WALLET: {

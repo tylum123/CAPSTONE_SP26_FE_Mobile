@@ -2,7 +2,7 @@
 
 Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase.
 
-Cập nhật lần cuối: **2026-03-10**
+Cập nhật lần cuối: **2026-03-17**
 
 ## 1) Thông tin chung
 
@@ -58,7 +58,6 @@ Cập nhật lần cuối: **2026-03-10**
 ```
 
 Validation chính:
-
 - `fullName`: required, max 256
 - `ageRange`: required, max 50
 - `primaryLocation`: required
@@ -87,8 +86,9 @@ Validation chính:
 }
 ```
 
-### 2.4 CheckInRequest
+### 2.4 CheckInRequest & CheckOutRequest
 
+**CheckInRequest:**
 ```json
 {
   "jobApplicationId": "guid",
@@ -96,15 +96,11 @@ Validation chính:
   "checkInNotes": "Đến sớm"
 }
 ```
-
-Validation chính:
-
 - `jobApplicationId`: required
 - `checkInTime`: required
 - `checkInNotes`: optional, max 500
 
-### 2.5 CheckOutRequest
-
+**CheckOutRequest:**
 ```json
 {
   "attendanceId": "guid",
@@ -112,14 +108,11 @@ Validation chính:
   "checkOutNotes": "Hoàn thành công việc"
 }
 ```
-
-Validation chính:
-
 - `attendanceId`: required
 - `checkOutTime`: required
 - `checkOutNotes`: optional, max 500
 
-### 2.6 ApproveAttendanceRequest (Farmer dùng)
+### 2.5 ApproveAttendanceRequest (Farmer dùng)
 
 ```json
 {
@@ -129,14 +122,55 @@ Validation chính:
 }
 ```
 
-Validation chính:
+### 2.6 JobApplicationDTO & CreateJobApplicationRequest
 
-- `attendanceId`: required
-- `approvedBy`: required
-- `adjustedHours`: optional
+**JobApplicationDTO:**
+```json
+{
+  "id": "guid",
+  "jobPostId": "guid",
+  "workerId": "guid",
+  "statusId": 1,
+  "coverLetter": "string | null",
+  "appliedAt": "2026-03-10T10:00:00Z",
+  "respondedAt": "2026-03-12T10:00:00Z",
+  "responseMessage": "string | null"
+}
+```
 
-### 2.7 LoginResponse
+**CreateJobApplicationRequest:**
+```json
+{
+  "jobPostId": "guid",
+  "workerId": "guid",
+  "statusId": 1,
+  "coverLetter": "Tôi có kinh nghiệm...",
+  "appliedAt": "2026-03-10T10:00:00Z",
+  "respondedAt": "2026-03-10T10:00:00Z",
+  "responseMessage": null
+}
+```
 
+### 2.7 NotificationDTO
+
+```json
+{
+  "id": "guid",
+  "userId": "guid",
+  "relatedEntityId": "guid | null",
+  "type": 1,
+  "typeName": "Info",
+  "title": "New Job Available",
+  "message": "A new job matching your profile was posted.",
+  "isRead": false,
+  "sentAt": "2026-03-15T08:00:00Z",
+  "readAt": null
+}
+```
+
+### 2.8 Auth Responses & Requests
+
+**LoginResponse:**
 ```json
 {
   "token": "jwt-token",
@@ -145,353 +179,204 @@ Validation chính:
 }
 ```
 
+**ForgotPasswordRequest:**
+```json
+{
+  "email": "worker@example.com"
+}
+```
+
+**ResetPasswordRequest:**
+```json
+{
+  "email": "worker@example.com",
+  "otp": "123456",
+  "newPassword": "newPassword123"
+}
+```
+
 ---
 
 ## 3) Worker Profile APIs
 
-### 3.1 GET `/worker-profile`
+### 3.1 GET `/worker`
+- **Mục đích**: Lấy profile worker của user hiện tại qua claim của token.
+- **Auth/Role**: `Authorize(Roles = "Worker")`
+- **Response**: `200 OK` (WorkerProfileDTO), `404 Not Found`
 
-Mục đích:
+### 3.2 PUT `/worker`
+- **Mục đích**: Tạo profile lần đầu hoặc cập nhật profile hiện có.
+- **Auth/Role**: `Authorize(Roles = "Worker")`
+- **Body**: `UpdateWorkerProfileRequest`
+- **Response**: `200 OK` (WorkerProfileDTO), `400 Bad Request`
 
-- Lấy profile worker của user hiện tại.
-- Lấy thông tin worker qua claim của token hiện hành (không cần truyền userId).
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker")`
-
-Path params:
-
-- Không có.
-
-Response:
-
-- `200`: `ApiResponse<WorkerProfileDTO>`
-- `404`: `ApiResponse<object>` (Không tìm thấy profile)
-- `500`: `ApiResponse<object>`
-
-### 3.2 PUT `/worker-profile`
-
-Mục đích:
-
-- Tạo profile lần đầu hoặc cập nhật profile hiện có.
-- Thông tin user sẽ được trích xuất từ JWT Claims.
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker")`
-
-Path params:
-
-- Không có.
-
-Request body:
-
-- `UpdateWorkerProfileRequest`
-
-Response:
-
-- `200`: `ApiResponse<WorkerProfileDTO>`
-- `400`: `ApiResponse<object>` (ModelState invalid)
-- `500`: `ApiResponse<object>`
+### 3.3 POST `/worker/upload-avatar`
+- **Mục đích**: Upload avatar cho worker.
+- **Auth**: `Authorize(Roles = "Worker")`
+- **Body**: `multipart/form-data` chứa `IFormFile image`
+- **Response**: `200 OK` (trả về URL của avatar dưới dạng string)
 
 ---
 
 ## 4) Worker Attendance APIs (Worker thao tác)
 
 ### 4.1 POST `/attendance/check-in`
-
-Mục đích:
-
-- Worker check-in cho công việc đủ điều kiện.
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker")`
-
-Request body:
-
-- `CheckInRequest`
-
-Response:
-
-- `200`: `ApiResponse<WorkerAttendanceDTO>`
-- `400`: `ApiResponse<object>` (ModelState invalid)
-- `403`: `ApiResponse<object>` (thiếu/không hợp lệ claim `WorkerProfileId`)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Worker check-in cho công việc.
+- **Role**: `Worker`
+- **Body**: `CheckInRequest`
+- **Response**: `200 OK` (WorkerAttendanceDTO)
 
 ### 4.2 PUT `/attendance/check-out`
-
-Mục đích:
-
-- Worker check-out cho bản ghi attendance đã check-in.
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker")`
-
-Request body:
-
-- `CheckOutRequest`
-
-Response:
-
-- `200`: `ApiResponse<WorkerAttendanceDTO>`
-- `400`: `ApiResponse<object>` (ModelState invalid)
-- `403`: `ApiResponse<object>` (thiếu/không hợp lệ claim `WorkerProfileId`)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Worker check-out cho bản ghi attendance đã check-in.
+- **Role**: `Worker`
+- **Body**: `CheckOutRequest`
+- **Response**: `200 OK` (WorkerAttendanceDTO)
 
 ### 4.3 GET `/attendance/{id}`
-
-Mục đích:
-
-- Lấy chi tiết một bản ghi attendance.
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker,Farmer")`
-
-Path params:
-
-- `id` (guid, required)
-
-Response:
-
-- `200`: `ApiResponse<WorkerAttendanceDTO>`
-- `404`: `ApiResponse<object>` (không tìm thấy attendance)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Lấy chi tiết một bản ghi attendance.
+- **Role**: `Worker,Farmer`
+- **Response**: `200 OK` (WorkerAttendanceDTO)
 
 ### 4.4 GET `/attendance/worker/{workerProfileId}`
-
-Mục đích:
-
-- Lấy lịch sử attendance của worker theo khoảng thời gian.
-- Chỉ cho phép worker xem dữ liệu của chính mình.
-
-Auth/Role:
-
-- `Authorize(Roles = "Worker")`
-
-Path params:
-
-- `workerProfileId` (guid, required)
-
-Query params:
-
-- `startDate` (datetime, optional)
-- `endDate` (datetime, optional)
-
-Response:
-
-- `200`: `ApiResponse<List<WorkerAttendanceDTO>>`
-- `403`: `ApiResponse<object>` (route id không khớp claim `WorkerProfileId`)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Lấy lịch sử attendance của worker theo khoảng thời gian. (Worker chỉ xem của mình).
+- **Role**: `Worker`
+- **Query params**: `startDate`, `endDate`
+- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
 
 ---
 
 ## 5) Attendance APIs liên quan Worker (Farmer thao tác)
 
 ### 5.1 PUT `/attendance/approve`
-
-Mục đích:
-
-- Farmer duyệt attendance của worker.
-
-Auth/Role:
-
-- `Authorize(Roles = "Farmer")`
-
-Request body:
-
-- `ApproveAttendanceRequest`
-
-Response:
-
-- `200`: `ApiResponse<WorkerAttendanceDTO>`
-- `400`: `ApiResponse<object>` (ModelState invalid)
-- `403`: `ApiResponse<object>` (thiếu/không hợp lệ claim `FarmerProfileId`)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Farmer duyệt attendance của worker.
+- **Role**: `Farmer`
+- **Body**: `ApproveAttendanceRequest`
+- **Response**: `200 OK`
 
 ### 5.2 GET `/attendance/farm/{farmerProfileId}`
-
-Mục đích:
-
-- Farmer xem attendance records trong farm của mình.
-
-Auth/Role:
-
-- `Authorize(Roles = "Farmer")`
-
-Path params:
-
-- `farmerProfileId` (guid, required)
-
-Query params:
-
-- `jobPostId` (guid, optional)
-- `startDate` (datetime, optional)
-- `endDate` (datetime, optional)
-
-Response:
-
-- `200`: `ApiResponse<List<WorkerAttendanceDTO>>`
-- `403`: `ApiResponse<object>` (route id không khớp claim `FarmerProfileId`)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Farmer xem attendance records trong farm của mình.
+- **Role**: `Farmer`
+- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
 
 ### 5.3 GET `/attendance/farm/{farmerProfileId}/worker/{workerProfileId}`
-
-Mục đích:
-
-- Farmer xem attendance của một worker cụ thể trong farm của mình.
-
-Auth/Role:
-
-- `Authorize(Roles = "Farmer")`
-
-Path params:
-
-- `farmerProfileId` (guid, required)
-- `workerProfileId` (guid, required)
-
-Query params:
-
-- `startDate` (datetime, optional)
-- `endDate` (datetime, optional)
-
-Response:
-
-- `200`: `ApiResponse<List<WorkerAttendanceDTO>>`
-- `403`: `ApiResponse<object>` (route id không khớp claim `FarmerProfileId`)
-- `404`: `ApiResponse<object>` (không có accepted applications giữa worker và farm)
-- `500`: `ApiResponse<object>`
+- **Mục đích**: Farmer xem attendance của một worker cụ thể trong farm của mình.
+- **Role**: `Farmer`
+- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
 
 ---
 
-## 6) Auth APIs Worker sử dụng
+## 6) Job APIs (Worker thao tác & Tương tác)
 
-### 6.1 POST `/login`
+### 6.1 GET `/job/post`
+- **Mục đích**: Lấy tất cả job posts có sẵn (để worker tìm việc).
+- **Response**: `200 OK` (List<JobPostDTO>)
 
-Mục đích:
+### 6.2 GET `/job/post/{id}`
+- **Mục đích**: Xem chi tiết 1 job post.
+- **Response**: `200 OK` (JobPostDTO)
 
-- Đăng nhập bằng email hoặc phone number + password.
+### 6.3 POST `/job/application`
+- **Mục đích**: Worker nộp đơn ứng tuyển vào một Job Post.
+- **Body**: `CreateJobApplicationRequest`
+- **Response**: `200 OK` (JobApplicationDTO)
 
-Request body (`LoginRequest`):
+### 6.4 GET `/job/application`
+- **Mục đích**: Lấy danh sách applications.
+- **Response**: `200 OK` (List<JobApplicationDTO>)
 
-```json
-{
-  "email": "worker@example.com",
-  "password": "123456"
-}
-```
-
-Hoặc:
-
-```json
-{
-  "phoneNumber": "0901234567",
-  "password": "123456"
-}
-```
-
-Validation chính:
-
-- `password`: required
-- Chỉ được truyền một trong hai: `email` hoặc `phoneNumber`
-
-Response:
-
-- `200`: `ApiResponse<LoginResponse>`
-- `401`: `ApiResponse<object>`
-- `500`: `ApiResponse<object>`
-
-### 6.2 POST `/register`
-
-Mục đích:
-
-- Tạo tài khoản mới (Worker khi `roleId` tương ứng).
-
-Request body (`RegisterRequest`):
-
-```json
-{
-  "email": "worker@example.com",
-  "password": "123456",
-  "phoneNumber": "0901234567",
-  "address": "Can Tho",
-  "roleId": 3
-}
-```
-
-Validation chính:
-
-- `email`: required + email format
-- `password`: required, min 6, max 100
-- `phoneNumber`: required, phone format, max 10
-- `address`: required
-- `roleId`: required, range 1..3
-
-Response:
-
-- `201`: `ApiResponse<LoginResponse>`
-- `400`: `ApiResponse<object>` (dữ liệu đăng ký không hợp lệ hoặc trùng)
-- `500`: `ApiResponse<object>`
-
-### 6.3 POST `/google-login`
-
-Mục đích:
-
-- Đăng nhập bằng Google ID token.
-
-Request body (`GoogleLoginRequest`):
-
-```json
-{
-  "googleToken": "google-id-token",
-  "roleId": 3
-}
-```
-
-Ghi chú:
-
-- `roleId` là **optional**.
-
-Response:
-
-- `200`: `ApiResponse<LoginResponse>`
-- `401`: `ApiResponse<object>`
-- `500`: `ApiResponse<object>`
-
-### 6.4 POST `/logout`
-
-Mục đích:
-
-- Logout và blacklist token hiện tại.
-
-Auth/Role:
-
-- `Authorize` (mọi user đã đăng nhập)
-
-Request body:
-
-- Không có.
-
-Response:
-
-- `200`: `ApiResponse<object>`
-- `400`: `ApiResponse<object>` (token header không hợp lệ)
-- `500`: `ApiResponse<object>`
+### 6.5 GET `/job/application/{id}`
+- **Mục đích**: Xem chi tiết application của mình.
+- **Response**: `200 OK` (JobApplicationDTO)
 
 ---
 
-## 7) Ghi chú nghiệp vụ quan trọng
+## 7) Notification APIs (Worker & Farmer)
 
-- WorkerProfile APIs (GET/PUT) đã loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
-- Attendance APIs yêu cầu claim tuỳ biến:
-  - `WorkerProfileId` cho luồng worker
-  - `FarmerProfileId` cho luồng farmer
-- Thiếu hoặc sai các claim trên sẽ trả `403` dù role hợp lệ.
-- Rule nghiệp vụ attendance trong service (có thể phát sinh lỗi logic trả về từ tầng service):
-  - Check-in chỉ cho `JobApplication` hợp lệ.
-  - Không check-in trùng ngày cho cùng job application.
-  - Check-out phải sau check-in.
-  - Farmer chỉ xem/duyệt attendance thuộc farm của chính mình.
+Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
+
+### 7.1 GET `/notification`
+- **Mục đích**: Lấy toàn bộ notifications của user hiện tại.
+- **Response**: `200 OK` (List<NotificationDTO>)
+
+### 7.2 GET `/notification/unread`
+- **Mục đích**: Lấy các notifications chưa đọc.
+- **Response**: `200 OK` (List<NotificationDTO>)
+
+### 7.3 PATCH `/notification/read`
+- **Mục đích**: Đánh dấu 1 notification là đã đọc.
+- **Body**: `{ "notificationId": "guid" }`
+- **Response**: `204 No Content`
+
+### 7.4 PATCH `/notification/read-all`
+- **Mục đích**: Đánh dấu tất cả notifications của user là đã đọc.
+- **Response**: `204 No Content`
+
+### 7.5 DELETE `/notification/{id}`
+- **Mục đích**: Xoá 1 notification.
+- **Response**: `204 No Content`
+
+---
+
+## 8) Auth APIs Worker sử dụng
+
+### 8.1 POST `/login`
+- Body: `{"email": "...", "password": "..."}` hoặc `phoneNumber`.
+- Response: `200 OK` (LoginResponse)
+
+### 8.2 POST `/register`
+- Body: `RegisterRequest` (Kèm `roleId = 3` cho Worker).
+- Response: `201 Created`
+
+### 8.3 POST `/google-login`
+- Body: `{"googleToken": "...", "roleId": 3}` (roleId optional).
+- Response: `200 OK` (LoginResponse)
+
+### 8.4 POST `/forget`
+- **Mục đích**: Yêu cầu mã OTP để reset mật khẩu.
+- Body: `ForgotPasswordRequest`
+- Response: `200 OK`
+
+### 8.5 POST `/reset`
+- **Mục đích**: Đổi mật khẩu với mã OTP.
+- Body: `ResetPasswordRequest`
+- Response: `200 OK`
+
+### 8.6 POST `/logout` (Yêu cầu `Authorize`)
+- Mục đích: Đăng xuất và blacklist token.
+- Response: `200 OK`
+
+---
+
+## 9) Ghi chú nghiệp vụ quan trọng
+
+- Các path API đều tuân thủ `ApiEndpointConstants.cs` (Ví dụ `/api/v1/worker` thay vì `/api/v1/worker-profile`).
+- WorkerProfile APIs (GET/PUT) loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
+- Attendance APIs yêu cầu các claim đặc thù như `WorkerProfileId` hoặc `FarmerProfileId`.
+- API Application Job có validate Role để đảm bảo đúng phân quyền ứng tuyển.
+- Hệ thống Notification được tích hợp cho cả 2 luồng.
+
+---
+
+## 10) Đề xuất Cải thiện UI (Từ bên Mobile Frontend Developer / BA)
+
+Để hỗ trợ hiển thị UI/UX hoàn chỉnh, đầy đủ thông tin cho người dùng mà không bị che khuất, Frontend có một số yêu cầu thêm vào Payload:
+
+### 10.1 Xử Lý Cân Bằng UI Chức Năng Việc Nông Nghiệp & Khoán
+- **Lưu ý:** Với công việc Nông nghiệp, chúng ta có **Theo Ngày** và **Theo Khoán**. Thời gian Check-in/Check-out chỉ dành để đo giờ cho Việc Ngày. Với Việc Khoán, người nông dân tính tiền theo Khối Lượng (VD: 1.5 Ha, 100Kg...).
+- Do đó, `CheckOutRequest` và `WorkerAttendanceDTO` TẠI BACKEND CẦN BỔ SUNG TRƯỜNG: `completedAmount` (float/decimal). Khi Worker (Khoán) ấn Check-out, App sẽ bật Popup hỏi: *"Hôm nay bạn đã hoàn thành khối lượng bao nhiêu?"*
+- Tương tự, `ApproveAttendanceRequest` (Farmer) cần thêm trường `adjustedAmount` để Farmer chốt số lượng trước khi trả lương gốc.
+
+### 10.2 Tránh Gọi API N Lần (Hiệu suất UI)
+1. **WorkerProfileDTO**: Cân nhắc thêm `phoneNumber`, `email`, `bio` hoặc `skills` nếu có, để hiển thị đầy đủ hơn trên trang cá nhân của worker mà không bị khuất hoặc bỏ trống mất thẩm mỹ.
+2. **WorkerAttendanceDTO**: Bắt buộc thêm metadata của Job (`jobTitle`, `farmName`, `wageTypeId`) rả về cùng trong list lịch sử điểm danh. Frontend cần render thẻ Job có Tên, Nơi làm ngay ở màn hình Lịch Sử mà KHÔNG ĐƯỢC gọi thêm GET JobDetail cho 100 items riêng biệt.
+3. **JobApplicationDTO**: Bắt buộc thêm metadata của JobPost (`title`, `location`, `wageAmount`, `farmName`, `wageTypeId`, v.v.) vào response list. Màn ứng tuyển Worker cần hiện thẳng số tiền và Tên việc để họ check lại danh sách công việc mình đang chờ duyệt.
+4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. Khi người dùng ấn vào Cảnh báo từ màn hình chính, Router sẽ chuyển họ thẳng vào Tab Chi Tiết thay vì ném ra màn Home rỗng tếch.
+
+---
+
+## 11) Yêu Cầu Backend cho Push Notification Real-time
+
+Để tính năng thông báo có thể hoạt động ngay tức thời trên app (kể cả khi tắt app), Frontend đã cài đặt thư viện `expo-notifications` lấy **Device Push Token**. Backend cần chuẩn bị:
+1. Mỗi khi User đăng nhập thành công vào app, app sẽ gọi API `POST /api/v1/notification/register-token` kèm body `{"token": "ExponentPushToken[xxx]"}`. Backend cần lưu lại chuỗi token này vào DB gắn liền với `userId`.
+2. Khi có sự kiện (VD: duyệt điểm danh, tin nhắn mới, job được accept...), Backend dựa vào danh sách `Device Token` của User đó trên DB để **gọi POST request qua API của Expo** (`https://exp.host/--/api/v2/push/send`) gửi kèm payload `{ "to": "ExponentPushToken[xxx]", "title": "Tiêu đề", "body": "Nội dung", "data": {...} }`.
+3. Expo Server sẽ tự động bắn sang APNs (Apple) và FCM (Android) để hiển thị thông báo popup về máy người dùng realtime.

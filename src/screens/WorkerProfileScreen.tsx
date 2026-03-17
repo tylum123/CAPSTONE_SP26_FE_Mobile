@@ -7,7 +7,8 @@ import { ListItem } from "../components/ui/ListItem";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Heart, CreditCard, Users, Settings, LogOut, Edit2, Phone, Mail, Wallet, Briefcase, Star, Bell, FileText, ChevronRight, MapPin } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
-import { workerProfileService, WorkerProfileDTO } from "../services";
+import { workerProfileService } from "../services";
+import { WorkerProfileDTO } from "../types/worker";
 
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout, isAuthenticated } = useAuth();

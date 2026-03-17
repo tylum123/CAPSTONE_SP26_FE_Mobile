@@ -39,3 +39,4 @@ export interface Stat {
 }
 
 export * from "./api";
+export * from "./worker";
