@@ -9,31 +9,36 @@ export interface JobCategoryDTO {
   isActive: boolean;
 }
 
+export interface JobSkillRequirementSummaryDTO {
+  id: string;
+  name: string;
+}
+
 export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
+  contactName: string;
+  jobSkillRequirements: JobSkillRequirementSummaryDTO[];
+  farmId: string;
   jobCategoryId: string;
   title: string;
   description: string;
   address: string;
-  latitude: number;
-  longitude: number;
   startDate: string;
   endDate: string;
   estimatedHours: number;
   workersNeeded: number;
   workersAccepted: number;
-  wageTypeId: string;
+  wageTypeId: number;
   wageAmount: number;
-  paymentMethodId: string;
+  paymentMethodId: number;
   requiredSkills: string;
   genderPreference: string;
-  ageRequirement: string;
   publishedAt: string;
   createdAt: string;
   updatedAt: string;
   isUrgent: boolean;
-  statusId: string;
+  status: string;
 }
 
 export const jobService = {

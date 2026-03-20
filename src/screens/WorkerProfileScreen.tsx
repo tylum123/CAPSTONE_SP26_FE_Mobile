@@ -9,13 +9,15 @@ import { Heart, CreditCard, Users, Settings, LogOut, Edit2, Phone, Mail, Wallet,
 import { useAuth } from "../context/AuthContext";
 import { workerProfileService } from "../services";
 import { WorkerProfileDTO } from "../types/worker";
+import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<WorkerProfileDTO | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const demoProfile: WorkerProfileDTO = {
-    id: "demo", userId: "demo", fullName: "Demo", ageRange: "35-44", primaryLocation: "Thốt Nốt, Cần Thơ",
+    id: "demo", userId: "demo", fullName: "Demo", age: "35-44", ageRange: "35-44", primaryLocation: "Thốt Nốt, Cần Thơ",
     travelRadiusKmPreference: 15, experienceLevelId: 2, experienceLevel: "Có kinh nghiệm",
     averageRating: 4.9, availabilitySchedule: "Thứ 2 - Thứ 7 (Sáng)", totalJobsCompleted: 45,
     avatarUrl: "", createdAt: "", updatedAt: "",
@@ -36,10 +38,8 @@ export function WorkerProfileScreen({ navigation }: any) {
   }, [profile, isAuthenticated, user?.isDemo, user?.name]);
 
   const handleLogout = () => {
-    Alert.alert("Đăng xuất", "Bạn có chắc chắn muốn đăng xuất?", [
-      { text: "Hủy", style: "cancel" },
-      { text: "Đăng xuất", style: "destructive", onPress: () => logout().catch(() => undefined) },
-    ]);
+    // Dùng FeedbackModal thay cho Alert.alert() vì Alert không hoạt động ổn định trên Web
+    setShowLogoutModal(true);
   };
   const handleEditProfile = () => {
     navigation.navigate("EditProfile", { currentProfile: { fullName: displayProfile.fullName || user?.name || "", ageRange: displayProfile.ageRange || "", primaryLocation: displayProfile.primaryLocation || "", travelRadiusKmPreference: displayProfile.travelRadiusKmPreference, experienceLevelId: displayProfile.experienceLevelId || 1, availabilitySchedule: displayProfile.availabilitySchedule || "", avatarUrl: displayProfile.avatarUrl || "" }, onUpdated: (up: WorkerProfileDTO) => setProfile(up) });
@@ -57,7 +57,7 @@ export function WorkerProfileScreen({ navigation }: any) {
   ];
 
   const details = [
-    { label: "Độ tuổi",       value: fmtVal(displayProfile.ageRange) },
+    { label: "Tuổi",       value: fmtVal(displayProfile.age || displayProfile.ageRange) },
     { label: "Khu vực",       value: fmtVal(displayProfile.primaryLocation) },
     { label: "Kinh nghiệm",   value: fmtVal(displayProfile.experienceLevel) },
     { label: "Lịch làm việc", value: fmtVal(displayProfile.availabilitySchedule) },
@@ -65,6 +65,7 @@ export function WorkerProfileScreen({ navigation }: any) {
   ];
 
   return (
+    <>
     <SafeAreaView className="flex-1 bg-primary-50" edges={["top"]}>
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
         {/* HERO */}
@@ -112,7 +113,10 @@ export function WorkerProfileScreen({ navigation }: any) {
 
         {/* CONTACT */}
         <View className="flex-row gap-2 px-4 mb-4 flex-wrap">
-          {[{ Icon: Phone, text: isAuthenticated && !user?.isDemo ? "--" : "0123 456 789" }, { Icon: Mail, text: user?.email || "maithihanh.tc@gmail.com" }].map(({ Icon, text }, i) => (
+          {[
+            { Icon: Phone, text: displayProfile.phoneNumber || (isAuthenticated && !user?.isDemo ? "Chưa cập nhật" : "0123 456 789") }, 
+            { Icon: Mail, text: displayProfile.email || user?.email || "Chưa cập nhật" }
+          ].map(({ Icon, text }, i) => (
             <View key={i} className="flex-row items-center gap-1.5 bg-primary-50 border border-primary-200 rounded-full px-3 py-2 flex-1">
               <Icon size={14} color="#059669" />
               <Text className="text-xs text-primary-700 font-semibold flex-1" numberOfLines={1}>{text}</Text>
@@ -166,5 +170,17 @@ export function WorkerProfileScreen({ navigation }: any) {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
+
+    {/* Logout Confirmation Modal */}
+    <FeedbackModal
+      visible={showLogoutModal}
+      title="Đăng xuất"
+      message="Bạn có chắc chắn muốn đăng xuất?"
+      variant="info"
+      confirmLabel="Đăng xuất"
+      cancelLabel="Hủy"
+      onClose={() => setShowLogoutModal(false)}
+      onConfirm={() => { setShowLogoutModal(false); logout().catch(() => undefined); }}
+    />
+  </>);
 }

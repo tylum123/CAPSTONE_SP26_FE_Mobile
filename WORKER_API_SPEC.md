@@ -357,26 +357,70 @@ Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
 
 ---
 
-## 10) Đề xuất Cải thiện UI (Từ bên Mobile Frontend Developer / BA)
+## 10) Đề xuất Cải thiện UI (Từ bên Mobile Frontend Developer )
 
 Để hỗ trợ hiển thị UI/UX hoàn chỉnh, đầy đủ thông tin cho người dùng mà không bị che khuất, Frontend có một số yêu cầu thêm vào Payload:
 
-### 10.1 Xử Lý Cân Bằng UI Chức Năng Việc Nông Nghiệp & Khoán
-- **Lưu ý:** Với công việc Nông nghiệp, chúng ta có **Theo Ngày** và **Theo Khoán**. Thời gian Check-in/Check-out chỉ dành để đo giờ cho Việc Ngày. Với Việc Khoán, người nông dân tính tiền theo Khối Lượng (VD: 1.5 Ha, 100Kg...).
-- Do đó, `CheckOutRequest` và `WorkerAttendanceDTO` TẠI BACKEND CẦN BỔ SUNG TRƯỜNG: `completedAmount` (float/decimal). Khi Worker (Khoán) ấn Check-out, App sẽ bật Popup hỏi: *"Hôm nay bạn đã hoàn thành khối lượng bao nhiêu?"*
-- Tương tự, `ApproveAttendanceRequest` (Farmer) cần thêm trường `adjustedAmount` để Farmer chốt số lượng trước khi trả lương gốc.
+### 10.1 [QUAN TRỌNG] Phân Tách API Check-in / Check-out cho Việc Theo Ngày vs Việc Khoán
+**[❌ CHƯA CẬP NHẬT]** DTO của hệ thống `WorkerAttendance` (`CheckInRequest`, `CheckOutRequest`, `ApproveAttendanceRequest`, `WorkerAttendanceDTO`) hiện tại đang bị dùng chung 1 khuôn là đếm thời gian. Điều này gây lỗi logic nghiệp vụ nặng vì **cách trả lương của 2 loại này hoàn toàn khác nhau**. Dưới đây là ghi chú rõ phần nào xài cho loại nào, phần nào bị thiếu cần BE vá lỗi ngay:
 
-### 10.2 Tránh Gọi API N Lần (Hiệu suất UI)
-1. **WorkerProfileDTO**: Cân nhắc thêm `phoneNumber`, `email`, `bio` hoặc `skills` nếu có, để hiển thị đầy đủ hơn trên trang cá nhân của worker mà không bị khuất hoặc bỏ trống mất thẩm mỹ.
-2. **WorkerAttendanceDTO**: Bắt buộc thêm metadata của Job (`jobTitle`, `farmName`, `wageTypeId`) rả về cùng trong list lịch sử điểm danh. Frontend cần render thẻ Job có Tên, Nơi làm ngay ở màn hình Lịch Sử mà KHÔNG ĐƯỢC gọi thêm GET JobDetail cho 100 items riêng biệt.
-3. **JobApplicationDTO**: Bắt buộc thêm metadata của JobPost (`title`, `location`, `wageAmount`, `farmName`, `wageTypeId`, v.v.) vào response list. Màn ứng tuyển Worker cần hiện thẳng số tiền và Tên việc để họ check lại danh sách công việc mình đang chờ duyệt.
-4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. Khi người dùng ấn vào Cảnh báo từ màn hình chính, Router sẽ chuyển họ thẳng vào Tab Chi Tiết thay vì ném ra màn Home rỗng tếch.
+#### Loại 1: Công Việc Theo Ngày (`wageTypeId = 1`)
+- **Nguyên lý tính lương:** Tiền công = `Tổng số ngày làm` (hoặc `Tổng số giờ` quy đổi ra ngày) * `Đơn giá ngày`.
+- **Khâu Check-in:** Worker BẮT BUỘC phải chấm công giờ đến (`CheckInTime`). -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
+- **Khâu Check-out:** Worker BẮT BUỘC phải chấm công giờ về (`CheckOutTime`), BE tự lấy giờ về trừ giờ đến ra `TotalHoursWorked` (từ đó FE tự quy ra ngày). -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
+- **Khâu Farmer Duyệt (Approve):** Nếu Worker đi làm trễ hoặc trốn về sớm, Farmer có quyền dùng `AdjustedHours` để bóp lại số giờ thực tế. -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
+- **💡 Kết luận:** Backend hiện hành là "đo ni đóng giày" cho đúng loại hình Mọi Theo Ngày này. Rất chuẩn!
+
+#### Loại 2: Công Việc Theo Khoán / Khối Lượng (`wageTypeId = 2`)
+- **Nguyên lý tính lương:** Tiền công = `Khối lượng hoàn thành (CompletedAmount)` * `Đơn giá khoán`. (Dù bạn làm 1 tiếng hay 10 tiếng thì gặt xong 1 hecta lúa vẫn chỉ được 2 củ).
+- **Khâu Check-in:** Vẫn gửi `CheckInTime` để chứng báo có mặt. -> **[✅ DÙNG CHUNG ĐƯỢC]**
+- **Khâu Check-out (BÁO CÁO SẢN LƯỢNG):** Khi vác cuốc đi về, hệ thống bật popup hỏi Worker: *"Hôm nay mày thu hoạch được bao nhiêu kg / bao nhiêu mét vuông?"* (Ví dụ: Điền số 50).
+  - **[❌ LỖI API]** API `POST /attendance/check-out` hiện tại KHÔNG CÓ chỗ nào để truyền số 50 này lên.
+  - **[🛠️ YÊU CẦU BE SỬA]** BE phải nhét thêm trường `decimal? completedAmount` vào body của `CheckOutRequest`.
+- **Khâu Farmer Duyệt (Approve):** Farmer tới đếm lại đống cà phê. Worker báo 50Kg nhưng thực tế cân được có 45Kg. Farmer phải sửa lại thành 45.
+  - **[❌ LỖI API]** Nếu Farmer truyền số 45 vào `AdjustedHours` hiện tại thì sai bét về ngữ nghĩa (45 giờ làm??).
+  - **[🛠️ YÊU CẦU BE SỬA]** BE phải nhét thêm trường `decimal? adjustedAmount` vào `ApproveAttendanceRequest`.
+- **Lịch Sử (Get Attendance):**
+  - **[🛠️ YÊU CẦU BE SỬA]** Cần trả về `CompletedAmount` trong `WorkerAttendanceDTO` để ghi sổ *"Hôm qua tôi được duyệt 45 Kg"*.
+
+### 10.2 [CẢNH BÁO ĐỎ] Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Liên Kết (Missing Joins)
+Hiện tại, một loạt DTO trả về dạng Danh Sách (List) đang mắc lỗi **Lazy Loading / Thiếu Join**, chỉ trả về ID trơn mà không có dữ liệu thật. BE tuyệt đối KHÔNG ĐƯỢC làm lơ phần này vì nó sẽ khiến Frontend không có dữ liệu để vẽ UI hoặc phá hủy hiệu năng App (gọi API 100 lần để tra cứu).
+
+1. **`WorkerProfileDTO`**:`skills` nếu có. -> **[✅ ĐÃ HOÀN THÀNH một phần]** (Đã có `Email` và `PhoneNumber`).
+
+2. **`WorkerAttendanceDTO` (CỰC KỲ NGHIÊM TRỌNG)**: 
+   - **Tình trạng:** Hiện DTO này chỉ nhả ra mỗi `JobApplicationId` (1 chuỗi vô hồn). 
+   - **Các API đang bị ảnh hưởng trực tiếp:** `GET /attendance/worker/{workerProfileId}` (Lịch sử làm việc của Worker), `GET /attendance/farm/{farmerProfileId}` (Farmer xem chấm công), `GET /attendance/farm/{farmerProfileId}/worker/{workerProfileId}`.
+   - **Hậu quả UI:** Màn hình Lịch sử Điểm danh của Worker và thẻ Duyệt Công của Farmer sẽ **trắng bóc thông tin**. Nông dân thấy 10 người điểm danh nhưng không biết thẻ đó là của công việc Gặt lúa hay Bón phân! Worker không biết hôm qua mình điểm danh cho Nông trại nào.
+   - **Bắt buộc cho BE:** BẮT BUỘC BE phải Join/Include bảng JobPost để đính kèm vào DTO này các Metadata sống còn sau: `JobTitle` (Tựa việc), `FarmName` (Tên khu vườn/Nông trại), `WageTypeId` (Hệ số lương). FE tuyệt đối KHÔNG gọi thêm 100 API `GetJobDetail` rời rạc cho 100 thẻ điểm danh vì sẽ làm sập máy Client. -> **[❌ CHƯA CẬP NHẬT]**
+
+3. **`JobApplicationDTO` (RẤT NGHIÊM TRỌNG)**: 
+   - **Tình trạng:** Hiện chỉ nhả thẻ `WorkerProfileDTO` và `JobPostId`. 
+   - **Các API đang bị ảnh hưởng trực tiếp:** `GET /job/application` (Danh sách công việc đã ứng tuyển), `GET /job/application/{id}`.
+   - **Hậu quả UI:** Màn hình "Việc làm đang chờ duyệt" của Worker sẽ mù mờ hoàn toàn. Họ apply 10 công việc nhưng mở danh sách lên không thể thấy Tựa việc, không thấy Lương, không thấy Vị trí.
+   - **Mệnh lệnh cho BE:** BẮT BUỘC BE phải Join bảng `JobPost` để gán thêm Metadata: `title` (Tựa đề), `location` (Nơi làm), `wageAmount` (Tiền công), `farmName` (Tên nông trại), `wageTypeId`. -> **[❌ CHƯA CẬP NHẬT]**
+
+4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. -> **[✅ ĐÃ HOÀN THÀNH]** (Đã có `RelatedEntityId`, `Type`, và `TypeName`).
+
+### 10.3 Thiếu Luồng Ứng Tuyển & Quản Lý Slot Theo Từng Ngày (Apply Job by Date)
+**[❌ CHƯA CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` chỉ nhận mỗi `JobPostId` và `CoverLetter`. Điều này dẫn đến sự cố nghiêm trọng cho dạng **"Việc Làm Theo Ngày"**:
+- **Ngữ cảnh:** Nông dân mở JobPost yêu cầu 2 người làm cho 2 ngày: Ngày 3 và Ngày 4.
+  - *Worker A* ứng tuyển và được duyệt làm **cả Ngày 3 & 4**.
+  - *Worker B* ứng tuyển và được duyệt làm **chỉ Ngày 3**.
+  - => Kết quả thực tế: **Ngày 3 đã ĐỦ NGƯỜI (0 slot trống)**, **Ngày 4 CÒN THIẾU 1 NGƯỜI (1 slot trống)**.
+- **Sự cố:** Khi *Worker C* vào ứng tuyển sau cùng, hệ thống Backend hiện tại không phân tách số người theo từng ngày cụ thể, nên UI không biết cách hiển thị "Ngày 3 đã đầy, bạn chỉ có thể tick chọn ứng tuyển Ngày 4". 
+- **Yêu Cầu Fix Từ Backend:**
+  1. Trong API Lấy `JobPostDetail`, Backend cần trả về mảng `AvailableDates` chứa số lượng slot *còn lại* của từng ngày. VD: `{"date": "2026-03-03", "remainingSlots": 0}, {"date": "2026-03-04", "remainingSlots": 1}`. UI sẽ khoá (disable) ô checkbox Ngày 3.
+  2. Bổ sung trường `List<string> appliedDates` (hoặc `List<int> timeSlotIds`) vào body của API `POST /api/v1/job/application` để Worker gửi lên danh sách xác định xác định họ đang apply vào những ngày nào còn trống.
+  3. Khi Farmer ấn **Duyệt (Approve)** 1 application, Backend phải tự động trừ đi số `remainingSlots` tương ứng cho từng ngày nằm trong application đó. 
 
 ---
 
 ## 11) Yêu Cầu Backend cho Push Notification Real-time
 
+**[✅ ĐÃ HOÀN THÀNH - SẴN SÀNG TÍCH HỢP]**
+
 Để tính năng thông báo có thể hoạt động ngay tức thời trên app (kể cả khi tắt app), Frontend đã cài đặt thư viện `expo-notifications` lấy **Device Push Token**. Backend cần chuẩn bị:
-1. Mỗi khi User đăng nhập thành công vào app, app sẽ gọi API `POST /api/v1/notification/register-token` kèm body `{"token": "ExponentPushToken[xxx]"}`. Backend cần lưu lại chuỗi token này vào DB gắn liền với `userId`.
+1. Mỗi khi User đăng nhập thành công vào app, app sẽ gọi API `POST /api/v1/notification/register-token` kèm body `{"token": "ExponentPushToken[xxx]"}`. Backend cần lưu lại chuỗi token này vào DB gắn liền với `userId`. -> **[✅ ĐÃ CÓ API `RegisterDeviceToken`]**
 2. Khi có sự kiện (VD: duyệt điểm danh, tin nhắn mới, job được accept...), Backend dựa vào danh sách `Device Token` của User đó trên DB để **gọi POST request qua API của Expo** (`https://exp.host/--/api/v2/push/send`) gửi kèm payload `{ "to": "ExponentPushToken[xxx]", "title": "Tiêu đề", "body": "Nội dung", "data": {...} }`.
 3. Expo Server sẽ tự động bắn sang APNs (Apple) và FCM (Android) để hiển thị thông báo popup về máy người dùng realtime.

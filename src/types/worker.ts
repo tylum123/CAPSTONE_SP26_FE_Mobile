@@ -1,10 +1,12 @@
+// Matches backend WorkerProfileDTO.cs
 export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  ageRange: string;
+  age: string;               // BE field name is 'Age' (not ageRange)
+  ageRange?: string;         // Alias kept for backward compat with some FE components
   primaryLocation: string;
-  travelRadiusKmPreference: number;
+  travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
   experienceLevel: string;
   averageRating: number;
@@ -13,16 +15,19 @@ export interface WorkerProfileDTO {
   avatarUrl: string;
   createdAt: string;
   updatedAt: string;
+  email?: string;            // Returned by BE along with profile
+  phoneNumber?: string;      // Returned by BE along with profile
 }
 
+// Matches backend UpdateWorkerProfileRequest.cs
 export interface UpdateWorkerProfileRequest {
   fullName: string;
-  ageRange: string;
+  ageRange: string;          // BE request field name is AgeRange
   primaryLocation: string;
-  travelRadiusKmPreference?: number;
-  experienceLevelId: number;
+  travelRadiusKmPreference?: number | null;
+  experienceLevelId: number; // Required, range 1-3
   availabilitySchedule: string;
-  avatarUrl: string;
+  avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
 }
 
 export interface WorkerAttendanceDTO {
@@ -65,11 +70,11 @@ export interface ApproveAttendanceRequest {
 export interface JobApplicationDTO {
   id: string;
   jobPostId: string;
-  jobPostTitle?: string;
-  farmName?: string;
-  wageAmount?: number;
-  wageTypeId?: number;
-  workerId: string;
+  jobPostTitle?: string; // Metadata added by FE or future BE join
+  farmName?: string;     // Metadata added by FE or future BE join
+  wageAmount?: number;   // Metadata added by FE or future BE join
+  wageTypeId?: number;   // Metadata added by FE or future BE join
+  worker?: WorkerProfileDTO; // Backend returns the full worker object
   statusId: number;
   coverLetter: string | null;
   appliedAt: string;
@@ -79,7 +84,7 @@ export interface JobApplicationDTO {
 
 export interface CreateJobApplicationRequest {
   jobPostId: string;
-  workerId: string;
+  // workerId: string; // BE extracts this from token, keeping it commented or removing if not in BE DTO
   statusId: number;
   coverLetter: string | null;
   appliedAt: string;

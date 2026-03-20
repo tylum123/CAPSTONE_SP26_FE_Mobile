@@ -1,23 +1,12 @@
 import api from "../config/axios";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse } from "../types";
-
-// Notification interface
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "success" | "warning" | "error";
-  isRead: boolean;
-  createdAt: string;
-  data?: any;
-}
+import { ApiResponse, NotificationDTO } from "../types";
 
 // Notification Service
 export const notificationService = {
   // Get all notifications
-  getNotifications: async (): Promise<Notification[]> => {
-    const response = await api.get<ApiResponse<Notification[]>>(
+  getNotifications: async (): Promise<NotificationDTO[]> => {
+    const response = await api.get<ApiResponse<NotificationDTO[]>>(
       API_ENDPOINTS.NOTIFICATIONS.LIST,
     );
     // @ts-ignore
@@ -25,8 +14,8 @@ export const notificationService = {
   },
 
   // Get unread notifications
-  getUnreadNotifications: async (): Promise<Notification[]> => {
-    const response = await api.get<ApiResponse<Notification[]>>(
+  getUnreadNotifications: async (): Promise<NotificationDTO[]> => {
+    const response = await api.get<ApiResponse<NotificationDTO[]>>(
       API_ENDPOINTS.NOTIFICATIONS.UNREAD,
     );
     // @ts-ignore
@@ -49,7 +38,7 @@ export const notificationService = {
   },
 
   // Register push notification token
-  registerPushToken: async (token: string): Promise<void> => {
-    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { token });
+  registerPushToken: async (token: string, deviceName: string = "Mobile Device"): Promise<void> => {
+    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { token, deviceName });
   },
 };

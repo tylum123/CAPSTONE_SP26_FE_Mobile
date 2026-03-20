@@ -25,8 +25,8 @@ export const API_ENDPOINTS = {
     GOOGLE_LOGIN: `${API_PREFIX}/google-login`,
     LOGOUT: `${API_PREFIX}/logout`,
     REFRESH_TOKEN: `${API_PREFIX}/refresh`,
-    FORGOT_PASSWORD: `${API_PREFIX}/forgot-password`,
-    RESET_PASSWORD: `${API_PREFIX}/reset-password`,
+    FORGOT_PASSWORD: `${API_PREFIX}/forget`,
+    RESET_PASSWORD: `${API_PREFIX}/reset`,
     VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
   },
   // Worker profile

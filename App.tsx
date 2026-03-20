@@ -1,6 +1,7 @@
 import "./global.css";
 import "react-native-gesture-handler";
 import React from "react";
+import { Platform, View, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -54,12 +55,41 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NavigationContainer>
-          <RootNavigator />
-          <StatusBar style="light" />
-        </NavigationContainer>
-      </AuthProvider>
+      <View style={styles.webWrapperOuter}>
+        <View style={styles.webWrapperInner}>
+          <AuthProvider>
+            <NavigationContainer>
+              <RootNavigator />
+              <StatusBar style="light" />
+            </NavigationContainer>
+          </AuthProvider>
+        </View>
+      </View>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  webWrapperOuter: {
+    flex: 1,
+    height: Platform.OS === "web" ? "100vh" as any : "100%",
+    backgroundColor: Platform.OS === "web" ? "#f3f4f6" : "transparent",
+    alignItems: Platform.OS === "web" ? "center" : undefined,
+    justifyContent: Platform.OS === "web" ? "center" : undefined,
+  },
+  webWrapperInner: {
+    flex: 1,
+    height: Platform.OS === "web" ? "100vh" as any : "100%",
+    width: "100%",
+    maxWidth: Platform.OS === "web" ? 480 : "100%",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+    ...(Platform.OS === "web" && {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 20,
+      elevation: 5,
+    }),
+  },
+});
