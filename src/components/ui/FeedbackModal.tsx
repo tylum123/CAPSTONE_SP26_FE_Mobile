@@ -11,7 +11,9 @@ interface FeedbackModalProps {
   message: string;
   variant?: FeedbackVariant;
   confirmLabel?: string;
+  cancelLabel?: string;  // Nếu có cancelLabel thì hiện 2 nút
   onClose: () => void;
+  onConfirm?: () => void; // Nếu có thì nút chính gọi onConfirm, không thì gọi onClose
 }
 
 export function FeedbackModal({
@@ -20,7 +22,9 @@ export function FeedbackModal({
   message,
   variant = "info",
   confirmLabel = "Đóng",
+  cancelLabel,
   onClose,
+  onConfirm,
 }: FeedbackModalProps) {
   const renderIcon = () => {
     if (variant === "success") return <CheckCircle2 size={28} color="#059669" />;
@@ -52,8 +56,19 @@ export function FeedbackModal({
           </View>
           <Text className="text-xl font-bold text-slate-900 text-center mb-1">{title}</Text>
           <Text className="text-[15px] text-slate-600 text-center mb-6">{message}</Text>
-          <View className="flex-row justify-center">
-            <Button onPress={onClose} style={{ minWidth: 120 }}>
+          <View
+            style={{ flexDirection: 'row', gap: 12, alignItems: 'stretch', justifyContent: 'center' }}
+          >
+            {cancelLabel && (
+              <Button variant="outline" onPress={onClose} style={{ flex: 1 }}>
+                {cancelLabel}
+              </Button>
+            )}
+            <Button
+              onPress={onConfirm ?? onClose}
+              style={cancelLabel ? { flex: 1 } : { minWidth: 120 }}
+              variant={variant === "error" ? "danger" : "default"}
+            >
               {confirmLabel}
             </Button>
           </View>

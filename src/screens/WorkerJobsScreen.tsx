@@ -37,10 +37,37 @@ export function WorkerJobsScreen({ navigation }: any) {
     if (!isAuthenticated || user?.isDemo) { setAppliedJobs(demoApplied); setUpcomingJobs(demoUpcoming); setCompletedJobs(demoCompleted); return; }
     (async () => {
       try {
-        const result = await jobService.getJobPosts();
-        setAppliedJobs(result.map((j: JobPostDTO) => ({ id: j.id, title: j.title, farmer: "Chủ nông trại", location: j.address, date: j.startDate ? new Date(j.startDate).toLocaleDateString("vi-VN") : "", time: "", wage: j.wageAmount || 0, status: "pending" as const, appliedDate: j.publishedAt ? new Date(j.publishedAt).toLocaleDateString("vi-VN") : "" })));
-        setUpcomingJobs([]); setCompletedJobs([]);
-      } catch { setAppliedJobs([]); setUpcomingJobs([]); setCompletedJobs([]); }
+        // NOTE: BE hiện tại chưa Join Metadata (JobTitle, FarmName) vào JobApplicationDTO
+        // Giải pháp: Fetch tất cả JobPosts để Map ngược lại thông tin.
+        const [apps, allJobs] = await Promise.all([
+          jobService.getApplications(),
+          jobService.getJobPosts()
+        ]);
+
+        const mappedApplied = apps.map((app) => {
+          const jobInfo = allJobs.find(j => String(j.id) === String(app.jobPostId));
+          
+          return {
+            id: app.id,
+            jobPostId: app.jobPostId,
+            title: jobInfo?.title || "Đơn ứng tuyển vào công việc",
+            farmer: jobInfo?.contactName || "Chủ nông trại",
+            location: jobInfo?.address && jobInfo.address !== "string" ? jobInfo.address : "Hệ thống",
+            date: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "N/A",
+            time: "",
+            wage: jobInfo?.wageAmount || app.wageAmount || 0,
+            status: app.statusId === 1 ? "pending" : app.statusId === 2 ? "accepted" : "rejected",
+            appliedDate: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : ""
+          };
+        });
+        setAppliedJobs(mappedApplied);
+        setUpcomingJobs([]); 
+        setCompletedJobs([]);
+      } catch { 
+        setAppliedJobs([]); 
+        setUpcomingJobs([]); 
+        setCompletedJobs([]); 
+      }
     })().catch(() => undefined);
   }, [isAuthenticated, user?.isDemo]);
 
@@ -49,7 +76,7 @@ export function WorkerJobsScreen({ navigation }: any) {
   const renderItem = (job: any) => {
     if (activeTab === "applied") return (
       <TouchableOpacity className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-        activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}>
+        activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}>
         <View className="flex-1 p-4">
           <View className="flex-row items-center gap-2 mb-2">
             <Avatar fallback={job.farmer[0]} size={42} />

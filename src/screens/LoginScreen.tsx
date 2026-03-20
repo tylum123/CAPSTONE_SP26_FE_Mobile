@@ -52,7 +52,13 @@ export function LoginScreen({ navigation }: any) {
     }
     setLoading(true);
     try { await login(identifier, password); }
-    catch { Alert.alert("Lỗi", "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại."); }
+    catch (error: any) { 
+      if (error?.message === "UNAUTHORIZED_ROLE") {
+        Alert.alert("Không có quyền", "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng dành cho Người lao động (Worker).");
+      } else {
+        Alert.alert("Lỗi", "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại."); 
+      }
+    }
     finally { setLoading(false); }
   };
 
@@ -67,6 +73,10 @@ export function LoginScreen({ navigation }: any) {
       await loginWithGoogle(idToken, 3);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
+      if (error?.message === "UNAUTHORIZED_ROLE") {
+        Alert.alert("Không có quyền", "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng dành cho Người lao động (Worker).");
+        return;
+      }
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       else if (error.code === statusCodes.IN_PROGRESS) return;
       else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) Alert.alert("Lỗi", "Google Play Services không khả dụng.");
@@ -78,9 +88,16 @@ export function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <ImageBackground source={require("../../assets/login.jpg")} className="flex-1" resizeMode="cover">
-      {/* Overlay xanh lá đậm */}
-      <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+    <View className="flex-1 bg-primary-900">
+      {/* Tuyệt đối ghim ảnh nền chết phía dưới, tách biệt khỏi ScrollView để chống chập chờn/vỡ khi xài web emulator */}
+      <View style={{ position: "absolute", width: "100%", height: "100%" }}>
+        <Image 
+          source={require("../../assets/login.jpg")} 
+          style={{ width: "100%", height: "100%" }} 
+          resizeMode="cover" 
+        />
+        <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+      </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
@@ -218,6 +235,6 @@ export function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </View>
   );
 }

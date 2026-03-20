@@ -45,7 +45,13 @@ export function RegisterScreen({ navigation }: any) {
       if (!idToken) { Alert.alert("Lỗi", "Không lấy được Google ID token."); return; }
       setLoading(true);
       try { await loginWithGoogle(idToken, 3); }
-      catch { Alert.alert("Lỗi", "Đăng ký bằng Google thất bại."); }
+      catch (error: any) { 
+        if (error?.message === "UNAUTHORIZED_ROLE") {
+          Alert.alert("Không thể đăng nhập", "Email này đã được đăng ký cho hệ thống khác. Vui lòng sử dụng tài khoản dành riêng cho Người lao động (Worker).");
+        } else {
+          Alert.alert("Lỗi", "Đăng ký bằng Google thất bại."); 
+        }
+      }
       finally { setLoading(false); }
     };
     doGoogleLogin().catch(() => undefined);
@@ -74,8 +80,17 @@ export function RegisterScreen({ navigation }: any) {
   ];
 
   return (
-    <ImageBackground source={require("../../assets/register.jpg")} className="flex-1" resizeMode="cover">
-      <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+    <View className="flex-1 bg-primary-900">
+      {/* Tuyệt đối ghim ảnh nền chết phía dưới, tách biệt khỏi ScrollView để chống chập chờn/vỡ khi xài web emulator */}
+      <View style={{ position: "absolute", width: "100%", height: "100%" }}>
+        <Image 
+          source={require("../../assets/register.jpg")} 
+          style={{ width: "100%", height: "100%" }} 
+          resizeMode="cover" 
+        />
+        <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+      </View>
+
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 32, paddingBottom: 32 }}
@@ -143,6 +158,6 @@ export function RegisterScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </View>
   );
 }

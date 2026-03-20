@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { User, MapPin, Briefcase, Calendar, Clock, Camera, ChevronLeft, Check } from "lucide-react-native";
@@ -16,12 +16,13 @@ export function EditProfileScreen({ navigation, route }: any) {
   const { currentProfile, onUpdated } = route.params || {};
   const insets = useSafeAreaInsets();
   const [fullName, setFullName]                             = useState(currentProfile?.fullName || "");
-  const [ageRange, setAgeRange]                             = useState(currentProfile?.ageRange || "");
+  const [age, setAge]                             = useState(currentProfile?.age || currentProfile?.ageRange || "");
   const [primaryLocation, setPrimaryLocation]               = useState(currentProfile?.primaryLocation || "");
   const [travelRadiusKmPreference, setTravelRadiusKmPreference] = useState(currentProfile?.travelRadiusKmPreference?.toString() || "");
-  const [experienceLevelId, setExperienceLevelId]           = useState(currentProfile?.experienceLevelId?.toString() || "");
+  // ExperienceLevelId: 1=Mới bắt đầu, 2=Có kinh nghiệm, 3=Chuyên nghiệp (BE validates range 1-3)
+  const [experienceLevelId, setExperienceLevelId]           = useState<number>(currentProfile?.experienceLevelId || 1);
   const [availabilitySchedule, setAvailabilitySchedule]     = useState(currentProfile?.availabilitySchedule || "");
-  const [avatarUrl, setAvatarUrl]                           = useState(currentProfile?.avatarUrl || "");
+  const [avatarUrl, setAvatarUrl]                           = useState(currentProfile?.avatarUrl || "string");
   const [loading, setLoading]                               = useState(false);
   const [avatarUploading, setAvatarUploading]               = useState(false);
   const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
@@ -31,27 +32,30 @@ export function EditProfileScreen({ navigation, route }: any) {
   const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const handleSave = async () => {
-    if (!fullName || !ageRange || !primaryLocation || !experienceLevelId || !availabilitySchedule) {
+    if (!fullName || !age || !primaryLocation || !availabilitySchedule) {
       showFeedback({ title: "Thiếu thông tin", message: "Vui lòng điền đầy đủ các trường bắt buộc.", variant: "error" }); return;
     }
-    const parsedLevelId = Number(experienceLevelId);
-    if (Number.isNaN(parsedLevelId) || parsedLevelId < 1 || parsedLevelId > 3) {
-      showFeedback({ title: "Dữ liệu chưa hợp lệ", message: "Mức kinh nghiệm phải là số từ 1 đến 3.", variant: "error" }); return;
+    if (experienceLevelId < 1 || experienceLevelId > 3) {
+      showFeedback({ title: "Dữ liệu chưa hợp lệ", message: "Mức kinh nghiệm không hợp lệ.", variant: "error" }); return;
     }
     setLoading(true);
     if (!isAuthenticated || user?.isDemo) {
       setTimeout(() => {
-        onUpdated?.({ id: "demo", userId: "demo", fullName, ageRange, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null, experienceLevelId: parsedLevelId, experienceLevel: "Demo", averageRating: 0, availabilitySchedule, totalJobsCompleted: 0, avatarUrl: avatarUrl || "", createdAt: "", updatedAt: "" });
+        const demo: any = { id: "demo", userId: "demo", fullName, age: age, ageRange: age, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null, experienceLevelId, experienceLevel: ["Mới bắt đầu","Có kinh nghiệm","Chuyên nghiệp"][experienceLevelId - 1], averageRating: 0, availabilitySchedule, totalJobsCompleted: 0, avatarUrl: avatarUrl || "", createdAt: "", updatedAt: "" };
+        onUpdated?.(demo);
         showFeedback({ title: "Thành công (Demo)", message: "Hồ sơ của bạn đã được cập nhật mô phỏng.", variant: "success", onConfirm: () => navigation.goBack() });
         setLoading(false);
       }, 1000);
       return;
     }
     try {
-      const updated = await workerProfileService.updateProfile({ fullName, ageRange, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, experienceLevelId: parsedLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
+      const updated = await workerProfileService.updateProfile({ fullName, ageRange: age, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null, experienceLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
       onUpdated?.(updated);
       showFeedback({ title: "Thành công", message: "Hồ sơ của bạn đã được cập nhật.", variant: "success", onConfirm: () => navigation.goBack() });
-    } catch { showFeedback({ title: "Có lỗi xảy ra", message: "Không thể cập nhật hồ sơ. Vui lòng thử lại.", variant: "error" }); }
+    } catch (err: any) { 
+      console.error("Update profile error:", JSON.stringify(err?.response?.data || err.message || err, null, 2));
+      showFeedback({ title: "Có lỗi xảy ra", message: "Không thể cập nhật hồ sơ. Vui lòng thử lại.", variant: "error" }); 
+    }
     finally { if (isAuthenticated) setLoading(false); }
   };
 
@@ -70,19 +74,28 @@ export function EditProfileScreen({ navigation, route }: any) {
     finally { setAvatarUploading(false); }
   };
 
-  const formFields = [
+  const EXPERIENCE_LEVELS = [
+    { id: 1, label: "Mới bắt đầu" },
+    { id: 2, label: "Có kinh nghiệm" },
+    { id: 3, label: "Chuyên nghiệp" },
+  ];
+
+  const basicFields = [
     { label: "Họ và tên", required: true, Icon: User, value: fullName, onChangeText: setFullName, placeholder: "Nhập họ và tên" },
-    { label: "Độ tuổi", required: true, Icon: Calendar, value: ageRange, onChangeText: setAgeRange, placeholder: "Ví dụ: 18-25" },
+    { label: "Tuổi", required: true, Icon: Calendar, value: age, onChangeText: setAge, placeholder: "Nhập số tuổi", keyboardType: "number-pad" as const },
     { label: "Khu vực chính", required: true, Icon: MapPin, value: primaryLocation, onChangeText: setPrimaryLocation, placeholder: "Nhập khu vực chính" },
     { label: "Bán kính di chuyển (km)", Icon: MapPin, value: travelRadiusKmPreference, onChangeText: setTravelRadiusKmPreference, placeholder: "Ví dụ: 10", keyboardType: "number-pad" as const },
-    { label: "Mức kinh nghiệm", required: true, Icon: Briefcase, value: experienceLevelId, onChangeText: setExperienceLevelId, placeholder: "Nhập experienceLevelId" },
     { label: "Lịch làm việc", required: true, Icon: Clock, value: availabilitySchedule, onChangeText: setAvailabilitySchedule, placeholder: "Ví dụ: T2-T7" },
   ];
 
   return (
     <>
       <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
-        <View className="flex-1 bg-slate-50/50">
+        {/* FIX SCROLL WEB: cần height tường minh để ScrollView có thể cuộn trên React Native Web */}
+        <View style={Platform.OS === 'web'
+          ? { height: '100vh' as any, display: 'flex' as any, flexDirection: 'column' as any, backgroundColor: '#f8fafc' }
+          : { flex: 1, backgroundColor: '#f8fafc' }
+        }>
           {/* Header */}
           <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
             <View className="flex-row items-center gap-3">
@@ -99,7 +112,11 @@ export function EditProfileScreen({ navigation, route }: any) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={Platform.OS === 'web' ? { flex: 1, overflowY: 'scroll' } as any : { flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            // NOTE: overflowY: 'scroll' bắt buộc phải có trên React Native Web để kéo cuộn hoạt động
+          >
             {/* Avatar Section */}
             <View className="items-center py-10 bg-white border-b border-slate-100 mb-2">
               <View className="relative shadow-md">
@@ -123,12 +140,12 @@ export function EditProfileScreen({ navigation, route }: any) {
             {/* Form */}
             <View className="p-5">
               <View className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100">
-                {formFields.map((field, i) => (
-                  <View key={i} className={i === formFields.length - 1 ? "" : "mb-6"}>
+                {basicFields.map((field, i) => (
+                  <View key={i} className="mb-6">
                     <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">
                       {field.label} {(field as any).required && <Text className="text-rose-500">*</Text>}
                     </Text>
-                    <View className="flex-row items-center bg-slate-50/80 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3 focus:border-primary-500">
+                    <View className="flex-row items-center bg-slate-50/80 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3">
                       <field.Icon size={18} color={COLORS.slate[400]} />
                       <TextInput
                         className="flex-1 text-[15px] text-slate-900 py-2 font-medium"
@@ -140,6 +157,32 @@ export function EditProfileScreen({ navigation, route }: any) {
                     </View>
                   </View>
                 ))}
+
+                {/* Experience Level Picker - thay vì nhập số thủ công */}
+                <View>
+                  <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">
+                    Mức kinh nghiệm <Text className="text-rose-500">*</Text>
+                  </Text>
+                  <View className="flex-row gap-2">
+                    {EXPERIENCE_LEVELS.map((level) => (
+                      <TouchableOpacity
+                        key={level.id}
+                        onPress={() => setExperienceLevelId(level.id)}
+                        className={[
+                          "flex-1 py-3 rounded-2xl border-2 items-center",
+                          experienceLevelId === level.id
+                            ? "bg-primary-600 border-primary-700"
+                            : "bg-slate-50 border-slate-200"
+                        ].join(" ")}
+                      >
+                        <Briefcase size={16} color={experienceLevelId === level.id ? "#fff" : COLORS.slate[400]} />
+                        <Text className={["text-[11px] font-bold mt-1", experienceLevelId === level.id ? "text-white" : "text-slate-600"].join(" ")}>
+                          {level.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               </View>
             </View>
             
@@ -147,10 +190,9 @@ export function EditProfileScreen({ navigation, route }: any) {
             <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Footer - Fixed Safe Area Issue */}
-          <View 
-            className="flex-row gap-4 px-6 pt-4 bg-white border-t border-slate-100 shadow-lg"
-            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          {/* Footer */}
+          <View
+            style={{ flexDirection: 'row', gap: 16, paddingHorizontal: 24, paddingTop: 16, paddingBottom: Math.max(insets.bottom, 24), backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#f1f5f9', alignItems: 'stretch' }}
           >
             <Button 
               variant="outline" 

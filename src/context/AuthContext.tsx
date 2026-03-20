@@ -13,6 +13,7 @@ import { authService, workerProfileService } from "../services";
 import { authTokenService } from "../services/auth-token.service";
 import { STORAGE_KEYS } from "../constants/api";
 
+
 interface User {
   id: string;
   name: string;
@@ -20,6 +21,13 @@ interface User {
   roleID: string;
   isDemo?: boolean; // cờ đánh dấu tài khoản demo
 }
+
+// Hàm format tên hiển thị, không để lộ @gmail.com
+const resolveName = (fullName?: string, email?: string) => {
+  if (fullName && fullName.trim() !== "") return fullName;
+  if (email && email.includes("@")) return email.split("@")[0];
+  return "Người dùng mới";
+};
 
 interface AuthContextType {
   user: User | null;
@@ -53,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       setUser({
         id: profile.id,
-        name: profile.fullName || profile.email || "User",
+        name: resolveName(profile.fullName, profile.email),
         email: profile.email || "",
         roleID: profile.roleID || "worker",
         isDemo: profile.isDemo,
@@ -68,6 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? { email, password }
         : { phoneNumber: email, password };
       const response = await authService.login(loginRequest);
+
+      // Dùng response.role trực tiếp từ backend thay vì decode JWT
+      // NOTE: Nếu BE thay đổi tên role (khác 'Worker'), cần cập nhật điều kiện này
+      if (response.role && response.role !== "Worker") {
+        throw new Error("UNAUTHORIZED_ROLE");
+      }
+
       await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
       authTokenService.setTokenToMemory(response.token);
       try {
@@ -82,10 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         applyUserProfile(profileWithEmail);
       } catch {
+        const fbEmail = response.email || email;
         applyUserProfile({
           id: "me",
-          fullName: response.email || email,
-          email: response.email || email,
+          fullName: resolveName(undefined, fbEmail),
+          email: fbEmail,
           roleID: "worker",
         });
       }
@@ -96,6 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = useCallback(
     async (googleToken: string, roleId = 3) => {
       const response = await authService.googleLogin({ googleToken, roleId });
+
+      // Dùng response.role trực tiếp từ backend thay vì decode JWT
+      // NOTE: Nếu BE thay đổi tên role (khác 'Worker'), cần cập nhật điều kiện này
+      if (response.role && response.role !== "Worker") {
+        throw new Error("UNAUTHORIZED_ROLE");
+      }
+
       await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
       authTokenService.setTokenToMemory(response.token);
 
@@ -113,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         applyUserProfile({
           id: "me",
-          fullName: response.email,
+          fullName: resolveName(undefined, response.email),
           email: response.email,
           roleID: "worker",
         });
@@ -184,10 +207,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         applyUserProfile(profileWithEmail);
       } catch {
+        const fEmail = response.email || payload.email;
         applyUserProfile({
           id: "me",
-          fullName: response.email || payload.email,
-          email: response.email || payload.email,
+          fullName: resolveName(undefined, fEmail),
+          email: fEmail,
           roleID: String(payload.roleId),
         });
       }

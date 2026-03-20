@@ -1,6 +1,6 @@
 import api from "../config/axios";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse } from "../types";
+import { ApiResponse, CreateJobApplicationRequest, JobApplicationDTO } from "../types";
 
 export interface JobCategoryDTO {
   id: string;
@@ -9,31 +9,36 @@ export interface JobCategoryDTO {
   isActive: boolean;
 }
 
+export interface JobSkillRequirementSummaryDTO {
+  id: string;
+  name: string;
+}
+
 export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
+  contactName: string;
+  jobSkillRequirements: JobSkillRequirementSummaryDTO[];
+  farmId: string;
   jobCategoryId: string;
   title: string;
   description: string;
   address: string;
-  latitude: number;
-  longitude: number;
   startDate: string;
   endDate: string;
   estimatedHours: number;
   workersNeeded: number;
   workersAccepted: number;
-  wageTypeId: string;
+  wageTypeId: number;
   wageAmount: number;
-  paymentMethodId: string;
+  paymentMethodId: number;
   requiredSkills: string;
   genderPreference: string;
-  ageRequirement: string;
   publishedAt: string;
   createdAt: string;
   updatedAt: string;
   isUrgent: boolean;
-  statusId: string;
+  status: string;
 }
 
 export const jobService = {
@@ -61,6 +66,28 @@ export const jobService = {
   getJobPostDetail: async (id: string): Promise<JobPostDTO> => {
     const response = await api.get<ApiResponse<JobPostDTO>>(
       API_ENDPOINTS.JOB.POST_DETAIL(id),
+    );
+    return response.data.data;
+  },
+
+  applyJob: async (data: CreateJobApplicationRequest): Promise<JobApplicationDTO> => {
+    const response = await api.post<ApiResponse<JobApplicationDTO>>(
+      API_ENDPOINTS.JOB.APPLICATION,
+      data,
+    );
+    return response.data.data;
+  },
+
+  getApplications: async (): Promise<JobApplicationDTO[]> => {
+    const response = await api.get<ApiResponse<JobApplicationDTO[]>>(
+      API_ENDPOINTS.JOB.APPLICATION,
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  getApplicationDetail: async (id: string): Promise<JobApplicationDTO> => {
+    const response = await api.get<ApiResponse<JobApplicationDTO>>(
+      API_ENDPOINTS.JOB.APPLICATION_DETAIL(id),
     );
     return response.data.data;
   },

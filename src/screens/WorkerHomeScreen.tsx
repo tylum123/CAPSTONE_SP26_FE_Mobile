@@ -33,7 +33,11 @@ export function WorkerHomeScreen({ navigation }: any) {
     (async () => {
       try {
         const jobs = await jobService.getJobPosts();
-        setNearbyJobs(jobs.map((j: JobPostDTO): Job => ({ id: j.id, title: j.title, farmer: "Chủ nông trại", location: j.address, distance: "N/A", wage: j.wageAmount ? j.wageAmount.toLocaleString("vi-VN") : "0", duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "N/A", rating: 0, urgent: j.isUrgent })));
+        setNearbyJobs(jobs.map((j: JobPostDTO): Job => {
+          const address = j.address && j.address !== "string" ? j.address : "Chưa cập nhật";
+          const contactName = j.contactName && j.contactName !== "string" ? j.contactName : "Chủ nông trại";
+          return { id: j.id, title: j.title || "Chưa có tiêu đề", farmer: contactName, location: address, distance: "N/A", wage: j.wageAmount ? j.wageAmount.toLocaleString("vi-VN") : "0", duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "N/A", rating: 0, urgent: j.isUrgent };
+        }));
       } catch { setNearbyJobs([]); }
     })().catch(() => undefined);
   }, [isAuthenticated]);

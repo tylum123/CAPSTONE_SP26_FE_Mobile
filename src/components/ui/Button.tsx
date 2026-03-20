@@ -89,11 +89,21 @@ export function Button({
   const vStyle = variantStyles[variant];
   const sStyle = sizeStyles[size];
 
+  // Tách các style liên quan đến layout để apply vào wrapper
+  const flatStyle = style ? (Array.isArray(style) ? Object.assign({}, ...style) : style) : {};
+  const { 
+    flex, margin, marginTop, marginBottom, marginLeft, marginRight, 
+    marginHorizontal, marginVertical, alignSelf, flexGrow, flexShrink,
+    width, height, position, top, bottom, left, right,
+    ...contentStyle 
+  } = flatStyle;
+
   return (
     <Animated.View
       style={[
         { transform: [{ scale: scaleAnim }] },
         fullWidth && { alignSelf: "stretch" },
+        { flex, margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical, alignSelf, flexGrow, flexShrink, width, height, position, top, bottom, left, right },
         vStyle.shadow,
       ]}
     >
@@ -112,7 +122,7 @@ export function Button({
         ]
           .filter(Boolean)
           .join(" ")}
-        style={style}
+        style={contentStyle}
       >
         {loading ? (
           <ActivityIndicator

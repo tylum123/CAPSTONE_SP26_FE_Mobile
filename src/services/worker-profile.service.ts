@@ -1,34 +1,7 @@
 import api from "../config/axios";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse } from "../types";
+import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest } from "../types";
 import { authTokenService } from "./auth-token.service";
-
-export interface WorkerProfileDTO {
-  id: string;
-  userId: string;
-  fullName: string;
-  ageRange: string;
-  primaryLocation: string;
-  travelRadiusKmPreference?: number | null;
-  experienceLevelId: number;
-  experienceLevel: string;
-  averageRating: number;
-  availabilitySchedule: string;
-  totalJobsCompleted: number;
-  avatarUrl: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface UpdateWorkerProfileRequest {
-  fullName: string;
-  ageRange: string;
-  primaryLocation: string;
-  travelRadiusKmPreference?: number | null;
-  experienceLevelId: number;
-  availabilitySchedule: string;
-  avatarUrl: string;
-}
 
 // Use JWT token directly for worker profile APIs
 export const workerProfileService = {
@@ -45,6 +18,17 @@ export const workerProfileService = {
     const response = await api.put<ApiResponse<WorkerProfileDTO>>(
       API_ENDPOINTS.WORKER_PROFILE.BASE,
       data,
+    );
+    return response.data.data;
+  },
+
+  uploadAvatar: async (imageFile: any): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    const response = await api.post<ApiResponse<string>>(
+      API_ENDPOINTS.WORKER_PROFILE.UPLOAD_AVATAR,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
     return response.data.data;
   },
