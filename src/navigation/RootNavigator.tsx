@@ -14,9 +14,9 @@ import { JobDetailScreen } from "../screens/JobDetailScreen";
 import { ChatScreen } from "../screens/ChatScreen";
 import { NotificationsScreen } from "../screens/NotificationsScreen";
 import { ReviewScreen } from "../screens/ReviewScreen";
-import { CheckInScreen } from "../screens/CheckInScreen";
-import { AttendanceHistoryScreen } from "../screens/AttendanceHistoryScreen";
-import { AttendanceDetailScreen } from "../screens/AttendanceDetailScreen";
+import { SubmitReportScreen } from "../screens/SubmitReportScreen";
+import { ReportHistoryScreen } from "../screens/ReportHistoryScreen";
+import { ReportDetailScreen } from "../screens/ReportDetailScreen";
 import { EditProfileScreen } from "../screens/EditProfileScreen";
 
 const Stack = createStackNavigator();
@@ -61,14 +61,14 @@ export function RootNavigator() {
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Review" component={ReviewScreen} />
-      <Stack.Screen name="CheckIn" component={CheckInScreen} />
+      <Stack.Screen name="SubmitReport" component={SubmitReportScreen} />
       <Stack.Screen
-        name="AttendanceHistory"
-        component={AttendanceHistoryScreen}
+        name="ReportHistory"
+        component={ReportHistoryScreen}
       />
       <Stack.Screen
-        name="AttendanceDetail"
-        component={AttendanceDetailScreen}
+        name="ReportDetail"
+        component={ReportDetailScreen}
       />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </>

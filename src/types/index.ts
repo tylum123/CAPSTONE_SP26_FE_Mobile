@@ -9,6 +9,7 @@ export interface Job {
   duration: string;
   rating: number;
   urgent?: boolean;
+  date?: string;
 }
 
 export interface UpcomingJob {

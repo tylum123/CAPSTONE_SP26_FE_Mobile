@@ -1,25 +1,32 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react-native";
+import { FeedbackModal } from "../components/ui/FeedbackModal";
+import { Button } from "../components/ui/Button";
 
 export function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
+
+  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
+    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
+  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const handleSendResetLink = async () => {
-    if (!email) { Alert.alert("Lỗi", "Vui lòng nhập địa chỉ email"); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Alert.alert("Lỗi", "Địa chỉ email không hợp lệ"); return; }
+    if (!email) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập địa chỉ email", variant: "error" }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFeedback({ title: "Sai định dạng", message: "Địa chỉ email không hợp lệ", variant: "error" }); return; }
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setIsSuccess(true);
       setTimeout(() => navigation.goBack(), 3000);
-    } catch { Alert.alert("Lỗi", "Không thể gửi email. Vui lòng thử lại."); }
+    } catch { showFeedback({ title: "Thất bại", message: "Không thể gửi email. Vui lòng thử lại.", variant: "error" }); }
     finally { setIsLoading(false); }
   };
 
@@ -87,6 +94,14 @@ export function ForgotPasswordScreen({ navigation }: any) {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        variant={feedback.variant}
+        onConfirm={closeFeedback}
+        onClose={closeFeedback}
+      />
     </SafeAreaView>
   );
 }
