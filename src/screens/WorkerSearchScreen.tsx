@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame } from "lucide-react-native";
+import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame, Map as MapIcon, List } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
 import { useAuth } from "../context/AuthContext";
-import { jobService, JobCategoryDTO, JobPostDTO } from "../services";
+import { jobService, JobCategoryDTO, JobPostDTO, workerProfileService, nominatimService } from "../services";
+import { JobMap } from "../components/ui/JobMap";
 
 interface FilterOptions { jobType: string[]; sortBy: "distance" | "wage" | "rating"; }
 
@@ -34,17 +35,46 @@ export function WorkerSearchScreen({ navigation }: any) {
   const [jobs, setJobs] = useState<JobPostDTO[]>([]);
   const [filters, setFilters] = useState<FilterOptions>({ jobType: [], sortBy: "distance" });
   const [refreshing, setRefreshing] = useState(false);
+  const [isMapView, setIsMapView] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(10);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated || user?.isDemo) { 
       setCategories(mockCategories); 
       setJobs(mockJobs); 
+      setRadiusKm(10);
+      setUserLocation({ latitude: 10.762622, longitude: 106.660172 });
       setRefreshing(false);
       return; 
     }
     try { 
-      const [jobPosts, jobCats] = await Promise.all([jobService.getJobPosts(), jobService.getCategories()]); 
-      setJobs(jobPosts); 
+      const [jobPosts, jobCats, applications, profile] = await Promise.all([
+        jobService.getJobPosts(), 
+        jobService.getCategories(),
+        jobService.getApplications(),
+        workerProfileService.getProfile()
+      ]); 
+
+      // 1. Lọc đơn ứng tuyển của chính mình
+      const myAppliedJobIds = new Set(
+        applications
+          .filter(a => (a.worker?.id || (a as any).workerId) === profile.id)
+          .map(a => String(a.jobPostId))
+      );
+
+      const prefRadius = profile?.travelRadiusKmPreference || 10;
+      setRadiusKm(prefRadius);
+      if (profile?.primaryLocation) {
+        nominatimService.geocodeAddress(profile.primaryLocation).then(loc => {
+          if (loc) setUserLocation(loc);
+        }).catch(e => console.log('Geocode error', e));
+      }
+
+      // 2. Lọc bỏ các job đã ứng tuyển khỏi danh sách tìm kiếm
+      const availableJobs = jobPosts.filter(j => !myAppliedJobIds.has(String(j.id)));
+      
+      setJobs(availableJobs); 
       setCategories(jobCats); 
     } catch { 
       setJobs([]); 
@@ -91,6 +121,12 @@ export function WorkerSearchScreen({ navigation }: any) {
         >
           <SlidersHorizontal size={18} color={showFilters ? "#059669" : "#475569"} />
         </TouchableOpacity>
+        <TouchableOpacity
+          className={["w-[46px] h-[46px] rounded-2xl border-[1.5px] justify-center items-center ml-1", isMapView ? "bg-primary-50 border-primary-300" : "bg-slate-50 border-slate-200"].join(" ")}
+          onPress={() => setIsMapView(!isMapView)}
+        >
+          {isMapView ? <List size={18} color="#059669" /> : <MapIcon size={18} color="#475569" />}
+        </TouchableOpacity>
       </View>
 
       {/* Filters */}
@@ -124,8 +160,19 @@ export function WorkerSearchScreen({ navigation }: any) {
         )}
       </View>
 
-      {/* List */}
-      <FlatList
+      {/* Main Content Area */}
+      {isMapView ? (
+        <View className="flex-1">
+          <JobMap 
+            userLocation={userLocation} 
+            radiusKm={radiusKm} 
+            jobs={sortedJobs as any} 
+            onCalloutPress={(job) => navigation.navigate("JobDetail", { jobId: job.id })}
+            style={{ borderRadius: 0, height: "100%" }}
+          />
+        </View>
+      ) : (
+        <FlatList
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         data={sortedJobs}
@@ -168,6 +215,7 @@ export function WorkerSearchScreen({ navigation }: any) {
           </View>
         }
       />
+      )}
     </SafeAreaView>
   );
 }

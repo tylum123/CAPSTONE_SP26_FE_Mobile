@@ -15,6 +15,14 @@ import { registerForPushNotificationsAsync } from "../services/push-notification
 import { authTokenService } from "../services/auth-token.service";
 import { STORAGE_KEYS } from "../constants/api";
 
+// Global reference to logout function for use in axios interceptors
+let forceLogoutRef: (() => Promise<void>) | null = null;
+export const forceLogout = async () => {
+  if (forceLogoutRef) {
+    await forceLogoutRef();
+  }
+};
+
 
 interface User {
   id: string;
@@ -98,6 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           JSON.stringify(profileWithEmail),
         );
         applyUserProfile(profileWithEmail);
+
+        // Đăng ký Push Notification
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          await notificationService.registerPushToken(pushToken);
+        }
       } catch {
         const fbEmail = response.email || email;
         applyUserProfile({
@@ -135,6 +149,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           JSON.stringify(profileWithEmail),
         );
         applyUserProfile(profileWithEmail);
+
+        // Đăng ký Push Notification
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          await notificationService.registerPushToken(pushToken);
+        }
       } catch {
         applyUserProfile({
           id: "me",
@@ -245,39 +265,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]).catch(() => undefined);
   }, [user?.isDemo]);
 
+  // Set global reference
+  useEffect(() => {
+    forceLogoutRef = logout;
+    return () => {
+      forceLogoutRef = null;
+    };
+  }, [logout]);
+
   useEffect(() => {
     const initializeAuth = async () => {
       if (user?.isDemo) return;
       const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       authTokenService.setTokenToMemory(token);
-      if (!token) {
-        // Only set null if there is no user currently (specifically handles demo user persistence briefly on reload before demo triggers)
+      
+      if (!token || authTokenService.isTokenExpired(token)) {
+        if (token) {
+          // Token exists but is expired, clear everything
+          await logout();
+        }
         return;
       }
 
+      const cachedProfileRaw = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       try {
-        const cachedProfileRaw = await AsyncStorage.getItem(
-          STORAGE_KEYS.USER_DATA,
-        );
-        const cachedProfile = cachedProfileRaw
-          ? (JSON.parse(cachedProfileRaw) as { email?: string })
-          : null;
         if (cachedProfileRaw) {
+          // Temporarily apply cached profile to show UI while verifying
           applyUserProfile(JSON.parse(cachedProfileRaw));
         }
 
         const profile = await workerProfileService.getProfile();
+        const cachedProfile = cachedProfileRaw ? JSON.parse(cachedProfileRaw) : null;
         const profileWithEmail = {
           ...profile,
-          email: cachedProfile?.email,
+          email: profile.email || cachedProfile?.email,
         };
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_DATA,
           JSON.stringify(profileWithEmail),
         );
         applyUserProfile(profileWithEmail);
-      } catch {
-        setUser(null);
+
+        // Register Push Notification on startup
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          await notificationService.registerPushToken(pushToken);
+        }
+      } catch (error: any) {
+        // If it's a 401 (Unauthorized), the token is invalid - logout
+        // If it's a network error (backend down) and we have a cached UI, 
+        // we might stay logged in but some apps prefer to logout for security.
+        // Given the USER's feedback about backend being down, let's clear it
+        // if we can't verify the session to avoid "fake" login state.
+        if (error?.response?.status === 401 || !cachedProfileRaw) {
+          await logout();
+        } else {
+          // It's a network error but we have cached data.
+          // Let's check if the backend is truly unreachable.
+          console.log("Auth initialization: Backend unreachable, keeping cached session.");
+        }
       }
     };
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, Image } from "react-native";
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, Image, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Camera, Upload, X } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
@@ -42,6 +42,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
           description,
           imageUrls: images
         });
+        DeviceEventEmitter.emit("REFRESH_DATA");
       }
       Alert.alert("Thành công", "Đã gửi báo cáo công việc.", [
         { text: "OK", onPress: () => navigation.goBack() }

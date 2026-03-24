@@ -120,7 +120,10 @@ Validation chính:
   "coverLetter": "string | null",
   "appliedAt": "2026-03-10T10:00:00Z",
   "respondedAt": "2026-03-12T10:00:00Z",
-  "responseMessage": "string | null"
+  "responseMessage": "string | null",
+  "jobPost": { ... }, // Object JobPost được nhúng kèm 
+  "locationName": "string | null",
+  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
 }
 ```
 
@@ -128,12 +131,12 @@ Validation chính:
 ```json
 {
   "jobPostId": "guid",
-  "workerId": "guid",
   "statusId": 1,
   "coverLetter": "Tôi có kinh nghiệm...",
   "appliedAt": "2026-03-10T10:00:00Z",
   "respondedAt": "2026-03-10T10:00:00Z",
-  "responseMessage": null
+  "responseMessage": null,
+  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
 }
 ```
 
@@ -378,9 +381,9 @@ Hiện tại, một loạt API trả về dạng Danh Sách (List) chỉ nhả r
    - **Yêu cầu BE:** Nếu BE chưa đập bỏ hệ thống cũ ngay lúc này, thì BẮT BUỘC bổ sung/nhúng Object `JobPost` vào DTO này để App tạm thời hiển thị được. -> **[❌ CHƯA CẬP NHẬT]**
 
 3. **`JobApplicationDTO` (Lịch Sử Ứng Tuyển)**: 
-   - **Tình trạng:** Chỉ nhả `JobPostId`.
-   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker mù mờ hoàn toàn, hiển thị 10 thẻ nhưng không thấy Tựa việc hay Lương.
-   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[❌ CHƯA CẬP NHẬT]**
+   - **Tình trạng:** Đã được nhúng kèm object `JobPost` và `LocationName`.
+   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker đã có đủ Tựa việc và Lương để hiển thị giao diện danh sách mà không cần lo lỗi N+1 Query.
+   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[✅ ĐÃ CẬP NHẬT]**
 
 > **💡 ĐỀ XUẤT RIÊNG CHO SPRINT TIẾP THEO (JobDailyReportDTO):** 
 > DTO `JobDailyReportDTO` (để thay thế Điểm danh cũ) hiện tại **chưa có trong Codebase**. Backend khi bắt tay vào code DTO và API này, xin hãy nhớ **TÍCH HỢP SẴN (`Embed / Join`) bảng `JobPost`** (Title, FarmName, WageAmount) ngay từ đầu để tránh lặp lại lỗi N+1 Query nêu trên nhé!
@@ -388,10 +391,10 @@ Hiện tại, một loạt API trả về dạng Danh Sách (List) chỉ nhả r
 4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. -> **[✅ ĐÃ HOÀN THÀNH]** (Đã có `RelatedEntityId`, `Type`, và `TypeName`).
 
 ### 10.3 Thiếu Cơ Chế Chọn Ngày Khi Ứng Tuyển (Phân Biệt Khoán/Ngày)
-**[❌ CHƯA CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` chỉ nhận chung 1 kiểu `JobPostId` và `CoverLetter`. Điều này dẫn đến vấn đề:
-- **Đối với Việc Khoán:** có thể 1 Worker nhận trọn gói nguyên 1 lô việc từ ngày A đến ngày B, không cần phân tách rạch ròi. -> *(Dùng payload như cũ rât ổn)*.
-- **Đối với Việc Làm Theo Ngày:** Payload ứng tuyển hiện tại chưa phân biệt được Worker đang apply cho riêng rẽ mùng nào.
-- **Yêu Cầu Tới BE:** Cần bổ sung thêm trường mảng danh sách ngày vào API Ứng Tuyển, để Frontend có thể gửi lên chính xác những ngày mà Worker rảnh và đã tick chọn muốn đi làm, làm sao để Frontend biết ở mùng nào đã nhận đủ số người để tránh Frontend gửi thêm request vào ngày đã nhận đủ.
+**[✅ ĐÃ CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` và schema ứng tuyển đã hỗ trợ phân tách ngày làm việc:
+- **Đối với Việc Khoán:** có thể 1 Worker nhận trọn gói nguyên 1 lô việc từ ngày A đến ngày B, không cần phân tách rạch ròi. -> *(Mảng `workDates` có thể để trống hoặc set null tuỳ backend thiết kế)*.
+- **Đối với Việc Làm Theo Ngày:** Đã có trường `workDates` dạng List/Array DateTime để FE ném xuống mảng những mùng (ngày) thợ chọn đi làm.
+- **Yêu Cầu Tới BE:** Cần bổ sung thêm trường mảng danh sách ngày vào API Ứng Tuyển, để Frontend có thể gửi lên chính xác những ngày mà Worker rảnh và đã tick chọn muốn đi làm, làm sao để Frontend biết ở mùng nào đã nhận đủ số người để tránh Frontend gửi thêm request vào ngày đã nhận đủ. -> **[✅ ĐÃ CẬP NHẬT - Đã thêm WorkDates]**
 
 ---
 

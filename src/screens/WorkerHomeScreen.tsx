@@ -9,9 +9,9 @@ import { SectionHeader } from "../components/ui";
 import { EmptyState } from "../components/ui";
 import { COLORS } from "../constants/theme";
 import { Job, UpcomingJob } from "../types";
-import { jobService, JobPostDTO, workerProfileService } from "../services";
+import { jobService, JobPostDTO, workerProfileService, nominatimService } from "../services";
 import { useAuth } from "../context/AuthContext";
-
+import { JobMap } from "../components/ui/JobMap";
 export function WorkerHomeScreen({ navigation }: any) {
   const { user, isAuthenticated } = useAuth();
   const [nearbyJobs, setNearbyJobs]             = useState<Job[]>([]);
@@ -20,6 +20,8 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [profileRating, setProfileRating]       = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(10);
 
   const demoNearbyJobs: Job[] = [
     { id: "101", title: "Thu hoạch lúa",      farmer: "Nguyễn Văn A", location: "Cần Thơ",   distance: "2.5 km", wage: "250,000", duration: "1 ngày",  rating: 4.8, urgent: true, date: "23/03/2026"  },
@@ -52,6 +54,8 @@ export function WorkerHomeScreen({ navigation }: any) {
       setActiveApplications(demoActiveApps);
       setProfileRating(4.7); 
       setTotalJobsCompleted(12); 
+      setRadiusKm(10);
+      setUserLocation({ latitude: 10.762622, longitude: 106.660172 });
       setRefreshing(false);
       return; 
     }
@@ -66,8 +70,21 @@ export function WorkerHomeScreen({ navigation }: any) {
       setProfileRating(profile?.averageRating ?? 0);
       setTotalJobsCompleted(profile?.totalJobsCompleted ?? 0);
 
-      const appliedJobIds = new Set(apps.map(a => String(a.jobPostId)));
-      const filteredJobs = jobs.filter(j => !appliedJobIds.has(String(j.id)));
+      const prefRadius = profile?.travelRadiusKmPreference || 10;
+      setRadiusKm(prefRadius);
+      if (profile?.primaryLocation) {
+        // Run geocoding without blocking other renders drastically
+        nominatimService.geocodeAddress(profile.primaryLocation).then(loc => {
+          if (loc) setUserLocation(loc);
+        }).catch(e => console.log('Geocode error', e));
+      }
+
+      const myAppliedJobIds = new Set(
+        apps
+          .filter(a => (a.worker?.id || (a as any).workerId) === profile.id)
+          .map(a => String(a.jobPostId))
+      );
+      const filteredJobs = jobs.filter(j => !myAppliedJobIds.has(String(j.id)));
 
       setNearbyJobs(filteredJobs.map((j: JobPostDTO): Job => {
         const address = j.address && j.address !== "string" ? j.address : "Chưa cập nhật";
@@ -86,7 +103,18 @@ export function WorkerHomeScreen({ navigation }: any) {
         };
       }));
 
-      const iterApps = [...apps].reverse(); // Latest are usually at the end of the list
+      // 1. Lọc chỉ lấy đơn ứng tuyển của chính worker hiện tại
+      // 2. Deduplicate: Nếu có nhiều application cho cùng 1 job, chỉ lấy cái mới nhất (Map sẽ ghi đè giá trị cũ)
+      const myAppsMap = new Map();
+      apps.forEach(a => {
+        const workerId = a.worker?.id || (a as any).workerId;
+        if (workerId === profile.id) {
+          myAppsMap.set(String(a.jobPostId), a);
+        }
+      });
+      
+      const myApps = Array.from(myAppsMap.values());
+      const iterApps = [...myApps].reverse(); // Latest are usually at the end of the list
       
       const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
       const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
@@ -99,12 +127,17 @@ export function WorkerHomeScreen({ navigation }: any) {
 
       const mapApp = (app: any) => {
         const job = jobs.find(j => String(j.id) === String(app.jobPostId));
+        const startDate = job?.startDate;
+        const formattedDate = (startDate && !startDate.startsWith("0001")) 
+          ? new Date(startDate).toLocaleDateString("vi-VN") 
+          : "Chưa rõ";
+
         return {
           id: app.id,
           jobPostId: app.jobPostId,
           title: job?.title || "Công việc",
           farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
-          date: job?.startDate ? new Date(job.startDate).toLocaleDateString("vi-VN") : "Chưa rõ",
+          date: formattedDate,
           time: job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A",
           status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"
         };
@@ -259,6 +292,16 @@ export function WorkerHomeScreen({ navigation }: any) {
             {/* NEARBY HEADER */}
             <View className="px-4 mb-1">
               <SectionHeader title="Việc gần bạn" subtitle="Phù hợp với khu vực của bạn" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
+            </View>
+
+            {/* JOB MAP SECTION */}
+            <View className="px-4 mb-4">
+              <JobMap
+                userLocation={userLocation}
+                radiusKm={radiusKm}
+                jobs={nearbyJobs}
+                onCalloutPress={(job) => navigation.navigate("JobDetail", { jobId: job.id })}
+              />
             </View>
           </>
         }

@@ -5,7 +5,7 @@ import { MapPin, Clock, Banknote, Star, Calendar, Users, Wrench, Briefcase, Mess
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { jobService, JobPostDTO } from "../services";
+import { authService, jobService, workerProfileService, notificationService } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { isPastDate } from "../utils/helpers";
@@ -129,15 +129,19 @@ export function JobDetailScreen({ navigation, route }: any) {
       return; 
     }
     try {
-      const [data, categories] = await Promise.all([
+      const [data, categories, profile] = await Promise.all([
         jobService.getJobPostDetail(String(jobId)),
-        jobService.getCategories()
+        jobService.getCategories(),
+        workerProfileService.getProfile()
       ]);
 
         // Kiểm tra xem đã ứng tuyển chưa (trừ khi bị Reject)
         if (isAuthenticated && !user?.isDemo) {
           const apps = await jobService.getApplications();
-          const existing = apps.find(a => String(a.jobPostId) === String(jobId));
+          const existing = apps.find(a => 
+            String(a.jobPostId) === String(jobId) && 
+            (a.worker?.id === profile.id || (a as any).workerId === profile.id)
+          );
           // statusId 3 = Rejected. Cho phép apply lại nếu bị reject.
           if (existing && existing.statusId !== 3) {
             setIsApplied(true);
@@ -168,6 +172,8 @@ export function JobDetailScreen({ navigation, route }: any) {
         
         // NOTE: BE hiện tại chưa Join Metadata (JobTitle, FarmName) vào JobApplicationDTO (Item 10.2 Spec)
         // FE đang tạm thời hiển thị từ JobPostDetail fetch trực tiếp.
+        const formatDateStr = (d: string | undefined) => (d && !d.startsWith("0001")) ? new Date(d).toLocaleDateString("vi-VN") : "N/A";
+        
         setJobDetail({ 
           ...demoJobDetail, 
           id: String(data.id),
@@ -186,10 +192,10 @@ export function JobDetailScreen({ navigation, route }: any) {
           paymentMethodId: mapPaymentMethod(data.paymentMethodId || 1),
           jobType: categoryName,
           urgent: data.isUrgent || false,
-          postedDate: data.publishedAt ? new Date(data.publishedAt).toLocaleDateString("vi-VN") : "N/A",
-          startDate: data.startDate ? new Date(data.startDate).toLocaleDateString("vi-VN") : "N/A",
-          endDate: data.endDate ? new Date(data.endDate).toLocaleDateString("vi-VN") : "N/A",
-          date: data.startDate ? new Date(data.startDate).toLocaleDateString("vi-VN") : "N/A",
+          postedDate: formatDateStr(data.publishedAt),
+          startDate: formatDateStr(data.startDate),
+          endDate: formatDateStr(data.endDate),
+          date: formatDateStr(data.startDate),
           timeSlots: []
         });
       } catch { 
@@ -222,6 +228,8 @@ export function JobDetailScreen({ navigation, route }: any) {
     setSelectedTimeSlots((p) => p.includes(key) ? p.filter((s) => s !== key) : [...p, key]);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleQuickApply = async () => {
     if (!isAuthenticated || user?.isDemo) {
       if (selectedTimeSlots.length === 0) { alert("Vui lòng chọn ít nhất một khung giờ"); return; }
@@ -230,6 +238,7 @@ export function JobDetailScreen({ navigation, route }: any) {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       // NOTE: Hiện tại Backend (BE) yêu cầu gửi các trường StatusId, AppliedAt trong body 
       // mặc dù BE sẽ tự động ghi đè lại các giá trị này. 
@@ -243,9 +252,10 @@ export function JobDetailScreen({ navigation, route }: any) {
         responseMessage: null,
       });
       setIsApplied(true);
+      DeviceEventEmitter.emit("REFRESH_DATA");
       showFeedback({ 
         title: "Thành công", 
-        message: "Bạn đã gửi đơn ứng tuyển thành công. Vui lòng chờ phản hồi từ chủ nông trại.", 
+        message: "Bạn đã gửi đơn ứng tuyển thành công. Vui lòng chờ phản hồi từ farmer.", 
         variant: "success",
         onConfirm: () => navigation.goBack() 
       });
@@ -255,6 +265,8 @@ export function JobDetailScreen({ navigation, route }: any) {
         message: err.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.", 
         variant: "error" 
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -502,11 +514,11 @@ export function JobDetailScreen({ navigation, route }: any) {
             ) : (
               <Button 
                 onPress={handleQuickApply} 
-                disabled={isApplied || ((!isAuthenticated || user?.isDemo) && jobDetail.wageTypeId !== "Khoán" && selectedTimeSlots.length === 0)} 
+                disabled={isApplied || isSubmitting || ((!isAuthenticated || user?.isDemo) && jobDetail.wageTypeId !== "Khoán" && selectedTimeSlots.length === 0)} 
                 size="lg"
                 variant={isApplied ? "ghost" : "default"}
               >
-                {isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+                {isSubmitting ? "Đang gửi..." : isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
               </Button>
             )}
           </View>

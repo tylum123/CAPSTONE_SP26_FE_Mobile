@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "519552684777",
+    "project_id": "argotemp-push",
+    "storage_bucket": "argotemp-push.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519552684777:android:b3c011cb20b01483cb9678",
+        "android_client_info": {
+          "package_name": "com.tylum123.agrotemp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGcZVExbZvEZIP0-dpq7WvN8UgpQ_JbeM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
