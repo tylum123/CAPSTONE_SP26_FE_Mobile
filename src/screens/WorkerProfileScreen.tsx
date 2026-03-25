@@ -42,7 +42,19 @@ export function WorkerProfileScreen({ navigation }: any) {
     setShowLogoutModal(true);
   };
   const handleEditProfile = () => {
-    navigation.navigate("EditProfile", { currentProfile: { fullName: displayProfile.fullName || user?.name || "", ageRange: displayProfile.ageRange || "", primaryLocation: displayProfile.primaryLocation || "", travelRadiusKmPreference: displayProfile.travelRadiusKmPreference, experienceLevelId: displayProfile.experienceLevelId || 1, availabilitySchedule: displayProfile.availabilitySchedule || "", avatarUrl: displayProfile.avatarUrl || "" }, onUpdated: (up: WorkerProfileDTO) => setProfile(up) });
+    navigation.navigate("EditProfile", { 
+      currentProfile: { 
+        fullName: displayProfile.fullName || user?.name || "", 
+        age: displayProfile.age || "",
+        ageRange: displayProfile.ageRange || "", 
+        primaryLocation: displayProfile.primaryLocation || "", 
+        travelRadiusKmPreference: displayProfile.travelRadiusKmPreference, 
+        experienceLevelId: displayProfile.experienceLevelId || 1, 
+        availabilitySchedule: displayProfile.availabilitySchedule || "", 
+        avatarUrl: displayProfile.avatarUrl || "" 
+      }, 
+      onUpdated: (up: WorkerProfileDTO) => setProfile(up) 
+    });
   };
 
   const fmtVal = (v?: string | number | null) => v === null || v === undefined || v === "" ? "Chưa cập nhật" : String(v);

@@ -9,6 +9,7 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "./src/services/push-notification.service";
+import { DeviceEventEmitter } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -36,6 +37,7 @@ export default function App() {
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       // You can handle notification receiving here while app is in foreground
       console.log('Notification received in foreground:', notification);
+      DeviceEventEmitter.emit("REFRESH_DATA");
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {

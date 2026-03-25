@@ -9,7 +9,9 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
-import { authService, workerProfileService } from "../services";
+import { Platform } from "react-native";
+import { authService, workerProfileService, notificationService } from "../services";
+import { registerForPushNotificationsAsync } from "../services/push-notification.service";
 import { authTokenService } from "../services/auth-token.service";
 import { STORAGE_KEYS } from "../constants/api";
 
@@ -281,6 +283,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth().catch(() => undefined);
   }, [applyUserProfile]);
+
+  useEffect(() => {
+    if (user && !user.isDemo) {
+      registerForPushNotificationsAsync().then((token) => {
+        if (token) {
+          const deviceName = `${Platform.OS === 'ios' ? 'iOS' : 'Android'} Device`;
+          notificationService.registerPushToken(token, deviceName)
+            .catch(err => console.log("Failed to register push token with backend", err));
+        }
+      });
+    }
+  }, [user]);
 
   const value = useMemo(
     () => ({

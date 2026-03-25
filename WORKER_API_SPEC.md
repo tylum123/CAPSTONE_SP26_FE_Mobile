@@ -66,59 +66,45 @@ Validation chính:
 - `availabilitySchedule`: required
 - `avatarUrl`: required
 
-### 2.3 WorkerAttendanceDTO
+### 2.3 JobDailyReportDTO **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
 
 ```json
 {
   "id": "guid",
   "jobApplicationId": "guid",
-  "workDate": "2026-03-03T00:00:00Z",
-  "checkInTime": "2026-03-03T01:00:00Z",
-  "checkInNotes": "string | null",
-  "checkOutTime": "2026-03-03T10:00:00Z | null",
-  "checkOutNotes": "string | null",
-  "totalHoursWorked": 9.0,
-  "isApproved": true,
-  "approvedBy": "guid | null",
-  "approvedAt": "2026-03-03T10:10:00Z | null",
-  "createdAt": "2026-03-03T01:00:00Z",
-  "updatedAt": "2026-03-03T10:10:00Z | null"
+  "reportDate": "2026-03-03T00:00:00Z",
+  "description": "Hôm nay tôi đã làm được 50kg...",
+  "imageUrls": ["https://img1...", "https://img2..."],
+  "statusId": 1, // VD: 1: Chờ duyệt, 2: Đã duyệt, 3: Đang Appeal Admin
+  "evaluationPercentage": 100, // Số phần trăm % công nhận bởi Farmer
+  "farmerFeedback": "Làm tốt",
+  "evaluatedAt": "2026-03-03T18:00:00Z | null",
+  "createdAt": "2026-03-03T17:00:00Z"
 }
 ```
 
-### 2.4 CheckInRequest & CheckOutRequest
+### 2.4 CreateDailyReportRequest **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
 
-**CheckInRequest:**
 ```json
 {
   "jobApplicationId": "guid",
-  "checkInTime": "2026-03-03T08:00:00Z",
-  "checkInNotes": "Đến sớm"
+  "reportDate": "2026-03-03T00:00:00Z",
+  "description": "Hôm nay tôi đã làm được 50kg...",
+  "imageUrls": ["https://img1...", "https://img2..."]
 }
 ```
 - `jobApplicationId`: required
-- `checkInTime`: required
-- `checkInNotes`: optional, max 500
+- `reportDate`: required
+- `description`: required, max 1000
+- `imageUrls`: optional array
 
-**CheckOutRequest:**
-```json
-{
-  "attendanceId": "guid",
-  "checkOutTime": "2026-03-03T17:00:00Z",
-  "checkOutNotes": "Hoàn thành công việc"
-}
-```
-- `attendanceId`: required
-- `checkOutTime`: required
-- `checkOutNotes`: optional, max 500
-
-### 2.5 ApproveAttendanceRequest (Farmer dùng)
+### 2.5 EvaluateReportRequest (Farmer dùng) **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
 
 ```json
 {
-  "attendanceId": "guid",
-  "approvedBy": "guid",
-  "adjustedHours": 8.5
+  "reportId": "guid",
+  "evaluationPercentage": 90,
+  "farmerFeedback": "Ghi chú từ farmer..."
 }
 ```
 
@@ -218,50 +204,52 @@ Validation chính:
 
 ---
 
-## 4) Worker Attendance APIs (Worker thao tác)
+## 4) Job Daily Report APIs (Worker thao tác)
 
-### 4.1 POST `/attendance/check-in`
-- **Mục đích**: Worker check-in cho công việc.
+Luồng mới: Worker không cần Check-in/Check-out. Worker tự tạo Báo Cáo Công Việc vào cuối mỗi ngày làm việc.
+
+### 4.1 POST `/report`
+- **Mục đích**: Worker tạo report hằng ngày.
 - **Role**: `Worker`
-- **Body**: `CheckInRequest`
-- **Response**: `200 OK` (WorkerAttendanceDTO)
+- **Body**: `CreateDailyReportRequest`
+- **Response**: `200 OK` (JobDailyReportDTO)
 
-### 4.2 PUT `/attendance/check-out`
-- **Mục đích**: Worker check-out cho bản ghi attendance đã check-in.
-- **Role**: `Worker`
-- **Body**: `CheckOutRequest`
-- **Response**: `200 OK` (WorkerAttendanceDTO)
-
-### 4.3 GET `/attendance/{id}`
-- **Mục đích**: Lấy chi tiết một bản ghi attendance.
+### 4.2 GET `/report/{id}`
+- **Mục đích**: Lấy chi tiết một bản ghi report.
 - **Role**: `Worker,Farmer`
-- **Response**: `200 OK` (WorkerAttendanceDTO)
+- **Response**: `200 OK` (JobDailyReportDTO)
 
-### 4.4 GET `/attendance/worker/{workerProfileId}`
-- **Mục đích**: Lấy lịch sử attendance của worker theo khoảng thời gian. (Worker chỉ xem của mình).
+### 4.3 GET `/report/worker/{workerProfileId}`
+- **Mục đích**: Lấy lịch sử report của worker theo khoảng thời gian.
 - **Role**: `Worker`
 - **Query params**: `startDate`, `endDate`
-- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
+- **Response**: `200 OK` (List<JobDailyReportDTO>)
+
+### 4.4 POST `/report/{id}/appeal`
+- **Mục đích**: Worker khiếu nại lên Admin nếu không chấp nhận mức phần trăm (%) mà Farmer đánh giá.
+- **Role**: `Worker`
+- **Body**: `{ "reason": "string" }`
+- **Response**: `200 OK`
 
 ---
 
-## 5) Attendance APIs liên quan Worker (Farmer thao tác)
+## 5) Report APIs liên quan Worker (Farmer thao tác)
 
-### 5.1 PUT `/attendance/approve`
-- **Mục đích**: Farmer duyệt attendance của worker.
+### 5.1 PUT `/report/evaluate`
+- **Mục đích**: Farmer chấm phần trăm (%) công và duyệt report của worker.
 - **Role**: `Farmer`
-- **Body**: `ApproveAttendanceRequest`
+- **Body**: `EvaluateReportRequest`
 - **Response**: `200 OK`
 
-### 5.2 GET `/attendance/farm/{farmerProfileId}`
-- **Mục đích**: Farmer xem attendance records trong farm của mình.
+### 5.2 GET `/report/farm/{farmerProfileId}`
+- **Mục đích**: Farmer xem toàn bộ daily reports trong farm của mình.
 - **Role**: `Farmer`
-- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
+- **Response**: `200 OK` (List<JobDailyReportDTO>)
 
-### 5.3 GET `/attendance/farm/{farmerProfileId}/worker/{workerProfileId}`
-- **Mục đích**: Farmer xem attendance của một worker cụ thể trong farm của mình.
+### 5.3 GET `/report/farm/{farmerProfileId}/worker/{workerProfileId}`
+- **Mục đích**: Farmer xem các reports của một worker cụ thể trong farm.
 - **Role**: `Farmer`
-- **Response**: `200 OK` (List<WorkerAttendanceDTO>)
+- **Response**: `200 OK` (List<JobDailyReportDTO>)
 
 ---
 
@@ -361,58 +349,49 @@ Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
 
 Để hỗ trợ hiển thị UI/UX hoàn chỉnh, đầy đủ thông tin cho người dùng mà không bị che khuất, Frontend có một số yêu cầu thêm vào Payload:
 
-### 10.1 [QUAN TRỌNG] Phân Tách API Check-in / Check-out cho Việc Theo Ngày vs Việc Khoán
-**[❌ CHƯA CẬP NHẬT]** DTO của hệ thống `WorkerAttendance` (`CheckInRequest`, `CheckOutRequest`, `ApproveAttendanceRequest`, `WorkerAttendanceDTO`) hiện tại đang bị dùng chung 1 khuôn là đếm thời gian. Điều này gây lỗi logic nghiệp vụ nặng vì **cách trả lương của 2 loại này hoàn toàn khác nhau**. Dưới đây là ghi chú rõ phần nào xài cho loại nào, phần nào bị thiếu cần BE vá lỗi ngay:
+### 10.1 Xử Lý UI Chức Năng Việc Nông Nghiệp (Theo Ngày) & Khoán
+**[🔄 ĐÃ THAY ĐỔI LUỒNG MỚI]** Backend BE và Mobile FE thống nhất BỎ hoàn toàn logic Check-in/Check-out. Thay vào đó, mỗi ngày làm việc Worker MẶC ĐỊNH phải gửi 1 `JobDailyReport` (kèm ảnh và mô tả tiến độ).
 
-#### Loại 1: Công Việc Theo Ngày (`wageTypeId = 1`)
-- **Nguyên lý tính lương:** Tiền công = `Tổng số ngày làm` (hoặc `Tổng số giờ` quy đổi ra ngày) * `Đơn giá ngày`.
-- **Khâu Check-in:** Worker BẮT BUỘC phải chấm công giờ đến (`CheckInTime`). -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
-- **Khâu Check-out:** Worker BẮT BUỘC phải chấm công giờ về (`CheckOutTime`), BE tự lấy giờ về trừ giờ đến ra `TotalHoursWorked` (từ đó FE tự quy ra ngày). -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
-- **Khâu Farmer Duyệt (Approve):** Nếu Worker đi làm trễ hoặc trốn về sớm, Farmer có quyền dùng `AdjustedHours` để bóp lại số giờ thực tế. -> **[✅ BACKEND ĐÃ ĐÁP ỨNG TỐT]**
-- **💡 Kết luận:** Backend hiện hành là "đo ni đóng giày" cho đúng loại hình Mọi Theo Ngày này. Rất chuẩn!
+#### Loại 1: Ngày (`wageTypeId = 1`)
+- **Worker thao tác:** Hằng ngày gửi 1 `JobDailyReport` có ảnh và mô tả công việc đã làm.
+- **Farmer thao tác:** Đánh giá Report của ngày hôm đó và chốt % lương (VD: Nghỉ nửa buổi thì chốt 50%).
+- **Quyết toán:** Lương ngày đó = `Lương cơ bản * % Đánh giá của Farmer` trên Report.
+- **Giải quyết tranh chấp:** Nếu Worker không đồng ý với % của Farmer, có quyền ấn nút Appeal gửi Ticket lên Admin xử lý.
 
-#### Loại 2: Công Việc Theo Khoán / Khối Lượng (`wageTypeId = 2`)
-- **Nguyên lý tính lương:** Tiền công = `Khối lượng hoàn thành (CompletedAmount)` * `Đơn giá khoán`. (Dù bạn làm 1 tiếng hay 10 tiếng thì gặt xong 1 hecta lúa vẫn chỉ được 2 củ).
-- **Khâu Check-in:** Vẫn gửi `CheckInTime` để chứng báo có mặt. -> **[✅ DÙNG CHUNG ĐƯỢC]**
-- **Khâu Check-out (BÁO CÁO SẢN LƯỢNG):** Khi vác cuốc đi về, hệ thống bật popup hỏi Worker: *"Hôm nay mày thu hoạch được bao nhiêu kg / bao nhiêu mét vuông?"* (Ví dụ: Điền số 50).
-  - **[❌ LỖI API]** API `POST /attendance/check-out` hiện tại KHÔNG CÓ chỗ nào để truyền số 50 này lên.
-  - **[🛠️ YÊU CẦU BE SỬA]** BE phải nhét thêm trường `decimal? completedAmount` vào body của `CheckOutRequest`.
-- **Khâu Farmer Duyệt (Approve):** Farmer tới đếm lại đống cà phê. Worker báo 50Kg nhưng thực tế cân được có 45Kg. Farmer phải sửa lại thành 45.
-  - **[❌ LỖI API]** Nếu Farmer truyền số 45 vào `AdjustedHours` hiện tại thì sai bét về ngữ nghĩa (45 giờ làm??).
-  - **[🛠️ YÊU CẦU BE SỬA]** BE phải nhét thêm trường `decimal? adjustedAmount` vào `ApproveAttendanceRequest`.
-- **Lịch Sử (Get Attendance):**
-  - **[🛠️ YÊU CẦU BE SỬA]** Cần trả về `CompletedAmount` trong `WorkerAttendanceDTO` để ghi sổ *"Hôm qua tôi được duyệt 45 Kg"*.
+#### Loại 2: Khoán (`wageTypeId = 2`)
+- **Worker thao tác:** Hằng ngày VẪN PHẢI gửi `JobDailyReport` (bao gồm mô tả + ảnh) để luồng dữ liệu tiến độ được liền mạch, để Farmer ở xa vẫn nắm được Worker đang làm tới đâu.
+- **Farmer thao tác:** Đánh giá tổng kết và chốt % lương VÀO LÚC CUỐI KHOÁN (hoặc dựa trên Report cuối cùng).
+- **Quyết toán:** Bằng `Tổng tiền khoán * % Đánh giá của Farmer`. **Lưu ý:** Nếu sau 7 ngày kết thúc việc mà Farmer không thèm đánh giá thanh toán, hệ thống tự động quy định là 100%.
+- **Giải quyết tranh chấp:** Tương tự, Worker có thể Appeal Admin nếu % của Farmer không đúng hợp đồng.
 
-### 10.2 [CẢNH BÁO ĐỎ] Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Liên Kết (Missing Joins)
-Hiện tại, một loạt DTO trả về dạng Danh Sách (List) đang mắc lỗi **Lazy Loading / Thiếu Join**, chỉ trả về ID trơn mà không có dữ liệu thật. BE tuyệt đối KHÔNG ĐƯỢC làm lơ phần này vì nó sẽ khiến Frontend không có dữ liệu để vẽ UI hoặc phá hủy hiệu năng App (gọi API 100 lần để tra cứu).
+### 10.2 [CẢNH BÁO ĐỎ] Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Tích Hợp
+Hiện tại, một loạt API trả về dạng Danh Sách (List) chỉ nhả ra các cục ID trơn (Ví dụ: `JobApplicationId`, `JobPostId`) mà không hề nhúng thêm dữ liệu chi tiết của ngọn ngành.
 
-1. **`WorkerProfileDTO`**:`skills` nếu có. -> **[✅ ĐÃ HOÀN THÀNH một phần]** (Đã có `Email` và `PhoneNumber`).
+- **Đề xuất từ Frontend:** Yêu cầu Backend hãy **nhúng (embed) thẳng Object `JobPostDTO`** vào bên trong các DTO dạng List dưới đây (nói cách khác là Join bảng để bưng data ra luôn).
+- **Mục đích xử lý:** Giúp Frontend có sẵn `Title` (Tên việc), `Location` (Vị trí), `WageAmount` (Lương), `FarmName` (Tên Nông Trại)... để vẽ liền giao diện thẻ (Card) danh sách. Tránh việc Frontend phải gọi thủ công hàng chục API `GetJobDetail` rời rạc khác nhau gây đứng máy Client (lỗi N+1 Query).
 
-2. **`WorkerAttendanceDTO` (CỰC KỲ NGHIÊM TRỌNG)**: 
-   - **Tình trạng:** Hiện DTO này chỉ nhả ra mỗi `JobApplicationId` (1 chuỗi vô hồn). 
-   - **Các API đang bị ảnh hưởng trực tiếp:** `GET /attendance/worker/{workerProfileId}` (Lịch sử làm việc của Worker), `GET /attendance/farm/{farmerProfileId}` (Farmer xem chấm công), `GET /attendance/farm/{farmerProfileId}/worker/{workerProfileId}`.
-   - **Hậu quả UI:** Màn hình Lịch sử Điểm danh của Worker và thẻ Duyệt Công của Farmer sẽ **trắng bóc thông tin**. Nông dân thấy 10 người điểm danh nhưng không biết thẻ đó là của công việc Gặt lúa hay Bón phân! Worker không biết hôm qua mình điểm danh cho Nông trại nào.
-   - **Bắt buộc cho BE:** BẮT BUỘC BE phải Join/Include bảng JobPost để đính kèm vào DTO này các Metadata sống còn sau: `JobTitle` (Tựa việc), `FarmName` (Tên khu vườn/Nông trại), `WageTypeId` (Hệ số lương). FE tuyệt đối KHÔNG gọi thêm 100 API `GetJobDetail` rời rạc cho 100 thẻ điểm danh vì sẽ làm sập máy Client. -> **[❌ CHƯA CẬP NHẬT]**
+1. **`WorkerProfileDTO`**:`skills` thêm vào nếu có và cho người dùng list ra các skills có sẵn để tích hợp cho người dùng chọn. -> **[✅ ĐÃ HOÀN THÀNH một phần]** (Đã có `Email` và `PhoneNumber`).
 
-3. **`JobApplicationDTO` (RẤT NGHIÊM TRỌNG)**: 
-   - **Tình trạng:** Hiện chỉ nhả thẻ `WorkerProfileDTO` và `JobPostId`. 
-   - **Các API đang bị ảnh hưởng trực tiếp:** `GET /job/application` (Danh sách công việc đã ứng tuyển), `GET /job/application/{id}`.
-   - **Hậu quả UI:** Màn hình "Việc làm đang chờ duyệt" của Worker sẽ mù mờ hoàn toàn. Họ apply 10 công việc nhưng mở danh sách lên không thể thấy Tựa việc, không thấy Lương, không thấy Vị trí.
-   - **Mệnh lệnh cho BE:** BẮT BUỘC BE phải Join bảng `JobPost` để gán thêm Metadata: `title` (Tựa đề), `location` (Nơi làm), `wageAmount` (Tiền công), `farmName` (Tên nông trại), `wageTypeId`. -> **[❌ CHƯA CẬP NHẬT]**
+2. **`WorkerAttendanceDTO` (Lịch Sử Điểm Danh Cũ)**: (cái này có thể không cần dùng)
+   - **Tình trạng:** Khối lượng việc lấy lịch sử làm việc hiện tại chỉ nhả mỗi ID cộc lốc (`JobApplicationId`). 
+   - **Hậu quả UI:** Màn hình Lịch sử làm việc của Worker và bảng Chấm công của Farmer sẽ trắng bốc, không rõ thẻ điểm danh này thuộc công việc nào.
+   - **Yêu cầu BE:** Nếu BE chưa đập bỏ hệ thống cũ ngay lúc này, thì BẮT BUỘC bổ sung/nhúng Object `JobPost` vào DTO này để App tạm thời hiển thị được. -> **[❌ CHƯA CẬP NHẬT]**
+
+3. **`JobApplicationDTO` (Lịch Sử Ứng Tuyển)**: 
+   - **Tình trạng:** Chỉ nhả `JobPostId`.
+   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker mù mờ hoàn toàn, hiển thị 10 thẻ nhưng không thấy Tựa việc hay Lương.
+   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[❌ CHƯA CẬP NHẬT]**
+
+> **💡 ĐỀ XUẤT RIÊNG CHO SPRINT TIẾP THEO (JobDailyReportDTO):** 
+> DTO `JobDailyReportDTO` (để thay thế Điểm danh cũ) hiện tại **chưa có trong Codebase**. Backend khi bắt tay vào code DTO và API này, xin hãy nhớ **TÍCH HỢP SẴN (`Embed / Join`) bảng `JobPost`** (Title, FarmName, WageAmount) ngay từ đầu để tránh lặp lại lỗi N+1 Query nêu trên nhé!
 
 4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. -> **[✅ ĐÃ HOÀN THÀNH]** (Đã có `RelatedEntityId`, `Type`, và `TypeName`).
 
-### 10.3 Thiếu Luồng Ứng Tuyển & Quản Lý Slot Theo Từng Ngày (Apply Job by Date)
-**[❌ CHƯA CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` chỉ nhận mỗi `JobPostId` và `CoverLetter`. Điều này dẫn đến sự cố nghiêm trọng cho dạng **"Việc Làm Theo Ngày"**:
-- **Ngữ cảnh:** Nông dân mở JobPost yêu cầu 2 người làm cho 2 ngày: Ngày 3 và Ngày 4.
-  - *Worker A* ứng tuyển và được duyệt làm **cả Ngày 3 & 4**.
-  - *Worker B* ứng tuyển và được duyệt làm **chỉ Ngày 3**.
-  - => Kết quả thực tế: **Ngày 3 đã ĐỦ NGƯỜI (0 slot trống)**, **Ngày 4 CÒN THIẾU 1 NGƯỜI (1 slot trống)**.
-- **Sự cố:** Khi *Worker C* vào ứng tuyển sau cùng, hệ thống Backend hiện tại không phân tách số người theo từng ngày cụ thể, nên UI không biết cách hiển thị "Ngày 3 đã đầy, bạn chỉ có thể tick chọn ứng tuyển Ngày 4". 
-- **Yêu Cầu Fix Từ Backend:**
-  1. Trong API Lấy `JobPostDetail`, Backend cần trả về mảng `AvailableDates` chứa số lượng slot *còn lại* của từng ngày. VD: `{"date": "2026-03-03", "remainingSlots": 0}, {"date": "2026-03-04", "remainingSlots": 1}`. UI sẽ khoá (disable) ô checkbox Ngày 3.
-  2. Bổ sung trường `List<string> appliedDates` (hoặc `List<int> timeSlotIds`) vào body của API `POST /api/v1/job/application` để Worker gửi lên danh sách xác định xác định họ đang apply vào những ngày nào còn trống.
-  3. Khi Farmer ấn **Duyệt (Approve)** 1 application, Backend phải tự động trừ đi số `remainingSlots` tương ứng cho từng ngày nằm trong application đó. 
+### 10.3 Thiếu Cơ Chế Chọn Ngày Khi Ứng Tuyển (Phân Biệt Khoán/Ngày)
+**[❌ CHƯA CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` chỉ nhận chung 1 kiểu `JobPostId` và `CoverLetter`. Điều này dẫn đến vấn đề:
+- **Đối với Việc Khoán:** có thể 1 Worker nhận trọn gói nguyên 1 lô việc từ ngày A đến ngày B, không cần phân tách rạch ròi. -> *(Dùng payload như cũ rât ổn)*.
+- **Đối với Việc Làm Theo Ngày:** Payload ứng tuyển hiện tại chưa phân biệt được Worker đang apply cho riêng rẽ mùng nào.
+- **Yêu Cầu Tới BE:** Cần bổ sung thêm trường mảng danh sách ngày vào API Ứng Tuyển, để Frontend có thể gửi lên chính xác những ngày mà Worker rảnh và đã tick chọn muốn đi làm, làm sao để Frontend biết ở mùng nào đã nhận đủ số người để tránh Frontend gửi thêm request vào ngày đã nhận đủ.
 
 ---
 
@@ -424,3 +403,43 @@ Hiện tại, một loạt DTO trả về dạng Danh Sách (List) đang mắc l
 1. Mỗi khi User đăng nhập thành công vào app, app sẽ gọi API `POST /api/v1/notification/register-token` kèm body `{"token": "ExponentPushToken[xxx]"}`. Backend cần lưu lại chuỗi token này vào DB gắn liền với `userId`. -> **[✅ ĐÃ CÓ API `RegisterDeviceToken`]**
 2. Khi có sự kiện (VD: duyệt điểm danh, tin nhắn mới, job được accept...), Backend dựa vào danh sách `Device Token` của User đó trên DB để **gọi POST request qua API của Expo** (`https://exp.host/--/api/v2/push/send`) gửi kèm payload `{ "to": "ExponentPushToken[xxx]", "title": "Tiêu đề", "body": "Nội dung", "data": {...} }`.
 3. Expo Server sẽ tự động bắn sang APNs (Apple) và FCM (Android) để hiển thị thông báo popup về máy người dùng realtime.
+
+---
+
+## 12) Bảng Bổ Sung: Từ Điển Enum (Dành Cho Frontend Mapping)
+Dựa theo cấu trúc Database hiện hành của Backend (`AgroTemp.Domain.Entities`), dưới đây là bảng Enum để Frontend tạo file định nghĩa hằng số (constants) và map UI cho chính xác:
+
+### 12.1 JobType (Loại Công Việc)
+*Xuất hiện ở `JobPost.JobTypeId`*
+- `1` = Theo Công nhật (Daily)
+- `2` = Theo Khoán / Từng Lô (PerPlot)
+- `3` = Khoán Trọn Gói (PerJob)
+
+### 12.2 JobPostStatus (Trạng Thái Việc Làm)
+*Xuất hiện ở `JobPost.StatusId`*
+- `1` = Nháp (Draft)
+- `2` = Đang Mở Tuyển (Published)
+- `3` = Đã Đóng Đơn (Closed)
+- `4` = Đang Tiến Hành (InProgress)
+- `5` = Đã Hoàn Thành (Completed)
+- `6` = Bị Hủy (Cancelled)
+
+### 12.3 ApplicationStatus (Trạng Thái Đơn Ứng Tuyển)
+*Xuất hiện ở `JobApplication.ApplicationStatus` / `statusId`*
+- `1` = Chờ Duyệt (Pending)
+- `2` = Đã Được Nhận (Accepted)
+- `3` = Bị Từ Chối (Rejected)
+- `4` = Worker Tự Hủy Đơn (Cancelled)
+
+### 12.4 ExperienceLevel (Cấp Độ Kinh Nghiệm Worker)
+*Xuất hiện ở `WorkerProfile.ExperienceLevel`*
+- `1` = Mới Định Hướng (Beginner)
+- `2` = Đã Có Kinh Nghiệm (Intermediate)
+- `3` = Thợ Lành Nghề (Experienced)
+
+### 12.5 NotificationType (Loại Thông Báo Push)
+*Dành cho module Notification*
+- `1` = JobAcceptance (Được nhận việc)
+- `2` = Reminder (Nhắc nhở lịch làm / báo cáo)
+- `3` = PaymentConfirmation (Xác nhận trả lương / tiền)
+- `4` = NearbyJobOpening (Có việc mới gần nhà)

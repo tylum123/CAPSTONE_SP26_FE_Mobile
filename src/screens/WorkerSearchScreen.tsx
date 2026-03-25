@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView } from "react-native";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
@@ -17,14 +17,14 @@ const mockCategories: JobCategoryDTO[] = [
   { id: "5", name: "Làm đất",     description: "", isActive: true },
 ];
 const _base = { statusId: "1", requiredSkills: "", latitude: 0, longitude: 0, startDate: "2026-01-20", endDate: "2026-01-22", workersNeeded: 5, workersAccepted: 1, wageTypeId: "1", paymentMethodId: "1", genderPreference: "none", ageRequirement: "any", publishedAt: "2026-01-01", createdAt: "2026-01-01", updatedAt: "2026-01-01" };
-const mockJobs: JobPostDTO[] = [
+const mockJobs = [
   { ..._base, id: "1", title: "Thu hoạch lúa",    address: "Cần Thơ",   wageAmount: 250000, estimatedHours: 8, jobCategoryId: "3", isUrgent: true,  farmerProfileId: "abc", description: "Thu hoạch 5 mẫu ruộng lúa mùa đông" },
   { ..._base, id: "2", title: "Chăm sóc lợn",     address: "Đồng Tháp", wageAmount: 300000, estimatedHours: 6, jobCategoryId: "2", isUrgent: false, farmerProfileId: "def", description: "Vệ sinh chuồng trại và cho ăn" },
   { ..._base, id: "3", title: "Phun thuốc trừ sâu", address: "Sóc Trăng", wageAmount: 200000, estimatedHours: 4, jobCategoryId: "1", isUrgent: false, farmerProfileId: "ghi", description: "Phun thuốc cho vườn cam 2 héc-ta" },
   { ..._base, id: "4", title: "Vận chuyển phân bón", address: "An Giang", wageAmount: 180000, estimatedHours: 5, jobCategoryId: "4", isUrgent: false, farmerProfileId: "jkl", description: "Bốc dỡ và vận chuyển 3 tấn phân bón" },
   { ..._base, id: "5", title: "Cày đất trồng rau",  address: "Vĩnh Long", wageAmount: 280000, estimatedHours: 7, jobCategoryId: "5", isUrgent: true,  farmerProfileId: "mno", description: "Cày xới 1 héc-ta đất chuẩn bị gieo hạt" },
   { ..._base, id: "6", title: "Hái cà phê",         address: "Đắk Lắk",  wageAmount: 220000, estimatedHours: 8, jobCategoryId: "3", isUrgent: false, farmerProfileId: "pqr", description: "Hái cà phê chín trên 3 héc-ta vườn" },
-];
+] as unknown as JobPostDTO[];
 
 export function WorkerSearchScreen({ navigation }: any) {
   const { isAuthenticated, user } = useAuth();
@@ -33,14 +33,37 @@ export function WorkerSearchScreen({ navigation }: any) {
   const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
   const [jobs, setJobs] = useState<JobPostDTO[]>([]);
   const [filters, setFilters] = useState<FilterOptions>({ jobType: [], sortBy: "distance" });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!isAuthenticated || user?.isDemo) { 
+      setCategories(mockCategories); 
+      setJobs(mockJobs); 
+      setRefreshing(false);
+      return; 
+    }
+    try { 
+      const [jobPosts, jobCats] = await Promise.all([jobService.getJobPosts(), jobService.getCategories()]); 
+      setJobs(jobPosts); 
+      setCategories(jobCats); 
+    } catch { 
+      setJobs([]); 
+      setCategories([]); 
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isAuthenticated, user?.isDemo]);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.isDemo) { setCategories(mockCategories); setJobs(mockJobs); return; }
-    (async () => {
-      try { const [jobPosts, jobCats] = await Promise.all([jobService.getJobPosts(), jobService.getCategories()]); setJobs(jobPosts); setCategories(jobCats); }
-      catch { setJobs([]); setCategories([]); }
-    })().catch(() => undefined);
-  }, [isAuthenticated, user?.isDemo]);
+    loadData();
+    const subscription = DeviceEventEmitter.addListener("REFRESH_DATA", loadData);
+    return () => subscription.remove();
+  }, [loadData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
 
   const categoryMap = useMemo(() => { const m = new Map<string, string>(); categories.forEach((c) => m.set(c.id, c.name)); return m; }, [categories]);
   const jobTypes = useMemo(() => categories.map((c) => c.name), [categories]);
@@ -108,6 +131,7 @@ export function WorkerSearchScreen({ navigation }: any) {
         data={sortedJobs}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
         renderItem={({ item: job }) => (
           <TouchableOpacity className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }} activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}>
             <View className={["w-1", job.urgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />

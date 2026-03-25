@@ -1,11 +1,13 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Bell, CheckCircle2, Clock, Banknote, Briefcase, AlertCircle,
   X, ChevronLeft, CheckCheck,
 } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
+import { notificationService } from "../services";
+import { useAuth } from "../context/AuthContext";
 
 type NotificationType = "job_accepted" | "job_rejected" | "payment_received" | "reminder" | "new_job" | "job_cancelled";
 
@@ -38,12 +40,74 @@ const INITIAL: Notification[] = [
 ];
 
 export function NotificationsScreen({ navigation }: any) {
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL);
+  const { isAuthenticated, user } = useAuth();
+  const [notifications, setNotifications] = useState<any[]>(INITIAL);
+  const [refreshing, setRefreshing] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead   = (id: number) => setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const deleteItem   = (id: number) => setNotifications((p) => p.filter((n) => n.id !== id));
-  const markAllRead  = ()           => setNotifications((p) => p.map((n) => ({ ...n, read: true })));
+  const loadNotifications = useCallback(async () => {
+    if (!isAuthenticated || user?.isDemo) {
+      setNotifications(INITIAL);
+      setRefreshing(false);
+      return;
+    }
+    try {
+      const data = await notificationService.getNotifications();
+      const mapType = (typeId: number) => {
+        if (typeId === 1) return "job_accepted";
+        if (typeId === 2) return "reminder";
+        if (typeId === 3) return "payment_received";
+        if (typeId === 4) return "new_job";
+        return "new_job";
+      };
+      
+      setNotifications(data.length > 0 ? data.map((n: any) => ({
+        ...n,
+        id: n.id,
+        type: mapType(n.notificationType),
+        title: n.title,
+        message: n.content || n.message,
+        timestamp: n.createdAt ? new Date(n.createdAt).toLocaleDateString("vi-VN") : "Gần đây",
+        read: n.isRead,
+        actionable: !!n.linkId,
+        jobId: n.linkId,
+      })) as any : INITIAL);
+    } catch {
+      setNotifications(INITIAL);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isAuthenticated, user?.isDemo]);
+
+  useEffect(() => {
+    loadNotifications();
+    const sub = DeviceEventEmitter.addListener("REFRESH_DATA", loadNotifications);
+    return () => sub.remove();
+  }, [loadNotifications]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadNotifications();
+  };
+
+  const markAsRead = async (id: number | string) => {
+    setNotifications((p) => p.map((n) => (n.id === id ? { ...n, read: true, isRead: true } : n)));
+    if (isAuthenticated && !user?.isDemo) {
+      try { await notificationService.markAsRead(String(id)); } catch {}
+    }
+  };
+  const deleteItem = async (id: number | string) => {
+    setNotifications((p) => p.filter((n) => n.id !== id));
+    if (isAuthenticated && !user?.isDemo) {
+      try { await notificationService.deleteNotification(String(id)); } catch {}
+    }
+  };
+  const markAllRead = async () => {
+    setNotifications((p) => p.map((n) => ({ ...n, read: true, isRead: true })));
+    if (isAuthenticated && !user?.isDemo) {
+      try { await notificationService.markAllAsRead(); } catch {}
+    }
+  };
 
   const handlePress = (notif: Notification) => {
     markAsRead(notif.id);
@@ -84,8 +148,9 @@ export function NotificationsScreen({ navigation }: any) {
         data={notifications}
         keyExtractor={(item) => item.id.toString()}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
         renderItem={({ item: notif }) => {
-          const cfg = TYPE_CONFIG[notif.type];
+          const cfg = TYPE_CONFIG[notif.type as NotificationType];
           const IconComp = cfg.icon;
           return (
             <TouchableOpacity

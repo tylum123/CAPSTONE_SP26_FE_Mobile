@@ -30,66 +30,55 @@ export interface UpdateWorkerProfileRequest {
   avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
 }
 
-export interface WorkerAttendanceDTO {
+import { JobPostDTO } from "../services/job.service";
+
+export interface JobDailyReportDTO {
   id: string;
   jobApplicationId: string;
-  workDate: string;
-  checkInTime: string;
-  checkInNotes: string | null;
-  checkOutTime: string | null;
-  checkOutNotes: string | null;
-  totalHoursWorked: number | null;
-  completedAmount: number | null;
-  isApproved: boolean;
-  approvedBy: string | null;
-  approvedAt: string | null;
+  reportDate: string;
+  description: string;
+  imageUrls: string[];
+  statusId: number; // 1: Pending, 2: Approved, 3: Appealed
+  evaluationPercentage?: number;
+  farmerFeedback?: string;
+  evaluatedAt?: string;
   createdAt: string;
-  updatedAt: string | null;
+  jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
 }
 
-export interface CheckInRequest {
+export interface CreateDailyReportRequest {
   jobApplicationId: string;
-  checkInTime: string;
-  checkInNotes?: string | null;
+  reportDate: string;
+  description: string;
+  imageUrls?: string[];
 }
 
-export interface CheckOutRequest {
-  attendanceId: string;
-  checkOutTime: string;
-  checkOutNotes?: string | null;
-  completedAmount?: number;
-}
-
-export interface ApproveAttendanceRequest {
-  attendanceId: string;
-  approvedBy: string;
-  adjustedHours?: number;
-  adjustedAmount?: number;
+export interface EvaluateReportRequest {
+  reportId: string;
+  evaluationPercentage: number;
+  farmerFeedback?: string;
 }
 
 export interface JobApplicationDTO {
   id: string;
   jobPostId: string;
-  jobPostTitle?: string; // Metadata added by FE or future BE join
-  farmName?: string;     // Metadata added by FE or future BE join
-  wageAmount?: number;   // Metadata added by FE or future BE join
-  wageTypeId?: number;   // Metadata added by FE or future BE join
-  worker?: WorkerProfileDTO; // Backend returns the full worker object
   statusId: number;
   coverLetter: string | null;
   appliedAt: string;
   respondedAt: string;
   responseMessage: string | null;
+  jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
+  worker?: WorkerProfileDTO;
 }
 
 export interface CreateJobApplicationRequest {
   jobPostId: string;
-  // workerId: string; // BE extracts this from token, keeping it commented or removing if not in BE DTO
   statusId: number;
   coverLetter: string | null;
   appliedAt: string;
   respondedAt: string;
   responseMessage: string | null;
+  availableDates?: string[]; // Added for Daily jobs
 }
 
 export interface NotificationDTO {
