@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X, Star } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
@@ -23,6 +23,7 @@ export function ReviewScreen({ navigation, route }: any) {
   const handleSubmit = () => {
     if (rating === 0) { alert("Vui lòng chọn số sao đánh giá"); return; }
     alert("Đánh giá của bạn đã được gửi thành công!");
+    DeviceEventEmitter.emit("REFRESH_DATA");
     navigation.goBack();
   };
 

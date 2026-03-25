@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { User, MapPin, Briefcase, Calendar, Clock, Camera, ChevronLeft, Check, ChevronRight, Search, X } from "lucide-react-native";
@@ -105,6 +105,7 @@ export function EditProfileScreen({ navigation, route }: any) {
     try {
       const updated = await workerProfileService.updateProfile({ fullName, ageRange: age, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null, experienceLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
       onUpdated?.(updated);
+      DeviceEventEmitter.emit("REFRESH_DATA");
       showFeedback({ title: "Thành công", message: "Hồ sơ của bạn đã được cập nhật.", variant: "success", onConfirm: () => navigation.goBack() });
     } catch (err: any) { 
       console.error("Update profile error:", JSON.stringify(err?.response?.data || err.message || err, null, 2));

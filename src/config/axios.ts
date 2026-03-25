@@ -46,42 +46,98 @@ api.interceptors.request.use(
 );
 
 // Response interceptor
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error: AxiosError) => {
+    const originalRequest = error.config as any;
+
     // Handle 401 Unauthorized
-    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
-      const requestUrl = error.config?.url || "";
+    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED && !originalRequest._retry) {
+      const requestUrl = originalRequest.url || "";
       const isAuthRequest =
         requestUrl.includes(API_ENDPOINTS.AUTH.LOGIN) ||
         requestUrl.includes(API_ENDPOINTS.AUTH.REGISTER) ||
-        requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN);
-      const token = await authTokenService.getToken();
+        requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN) ||
+        requestUrl.includes(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
 
-      if (!isAuthRequest && token) {
-        // Clear token and redirect to login
-        authTokenService.setTokenToMemory(null);
-        await AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-        // You can add navigation to login screen here
-        // navigationRef.current?.navigate('Login');
-        // Suppress terminal log; handle UI messaging elsewhere if needed
+      if (!isAuthRequest) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return api(originalRequest);
+            })
+            .catch((err) => {
+              return Promise.reject(err);
+            });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+        if (refreshToken) {
+          try {
+            // Use a clean axios instance to avoid interceptor loop for refresh
+            const refreshResponse = await axios.post(`${api.defaults.baseURL}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`, {
+              refreshToken,
+            });
+
+            const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data.data;
+
+            await AsyncStorage.multiSet([
+              [STORAGE_KEYS.AUTH_TOKEN, newToken],
+              [STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken || refreshToken],
+            ]);
+            authTokenService.setTokenToMemory(newToken);
+
+            processQueue(null, newToken);
+            isRefreshing = false;
+
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          } catch (refreshError) {
+            processQueue(refreshError, null);
+            isRefreshing = false;
+            // Force logout from AuthContext reference exported earlier
+            const { forceLogout } = require("../context/AuthContext");
+            await forceLogout();
+          }
+        } else {
+          const { forceLogout } = require("../context/AuthContext");
+          await forceLogout();
+        }
       }
     }
 
-    // Handle network errors
-    if (error.message === "Network Error") {
-      // Handle network error UI directly if needed
-    }
-
-    // Handle timeout errors
-    if (error.code === "ECONNABORTED") {
-      // Handle timeout error UI directly if needed
+    // Handle network errors (Backend Down -> "Sập")
+    // As per user request: "nếu backend sập thì phải bặt người dùng out khỏi app ra màn hình login liền"
+    if (error.message === "Network Error" || error.code === "ECONNABORTED" || error.response?.status === 502 || error.response?.status === 503) {
+      const { forceLogout } = require("../context/AuthContext");
+      await forceLogout();
     }
 
     return Promise.reject(error);
   },
 );
+
 
 export default api;

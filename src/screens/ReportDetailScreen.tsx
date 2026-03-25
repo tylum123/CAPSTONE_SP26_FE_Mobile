@@ -4,12 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Info, FileText } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
-import { JobDailyReportDTO } from "../types";
+import { JobDetailDTO } from "../types";
 import { reportService } from "../services/report.service";
+import { disputeService } from "../services/dispute.service";
 
 export function ReportDetailScreen({ navigation, route }: any) {
-  const { reportId, report } = route.params as { reportId: string; report: JobDailyReportDTO };
-  const [data, setData] = useState<JobDailyReportDTO | null>(report || null);
+  const { reportId, report } = route.params as { reportId: string; report: JobDetailDTO };
+  const [data, setData] = useState<JobDetailDTO | null>(report || null);
   const [isAppealing, setIsAppealing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,6 +38,7 @@ export function ReportDetailScreen({ navigation, route }: any) {
   };
 
   const handleAppeal = () => {
+    if (!data) return;
     Alert.alert(
       "Khiếu nại",
       "Bạn muốn gửi khiếu nại đánh giá của báo cáo này?",
@@ -47,7 +49,11 @@ export function ReportDetailScreen({ navigation, route }: any) {
           onPress: async () => {
              setIsAppealing(true);
              try {
-                await reportService.appealEvaluation(reportId, "Chủ vườn đánh giá không công bằng.");
+                await disputeService.createDispute({
+                  jobPostId: data.jobPostId,
+                  disputeTypeId: 1,
+                  reason: "Chủ vườn đánh giá không công bằng.",
+                });
                 Alert.alert("Thành công", "Đã gửi khiếu nại. Admin sẽ liên hệ lại.");
                 navigation.goBack();
              } catch (e) {
@@ -83,7 +89,7 @@ export function ReportDetailScreen({ navigation, route }: any) {
       >
         <View className="bg-white rounded-xl border border-slate-200 p-4 mb-4">
           <View className="flex-row justify-between mb-3">
-            <Text className="text-slate-500 text-xs font-semibold">Ngày báo cáo: {new Date(data.reportDate).toLocaleDateString("vi-VN")}</Text>
+            <Text className="text-slate-500 text-xs font-semibold">Ngày báo cáo: {new Date(data.workDate).toLocaleDateString("vi-VN")}</Text>
             <Badge variant={isApproved ? "success" : isPending ? "secondary" : "warning"}>
               {isApproved ? "Đã duyệt" : isPending ? "Chờ duyệt" : "Đang khiếu nại"}
             </Badge>
@@ -95,18 +101,7 @@ export function ReportDetailScreen({ navigation, route }: any) {
           <View className="h-px bg-slate-100 mb-4" />
 
           <Text className="font-semibold text-slate-800 mb-2">Mô tả công việc:</Text>
-          <Text className="text-[15px] text-slate-700 leading-6 mb-4">{data.description}</Text>
-
-          {data.imageUrls && data.imageUrls.length > 0 && (
-            <View>
-              <Text className="font-semibold text-slate-800 mb-2">Hình ảnh đính kèm:</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {data.imageUrls.map((url, i) => (
-                   <Image key={i} source={{ uri: url }} className="w-20 h-20 rounded-lg bg-slate-100" />
-                ))}
-              </View>
-            </View>
-          )}
+          <Text className="text-[15px] text-slate-700 leading-6 mb-4">{data.workerDescription}</Text>
         </View>
 
         {isApproved && (
@@ -119,12 +114,12 @@ export function ReportDetailScreen({ navigation, route }: any) {
             
             <View className="bg-primary-50 p-3 rounded-lg flex-row justify-between">
                <Text className="text-primary-800 font-semibold">Phần trăm hoàn thành:</Text>
-               <Text className="text-primary-800 font-bold text-lg">{data.evaluationPercentage}%</Text>
+               <Text className="text-primary-800 font-bold text-lg">{data.farmerApprovedPercent}%</Text>
             </View>
           </View>
         )}
 
-        {isApproved && (data.evaluationPercentage ?? 0) < 100 && (
+        {isApproved && (data.farmerApprovedPercent ?? 0) < 100 && (
           <View className="bg-yellow-50 rounded-xl border border-yellow-200 p-4 mb-4">
             <View className="flex-row items-start gap-2 mb-2">
               <Info size={16} color="#ca8a04" className="mt-0.5" />

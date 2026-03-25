@@ -50,18 +50,19 @@ export const API_ENDPOINTS = {
     APPLICATION: `${API_PREFIX}/job/application`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
   },
-  // Attendance
-  ATTENDANCE: {
-    CHECK_IN: `${API_PREFIX}/attendance/check-in`,
-    CHECK_OUT: `${API_PREFIX}/attendance/check-out`,
-    APPROVE: `${API_PREFIX}/attendance/approve`,
-    DETAIL: (id: string) => `${API_PREFIX}/attendance/${id}`,
-    WORKER: (workerProfileId: string) =>
-      `${API_PREFIX}/attendance/worker/${workerProfileId}`,
-    FARM: (farmerProfileId: string) =>
-      `${API_PREFIX}/attendance/farm/${farmerProfileId}`,
-    FARM_WORKER: (farmerProfileId: string, workerProfileId: string) =>
-      `${API_PREFIX}/attendance/farm/${farmerProfileId}/worker/${workerProfileId}`,
+  // Job Detail (Replaces Attendance/Daily Report)
+  JOB_DETAIL: {
+    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
+    APPROVE: (id: string) => `${API_PREFIX}/JobDetail/${id}/approve`,
+    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
+    FARM: (jobPostId: string) => `${API_PREFIX}/JobDetail/job-post/${jobPostId}`,
+  },
+  // Disputes
+  DISPUTE: {
+    CREATE: `${API_PREFIX}/disputes`,
+    MY: `${API_PREFIX}/disputes/my`,
+    DETAIL: (id: string) => `${API_PREFIX}/disputes/${id}`,
   },
   // Media
   MEDIA: {

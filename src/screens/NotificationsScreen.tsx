@@ -71,9 +71,9 @@ export function NotificationsScreen({ navigation }: any) {
         read: n.isRead,
         actionable: !!n.linkId,
         jobId: n.linkId,
-      })) as any : INITIAL);
+      })) as any : []);
     } catch {
-      setNotifications(INITIAL);
+      setNotifications([]);
     } finally {
       setRefreshing(false);
     }

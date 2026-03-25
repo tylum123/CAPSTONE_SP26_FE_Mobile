@@ -7,7 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
 import { PillTabs, EmptyState } from "../components/ui";
 import { Clock, MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck } from "lucide-react-native";
-import { jobService, JobPostDTO } from "../services";
+import { jobService, JobPostDTO, workerProfileService } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { isPastDate } from "../utils/helpers";
 
@@ -45,13 +45,26 @@ export function WorkerJobsScreen({ navigation, route }: any) {
     }
     try {
         // NOTE: BE hiện tại chưa Join Metadata (JobTitle, FarmName) vào JobApplicationDTO
-        // Giải pháp: Fetch tất cả JobPosts để Map ngược lại thông tin.
-        const [apps, allJobs] = await Promise.all([
+        // Giải pháp: Fetch tất cả JobPosts và WorkerProfile để Map ngược lại thông tin.
+        const [apps, allJobs, profile] = await Promise.all([
           jobService.getApplications(),
-          jobService.getJobPosts()
+          jobService.getJobPosts(),
+          workerProfileService.getProfile()
         ]);
 
-        const mappedApps = apps.map((app) => {
+        // 1. Lọc chỉ lấy đơn ứng tuyển của chính worker hiện tại
+        // 2. Deduplicate: Nếu có nhiều application cho cùng 1 job, chỉ lấy cái mới nhất
+        const myAppsMap = new Map();
+        apps.forEach(a => {
+          const workerId = a.worker?.id || (a as any).workerId;
+          if (workerId === profile.id) {
+            myAppsMap.set(String(a.jobPostId), a);
+          }
+        });
+        
+        const myApps = Array.from(myAppsMap.values());
+
+        const mappedApps = myApps.map((app) => {
           const jobInfo = allJobs.find(j => String(j.id) === String(app.jobPostId));
           const jobStatusId = (jobInfo as any)?.statusId || 2; // Default to published if undefined
           
@@ -69,13 +82,18 @@ export function WorkerJobsScreen({ navigation, route }: any) {
              }
           }
 
+          const startDate = jobInfo?.startDate;
+          const formattedDate = (startDate && !startDate.startsWith("0001")) 
+            ? new Date(startDate).toLocaleDateString("vi-VN") 
+            : "Chưa rõ";
+
           return {
             id: app.id,
             jobPostId: app.jobPostId,
             title: jobInfo?.title || "Đơn ứng tuyển",
             farmer: jobInfo?.contactName || "Chủ nông trại",
             location: jobInfo?.address && jobInfo.address !== "string" ? jobInfo.address : "Hệ thống",
-            date: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "N/A",
+            date: formattedDate,
             time: jobInfo?.estimatedHours ? `${jobInfo.estimatedHours} giờ` : "",
             wage: jobInfo?.wageAmount || (app as any).jobPost?.wageAmount || 0,
             wageType: jobInfo?.wageTypeId === 2 || (jobInfo?.wageTypeId as any) === "2" ? "Khoán" : "Ngày",
@@ -84,7 +102,9 @@ export function WorkerJobsScreen({ navigation, route }: any) {
             completedDate: jobStatusId === 5 && jobInfo?.updatedAt ? new Date(jobInfo.updatedAt).toLocaleDateString("vi-VN") : undefined,
             paidAmount: jobStatusId === 5 ? (jobInfo?.wageAmount || 0) : 0,
             review: null,
-            rating: null
+            rating: null,
+            startDate: formattedDate, // Added for UI consistence
+            endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : formattedDate
           };
         });
 

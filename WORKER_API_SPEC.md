@@ -2,7 +2,7 @@
 
 Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase.
 
-Cập nhật lần cuối: **2026-03-17**
+Cập nhật lần cuối: **2026-03-25**
 
 ## 1) Thông tin chung
 
@@ -29,7 +29,7 @@ Cập nhật lần cuối: **2026-03-17**
   "id": "guid",
   "userId": "guid",
   "fullName": "string",
-  "ageRange": "string",
+  "age": "string",
   "primaryLocation": "string",
   "travelRadiusKmPreference": 10.5,
   "experienceLevelId": 2,
@@ -38,6 +38,8 @@ Cập nhật lần cuối: **2026-03-17**
   "availabilitySchedule": "string",
   "totalJobsCompleted": 12,
   "avatarUrl": "string",
+  "email": "string",
+  "phoneNumber": "string",
   "createdAt": "2026-03-03T08:00:00Z",
   "updatedAt": "2026-03-03T08:00:00Z"
 }
@@ -66,49 +68,79 @@ Validation chính:
 - `availabilitySchedule`: required
 - `avatarUrl`: required
 
-### 2.3 JobDailyReportDTO **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
+### 2.3 JobDetailDTO (Daily Report)
 
 ```json
 {
   "id": "guid",
   "jobApplicationId": "guid",
-  "reportDate": "2026-03-03T00:00:00Z",
-  "description": "Hôm nay tôi đã làm được 50kg...",
-  "imageUrls": ["https://img1...", "https://img2..."],
-  "statusId": 1, // VD: 1: Chờ duyệt, 2: Đã duyệt, 3: Đang Appeal Admin
-  "evaluationPercentage": 100, // Số phần trăm % công nhận bởi Farmer
+  "jobPostId": "guid",
+  "workerId": "guid",
+  "statusId": 1, 
+  "workDate": "2026-03-03T00:00:00Z",
+  "workerDescription": "Hôm nay tôi đã làm được 50kg...",
   "farmerFeedback": "Làm tốt",
-  "evaluatedAt": "2026-03-03T18:00:00Z | null",
-  "createdAt": "2026-03-03T17:00:00Z"
+  "farmerApprovedPercent": 100,
+  "jobPrice": 500000,
+  "workerPaymentAmount": 500000,
+  "refundAmount": 0,
+  "completedAt": "2026-03-03T18:00:00Z",
+  "createdAt": "2026-03-03T17:00:00Z",
+  "updatedAt": "2026-03-03T18:00:00Z"
 }
 ```
 
-### 2.4 CreateDailyReportRequest **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
+### 2.4 CreateDailyReportRequest
 
 ```json
 {
   "jobApplicationId": "guid",
-  "reportDate": "2026-03-03T00:00:00Z",
-  "description": "Hôm nay tôi đã làm được 50kg...",
-  "imageUrls": ["https://img1...", "https://img2..."]
+  "workerDescription": "Hôm nay tôi đã làm được 50kg..."
 }
 ```
-- `jobApplicationId`: required
-- `reportDate`: required
-- `description`: required, max 1000
-- `imageUrls`: optional array
 
-### 2.5 EvaluateReportRequest (Farmer dùng) **[💡 DỰ KIẾN - CHƯA CÓ TRONG BE]**
+### 2.5 ApproveJobDetailRequest (Farmer dùng)
 
 ```json
 {
-  "reportId": "guid",
-  "evaluationPercentage": 90,
+  "farmerApprovedPercent": 90,
   "farmerFeedback": "Ghi chú từ farmer..."
 }
 ```
 
-### 2.6 JobApplicationDTO & CreateJobApplicationRequest
+### 2.6 DisputeReportDTO (Appeal)
+
+```json
+{
+  "id": "guid",
+  "farmerId": "guid | null",
+  "workerId": "guid | null",
+  "jobPostId": "guid",
+  "disputeTypeId": 1,
+  "reason": "string",
+  "description": "string | null",
+  "evidenceUrl": "string | null",
+  "statusId": 1,
+  "adminNote": "string | null",
+  "resolvedById": "guid | null",
+  "createdAt": "2026-03-17T08:00:00Z",
+  "resolvedAt": "2026-03-18T08:00:00Z | null"
+}
+```
+
+### 2.7 CreateDisputeReportRequest
+
+```json
+{
+  "jobPostId": "guid",
+  "disputeTypeId": 1,
+  "reason": "Lý do khiếu nại",
+  "description": "Mô tả chi tiết",
+  "evidenceUrl": "https://..."
+}
+```
+
+### 2.8 JobApplicationDTO & CreateJobApplicationRequest
 
 **JobApplicationDTO:**
 ```json
@@ -120,7 +152,10 @@ Validation chính:
   "coverLetter": "string | null",
   "appliedAt": "2026-03-10T10:00:00Z",
   "respondedAt": "2026-03-12T10:00:00Z",
-  "responseMessage": "string | null"
+  "responseMessage": "string | null",
+  "jobPost": { ... }, // Object JobPost được nhúng kèm 
+  "locationName": "string | null",
+  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
 }
 ```
 
@@ -128,16 +163,16 @@ Validation chính:
 ```json
 {
   "jobPostId": "guid",
-  "workerId": "guid",
   "statusId": 1,
   "coverLetter": "Tôi có kinh nghiệm...",
   "appliedAt": "2026-03-10T10:00:00Z",
   "respondedAt": "2026-03-10T10:00:00Z",
-  "responseMessage": null
+  "responseMessage": null,
+  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
 }
 ```
 
-### 2.7 NotificationDTO
+### 2.9 NotificationDTO
 
 ```json
 {
@@ -154,7 +189,7 @@ Validation chính:
 }
 ```
 
-### 2.8 Auth Responses & Requests
+### 2.10 Auth Responses & Requests
 
 **LoginResponse:**
 ```json
@@ -206,50 +241,44 @@ Validation chính:
 
 ## 4) Job Daily Report APIs (Worker thao tác)
 
-Luồng mới: Worker không cần Check-in/Check-out. Worker tự tạo Báo Cáo Công Việc vào cuối mỗi ngày làm việc.
+Luồng mới: Worker không cần Check-in/Check-out. Worker tự tạo Báo Cáo Công Việc thông qua `JobDetail`.
 
-### 4.1 POST `/report`
+### 4.1 POST `/JobDetail/report-daily`
 - **Mục đích**: Worker tạo report hằng ngày.
 - **Role**: `Worker`
 - **Body**: `CreateDailyReportRequest`
-- **Response**: `200 OK` (JobDailyReportDTO)
+- **Response**: `200 OK` (JobDetailDTO)
 
-### 4.2 GET `/report/{id}`
+### 4.2 GET `/JobDetail/{id}`
 - **Mục đích**: Lấy chi tiết một bản ghi report.
 - **Role**: `Worker,Farmer`
-- **Response**: `200 OK` (JobDailyReportDTO)
+- **Response**: `200 OK` (JobDetailDTO)
 
-### 4.3 GET `/report/worker/{workerProfileId}`
-- **Mục đích**: Lấy lịch sử report của worker theo khoảng thời gian.
+### 4.3 GET `/JobDetail/worker/{workerId}`
+- **Mục đích**: Lấy lịch sử report của worker.
 - **Role**: `Worker`
-- **Query params**: `startDate`, `endDate`
-- **Response**: `200 OK` (List<JobDailyReportDTO>)
+- **Response**: `200 OK` (List<JobDetailDTO>)
 
-### 4.4 POST `/report/{id}/appeal`
-- **Mục đích**: Worker khiếu nại lên Admin nếu không chấp nhận mức phần trăm (%) mà Farmer đánh giá.
-- **Role**: `Worker`
-- **Body**: `{ "reason": "string" }`
-- **Response**: `200 OK`
+### 4.4 POST `/disputes`
+- **Mục đích**: Worker/Farmer khiếu nại (Appeal) nếu không chấp nhận mức phần trăm (%) đánh giá hoặc có vấn đề khác.
+- **Role**: `Worker, Farmer`
+- **Body**: `CreateDisputeReportRequest`
+- **Response**: `201 Created` (DisputeReportDTO)
 
 ---
 
 ## 5) Report APIs liên quan Worker (Farmer thao tác)
 
-### 5.1 PUT `/report/evaluate`
+### 5.1 POST `/JobDetail/{id}/approve`
 - **Mục đích**: Farmer chấm phần trăm (%) công và duyệt report của worker.
 - **Role**: `Farmer`
-- **Body**: `EvaluateReportRequest`
-- **Response**: `200 OK`
+- **Body**: `ApproveJobDetailRequest`
+- **Response**: `200 OK` (JobDetailDTO)
 
-### 5.2 GET `/report/farm/{farmerProfileId}`
-- **Mục đích**: Farmer xem toàn bộ daily reports trong farm của mình.
+### 5.2 GET `/JobDetail/job-post/{jobPostId}`
+- **Mục đích**: Farmer xem toàn bộ daily reports (JobDetail) của một Job Post.
 - **Role**: `Farmer`
-- **Response**: `200 OK` (List<JobDailyReportDTO>)
-
-### 5.3 GET `/report/farm/{farmerProfileId}/worker/{workerProfileId}`
-- **Mục đích**: Farmer xem các reports của một worker cụ thể trong farm.
-- **Role**: `Farmer`
-- **Response**: `200 OK` (List<JobDailyReportDTO>)
+- **Response**: `200 OK` (List<JobDetailDTO>)
 
 ---
 
@@ -303,6 +332,11 @@ Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
 - **Mục đích**: Xoá 1 notification.
 - **Response**: `204 No Content`
 
+### 7.6 POST `/api/v1/notification/register-token`
+- **Mục đích**: Đăng ký Device Token cho Push Notification.
+- **Body**: `{ "token": "string" }`
+- **Response**: `200 OK`
+
 ---
 
 ## 8) Auth APIs Worker sử dụng
@@ -339,59 +373,37 @@ Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
 
 - Các path API đều tuân thủ `ApiEndpointConstants.cs` (Ví dụ `/api/v1/worker` thay vì `/api/v1/worker-profile`).
 - WorkerProfile APIs (GET/PUT) loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
-- Attendance APIs yêu cầu các claim đặc thù như `WorkerProfileId` hoặc `FarmerProfileId`.
+- Luồng báo cáo công việc đã được chuyển từ `WorkerAttendance` sang `JobDetail`.
+- `WorkerAttendance` (Check-in/Check-out) vẫn còn trong codebase nhưng khuyến cáo sử dụng `JobDetail` cho luồng báo cáo mới.
+- Hệ thống Khiếu nại (Dispute/Appeal) đã được tách thành module riêng.
+- Các DTO danh sách (Application) đã được nhúng kèm Object liên quan để tối ưu UI.
 - API Application Job có validate Role để đảm bảo đúng phân quyền ứng tuyển.
 - Hệ thống Notification được tích hợp cho cả 2 luồng.
 
 ---
 
-## 10) Đề xuất Cải thiện UI (Từ bên Mobile Frontend Developer )
-
-Để hỗ trợ hiển thị UI/UX hoàn chỉnh, đầy đủ thông tin cho người dùng mà không bị che khuất, Frontend có một số yêu cầu thêm vào Payload:
+## 10) Trạng thái Cải thiện UI & Backend Sync
 
 ### 10.1 Xử Lý UI Chức Năng Việc Nông Nghiệp (Theo Ngày) & Khoán
-**[🔄 ĐÃ THAY ĐỔI LUỒNG MỚI]** Backend BE và Mobile FE thống nhất BỎ hoàn toàn logic Check-in/Check-out. Thay vào đó, mỗi ngày làm việc Worker MẶC ĐỊNH phải gửi 1 `JobDailyReport` (kèm ảnh và mô tả tiến độ).
+- **[✅ ĐÃ HOÀN THÀNH]** Đã chuyển sang luồng `JobDetail`. Worker gửi `report-daily`, Farmer `approve` kèm `%` và `feedback`.
 
-#### Loại 1: Ngày (`wageTypeId = 1`)
-- **Worker thao tác:** Hằng ngày gửi 1 `JobDailyReport` có ảnh và mô tả công việc đã làm.
-- **Farmer thao tác:** Đánh giá Report của ngày hôm đó và chốt % lương (VD: Nghỉ nửa buổi thì chốt 50%).
-- **Quyết toán:** Lương ngày đó = `Lương cơ bản * % Đánh giá của Farmer` trên Report.
-- **Giải quyết tranh chấp:** Nếu Worker không đồng ý với % của Farmer, có quyền ấn nút Appeal gửi Ticket lên Admin xử lý.
-
-#### Loại 2: Khoán (`wageTypeId = 2`)
-- **Worker thao tác:** Hằng ngày VẪN PHẢI gửi `JobDailyReport` (bao gồm mô tả + ảnh) để luồng dữ liệu tiến độ được liền mạch, để Farmer ở xa vẫn nắm được Worker đang làm tới đâu.
-- **Farmer thao tác:** Đánh giá tổng kết và chốt % lương VÀO LÚC CUỐI KHOÁN (hoặc dựa trên Report cuối cùng).
-- **Quyết toán:** Bằng `Tổng tiền khoán * % Đánh giá của Farmer`. **Lưu ý:** Nếu sau 7 ngày kết thúc việc mà Farmer không thèm đánh giá thanh toán, hệ thống tự động quy định là 100%.
-- **Giải quyết tranh chấp:** Tương tự, Worker có thể Appeal Admin nếu % của Farmer không đúng hợp đồng.
-
-### 10.2 [CẢNH BÁO ĐỎ] Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Tích Hợp
+### 10.2 Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Tích Hợp
 Hiện tại, một loạt API trả về dạng Danh Sách (List) chỉ nhả ra các cục ID trơn (Ví dụ: `JobApplicationId`, `JobPostId`) mà không hề nhúng thêm dữ liệu chi tiết của ngọn ngành.
 
 - **Đề xuất từ Frontend:** Yêu cầu Backend hãy **nhúng (embed) thẳng Object `JobPostDTO`** vào bên trong các DTO dạng List dưới đây (nói cách khác là Join bảng để bưng data ra luôn).
 - **Mục đích xử lý:** Giúp Frontend có sẵn `Title` (Tên việc), `Location` (Vị trí), `WageAmount` (Lương), `FarmName` (Tên Nông Trại)... để vẽ liền giao diện thẻ (Card) danh sách. Tránh việc Frontend phải gọi thủ công hàng chục API `GetJobDetail` rời rạc khác nhau gây đứng máy Client (lỗi N+1 Query).
 
-1. **`WorkerProfileDTO`**:`skills` thêm vào nếu có và cho người dùng list ra các skills có sẵn để tích hợp cho người dùng chọn. -> **[✅ ĐÃ HOÀN THÀNH một phần]** (Đã có `Email` và `PhoneNumber`).
+1. **`WorkerProfileDTO`**: Đã bổ sung `Email` và `PhoneNumber`. -> **[✅ ĐÃ HOÀN THÀNH]**
 
-2. **`WorkerAttendanceDTO` (Lịch Sử Điểm Danh Cũ)**: (cái này có thể không cần dùng)
-   - **Tình trạng:** Khối lượng việc lấy lịch sử làm việc hiện tại chỉ nhả mỗi ID cộc lốc (`JobApplicationId`). 
-   - **Hậu quả UI:** Màn hình Lịch sử làm việc của Worker và bảng Chấm công của Farmer sẽ trắng bốc, không rõ thẻ điểm danh này thuộc công việc nào.
-   - **Yêu cầu BE:** Nếu BE chưa đập bỏ hệ thống cũ ngay lúc này, thì BẮT BUỘC bổ sung/nhúng Object `JobPost` vào DTO này để App tạm thời hiển thị được. -> **[❌ CHƯA CẬP NHẬT]**
+2. **`JobApplicationDTO` (Lịch Sử Ứng Tuyển)**: 
+   - **Tình trạng:** Đã được nhúng kèm object `JobPost` và `LocationName`.
+   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker đã có đủ Tựa việc và Lương để hiển thị giao diện danh sách mà không cần lo lỗi N+1 Query.
+   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[✅ ĐÃ CẬP NHẬT]**
 
-3. **`JobApplicationDTO` (Lịch Sử Ứng Tuyển)**: 
-   - **Tình trạng:** Chỉ nhả `JobPostId`.
-   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker mù mờ hoàn toàn, hiển thị 10 thẻ nhưng không thấy Tựa việc hay Lương.
-   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[❌ CHƯA CẬP NHẬT]**
+3. **`JobDetailDTO` (thay thế Attendance)**: Đã được tích hợp vào codebase. -> **[✅ ĐÃ HOÀN THÀNH]**
 
-> **💡 ĐỀ XUẤT RIÊNG CHO SPRINT TIẾP THEO (JobDailyReportDTO):** 
-> DTO `JobDailyReportDTO` (để thay thế Điểm danh cũ) hiện tại **chưa có trong Codebase**. Backend khi bắt tay vào code DTO và API này, xin hãy nhớ **TÍCH HỢP SẴN (`Embed / Join`) bảng `JobPost`** (Title, FarmName, WageAmount) ngay từ đầu để tránh lặp lại lỗi N+1 Query nêu trên nhé!
-
-4. **NotificationDTO**: Thêm cơ chế `actionUrl` / `relatedEntityId` + `type` vào payload của Push. -> **[✅ ĐÃ HOÀN THÀNH]** (Đã có `RelatedEntityId`, `Type`, và `TypeName`).
-
-### 10.3 Thiếu Cơ Chế Chọn Ngày Khi Ứng Tuyển (Phân Biệt Khoán/Ngày)
-**[❌ CHƯA CÓ TRONG API]** Hiện tại `CreateJobApplicationRequest` chỉ nhận chung 1 kiểu `JobPostId` và `CoverLetter`. Điều này dẫn đến vấn đề:
-- **Đối với Việc Khoán:** có thể 1 Worker nhận trọn gói nguyên 1 lô việc từ ngày A đến ngày B, không cần phân tách rạch ròi. -> *(Dùng payload như cũ rât ổn)*.
-- **Đối với Việc Làm Theo Ngày:** Payload ứng tuyển hiện tại chưa phân biệt được Worker đang apply cho riêng rẽ mùng nào.
-- **Yêu Cầu Tới BE:** Cần bổ sung thêm trường mảng danh sách ngày vào API Ứng Tuyển, để Frontend có thể gửi lên chính xác những ngày mà Worker rảnh và đã tick chọn muốn đi làm, làm sao để Frontend biết ở mùng nào đã nhận đủ số người để tránh Frontend gửi thêm request vào ngày đã nhận đủ.
+### 10.3 Thiếu Cơ Chế Chọn Ngày Khi Ứng Tuyển
+- **[✅ ĐÃ HOÀN THÀNH]** `JobApplicationDTO` và `CreateJobApplicationRequest` đã hỗ trợ mảng `workDates`.
 
 ---
 

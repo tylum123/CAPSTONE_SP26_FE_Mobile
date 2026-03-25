@@ -117,4 +117,14 @@ export const authTokenService = {
     const payload = await authTokenService.getTokenPayload();
     return extractStringClaim(payload, WORKER_PROFILE_ID_CLAIM_KEYS);
   },
+
+  isTokenExpired: (token: string): boolean => {
+    const payload = parseJwtPayload(token);
+    if (!payload || !payload.exp || typeof payload.exp !== "number") {
+      return false; // If no exp, assume not expired (or let backend handle it)
+    }
+    // Convert current time to seconds
+    const currentTime = Math.floor(Date.now() / 1000);
+    return payload.exp < currentTime;
+  },
 };

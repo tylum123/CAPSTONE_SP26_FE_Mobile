@@ -32,31 +32,57 @@ export interface UpdateWorkerProfileRequest {
 
 import { JobPostDTO } from "../services/job.service";
 
-export interface JobDailyReportDTO {
+export interface JobDetailDTO {
   id: string;
   jobApplicationId: string;
-  reportDate: string;
-  description: string;
-  imageUrls: string[];
-  statusId: number; // 1: Pending, 2: Approved, 3: Appealed
-  evaluationPercentage?: number;
+  jobPostId: string;
+  workerId: string;
+  statusId: number; 
+  workDate: string;
+  workerDescription: string;
   farmerFeedback?: string;
-  evaluatedAt?: string;
+  farmerApprovedPercent?: number;
+  jobPrice: number;
+  workerPaymentAmount?: number;
+  refundAmount?: number;
+  completedAt?: string;
   createdAt: string;
+  updatedAt?: string;
   jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
 }
 
 export interface CreateDailyReportRequest {
   jobApplicationId: string;
-  reportDate: string;
-  description: string;
-  imageUrls?: string[];
+  workerDescription: string;
 }
 
-export interface EvaluateReportRequest {
-  reportId: string;
-  evaluationPercentage: number;
+export interface ApproveJobDetailRequest {
+  farmerApprovedPercent: number;
   farmerFeedback?: string;
+}
+
+export interface DisputeReportDTO {
+  id: string;
+  farmerId: string | null;
+  workerId: string | null;
+  jobPostId: string;
+  disputeTypeId: number;
+  reason: string;
+  description: string | null;
+  evidenceUrl: string | null;
+  statusId: number;
+  adminNote: string | null;
+  resolvedById: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface CreateDisputeReportRequest {
+  jobPostId: string;
+  disputeTypeId: number;
+  reason: string;
+  description?: string;
+  evidenceUrl?: string;
 }
 
 export interface JobApplicationDTO {
@@ -69,6 +95,7 @@ export interface JobApplicationDTO {
   responseMessage: string | null;
   jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
   worker?: WorkerProfileDTO;
+  workDates?: string[]; // Added for Daily jobs
 }
 
 export interface CreateJobApplicationRequest {

@@ -8,3 +8,4 @@ export * from "./report.service";
 export * from "./media.service";
 export * from "./auth-token.service";
 export * from "./location.service";
+export * from "./nominatimService";

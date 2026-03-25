@@ -20,6 +20,11 @@
         "foregroundImage": "../CAPSTONE_SP26_FE_Mobile/assets/logo.png",
         "backgroundColor": "#ffffff"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "dummy_key_to_bypass_crash"
+        }
+      },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

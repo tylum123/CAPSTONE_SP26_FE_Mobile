@@ -4,35 +4,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ClipboardCheck, Calendar, Info } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import { JobDailyReportDTO } from "../types";
+import { JobDetailDTO } from "../types";
 import { reportService } from "../services/report.service";
 import { useAuth } from "../context/AuthContext";
 
 export function ReportHistoryScreen({ navigation }: any) {
   const { user } = useAuth();
-  const [reports, setReports] = useState<JobDailyReportDTO[]>([]);
+  const [reports, setReports] = useState<JobDetailDTO[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Demo initial data
-  const demoReports: JobDailyReportDTO[] = [
+  const demoReports: JobDetailDTO[] = [
     {
       id: "1",
       jobApplicationId: "101",
-      reportDate: new Date().toISOString(),
-      description: "Đã rải phân bón cho khu vực Bắc.",
-      imageUrls: [],
+      jobPostId: "p1",
+      workerId: "w1",
+      workDate: new Date().toISOString(),
+      workerDescription: "Đã rải phân bón cho khu vực Bắc.",
       statusId: 2, // Approved
-      evaluationPercentage: 100,
+      farmerApprovedPercent: 100,
+      jobPrice: 500000,
       createdAt: new Date().toISOString(),
       jobPost: { title: "Chăm sóc cây ăn quả", contactName: "Nông trại Hữu Cơ" }
     },
     {
       id: "2",
       jobApplicationId: "102",
-      reportDate: new Date().toISOString(),
-      description: "Hái cà phê được 30kg nhưng trời mưa nghỉ sớm.",
-      imageUrls: [],
+      jobPostId: "p2",
+      workerId: "w1",
+      workDate: new Date().toISOString(),
+      workerDescription: "Hái cà phê được 30kg nhưng trời mưa nghỉ sớm.",
       statusId: 1, // Pending
+      jobPrice: 400000,
       createdAt: new Date().toISOString(),
       jobPost: { title: "Thu hoạch cà phê", contactName: "Vườn cà phê Đắk Lắk" }
     }
@@ -60,7 +64,7 @@ export function ReportHistoryScreen({ navigation }: any) {
     return () => subscription.remove();
   }, []);
 
-  const renderItem = ({ item }: { item: JobDailyReportDTO }) => {
+  const renderItem = ({ item }: { item: JobDetailDTO }) => {
     const isApproved = item.statusId === 2;
     const isPending = item.statusId === 1;
 
@@ -76,7 +80,7 @@ export function ReportHistoryScreen({ navigation }: any) {
             <View className="flex-row items-center gap-2">
               <Calendar size={14} color="#64748b" />
               <Text className="text-xs font-semibold text-slate-500">
-                {new Date(item.reportDate).toLocaleDateString("vi-VN")}
+                {new Date(item.workDate).toLocaleDateString("vi-VN")}
               </Text>
             </View>
             <Badge variant={isApproved ? "success" : isPending ? "secondary" : "warning"}>
@@ -92,13 +96,13 @@ export function ReportHistoryScreen({ navigation }: any) {
           </Text>
           
           <Text className="text-[14px] text-slate-600 mb-3" numberOfLines={2}>
-            {item.description}
+            {item.workerDescription}
           </Text>
 
-          {isApproved && item.evaluationPercentage !== undefined && (
+          {isApproved && item.farmerApprovedPercent !== undefined && (
             <View className="bg-primary-50 px-3 py-2 rounded-lg flex-row items-center justify-between border border-primary-100">
               <Text className="text-[13px] text-primary-800 font-medium">Kết quả tiến độ:</Text>
-              <Text className="text-[14px] font-bold text-primary-700">{item.evaluationPercentage}%</Text>
+              <Text className="text-[14px] font-bold text-primary-700">{item.farmerApprovedPercent}%</Text>
             </View>
           )}
         </View>

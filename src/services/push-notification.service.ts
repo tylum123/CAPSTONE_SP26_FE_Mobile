@@ -32,12 +32,12 @@ export async function registerForPushNotificationsAsync() {
       console.log('Project ID not found');
     }
     try {
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId,
-      })).data;
-      console.log('Push token:', token);
+      // Vì bạn đã có google-services.json, chúng ta lấy Device Token trực tiếp
+      // Token này dùng được trực tiếp với Firebase Admin SDK của team Backend C#
+      token = (await Notifications.getDevicePushTokenAsync()).data;
+      console.log('FCM Device Push token:', token);
     } catch (e: unknown) {
-      console.log('Error getting push token', e);
+      console.log('Error getting device push token', e);
     }
   } else {
     console.log('Must use physical device for Push Notifications');
