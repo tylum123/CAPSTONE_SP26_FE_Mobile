@@ -29,6 +29,7 @@ export interface LoginResponse {
   token: string;
   expiresAt: string;
   email: string;
+  role: string; // Backend trả về role name (vd: "Worker", "Farmer", "Admin")
 }
 
 // Auth Service

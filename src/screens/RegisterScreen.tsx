@@ -11,6 +11,7 @@ import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config";
+import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 WebBrowser.maybeCompleteAuthSession();
 const EXPO_GO_REDIRECT_URI = "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mobile";
@@ -25,8 +26,13 @@ export function RegisterScreen({ navigation }: any) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading]               = useState(false);
   const [focusedField, setFocusedField]     = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
   const { register, loginWithGoogle } = useAuth();
   const isExpoGo = Constants.appOwnership === "expo" || Constants.executionEnvironment === "storeClient";
+
+  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
+    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
+  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const [googleRequest, googleResponse, promptGoogleAuth] = Google.useIdTokenAuthRequest({
     webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID || undefined,
@@ -39,29 +45,35 @@ export function RegisterScreen({ navigation }: any) {
   useEffect(() => {
     const doGoogleLogin = async () => {
       if (!googleResponse) return;
-      if (googleResponse.type === "error") { Alert.alert("Google Signup lỗi", String((googleResponse.params as any)?.error_description ?? "OAuth failed")); return; }
+      if (googleResponse.type === "error") { showFeedback({ title: "Google Signup lỗi", message: String((googleResponse.params as any)?.error_description ?? "OAuth failed"), variant: "error" }); return; }
       if (googleResponse.type !== "success") return;
       const idToken = googleResponse.params?.id_token;
-      if (!idToken) { Alert.alert("Lỗi", "Không lấy được Google ID token."); return; }
+      if (!idToken) { showFeedback({ title: "Lỗi Google", message: "Không lấy được Google ID token.", variant: "error" }); return; }
       setLoading(true);
       try { await loginWithGoogle(idToken, 3); }
-      catch { Alert.alert("Lỗi", "Đăng ký bằng Google thất bại."); }
+      catch (error: any) { 
+        if (error?.message === "UNAUTHORIZED_ROLE") {
+          showFeedback({ title: "Không thể đăng nhập", message: "Email này đã được đăng ký cho hệ thống khác. Vui lòng sử dụng tài khoản dành riêng cho Người lao động (Worker).", variant: "error" });
+        } else {
+          showFeedback({ title: "Lỗi Đăng ký", message: "Đăng ký bằng Google thất bại.", variant: "error" }); 
+        }
+      }
       finally { setLoading(false); }
     };
     doGoogleLogin().catch(() => undefined);
   }, [googleResponse, loginWithGoogle]);
 
   const handleRegister = async () => {
-    if (!phoneNumber || !email || !address || !password || !confirmPassword) { Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin"); return; }
-    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { Alert.alert("Lỗi", "Số điện thoại không hợp lệ"); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { Alert.alert("Lỗi", "Email không hợp lệ"); return; }
-    if (password !== confirmPassword) { Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp"); return; }
-    if (password.length < 6) { Alert.alert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự"); return; }
+    if (!phoneNumber || !email || !address || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
+    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { showFeedback({ title: "Sai định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFeedback({ title: "Sai định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
+    if (password !== confirmPassword) { showFeedback({ title: "Mật khẩu không khớp", message: "Mật khẩu xác nhận không khớp", variant: "error" }); return; }
+    if (password.length < 6) { showFeedback({ title: "Mật khẩu yếu", message: "Mật khẩu phải có ít nhất 6 ký tự", variant: "error" }); return; }
     setLoading(true);
     try {
       await register({ email: email.trim(), phoneNumber: phoneNumber.trim(), password, address: address.trim(), roleId: 3 });
-      Alert.alert("Thành công", "Đăng ký tài khoản thành công!", [{ text: "Đăng nhập ngay", onPress: () => navigation.navigate("Login") }]);
-    } catch { Alert.alert("Lỗi", "Đăng ký thất bại. Vui lòng thử lại."); }
+      showFeedback({ title: "Thành công", message: "Đăng ký tài khoản thành công!", variant: "success", onConfirm: () => navigation.navigate("Login") });
+    } catch { showFeedback({ title: "Thất bại", message: "Đăng ký thất bại. Vui lòng thử lại.", variant: "error" }); }
     finally { setLoading(false); }
   };
 
@@ -74,8 +86,16 @@ export function RegisterScreen({ navigation }: any) {
   ];
 
   return (
-    <ImageBackground source={require("../../assets/register.jpg")} className="flex-1" resizeMode="cover">
-      <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+    <View className="flex-1 bg-primary-900">
+      <View style={{ position: "absolute", width: "100%", height: "100%" }}>
+        <Image 
+          source={require("../../assets/register.jpg")} 
+          style={{ width: "100%", height: "100%" }} 
+          resizeMode="cover" 
+        />
+        <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+      </View>
+
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 32, paddingBottom: 32 }}
@@ -143,6 +163,15 @@ export function RegisterScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        variant={feedback.variant}
+        onConfirm={closeFeedback}
+        onClose={closeFeedback}
+      />
+    </View>
   );
 }

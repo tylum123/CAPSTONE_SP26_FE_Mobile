@@ -19,17 +19,6 @@ const WORKER_PROFILE_ID_CLAIM_KEYS = [
   "worker_profile_id",
 ] as const;
 
-const decodeBase64Url = (value: string): string => {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-
-  if (typeof globalThis.atob === "function") {
-    return globalThis.atob(padded);
-  }
-
-  throw new Error("Base64 decoding is not available in this runtime.");
-};
-
 const parseJwtPayload = (token: string): JwtClaims | null => {
   try {
     const tokenParts = token.split(".");
@@ -37,12 +26,43 @@ const parseJwtPayload = (token: string): JwtClaims | null => {
       return null;
     }
 
-    const payloadJson = decodeBase64Url(tokenParts[1]);
+    const payloadBase64 = tokenParts[1];
+    let base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4 !== 0) {
+      base64 += '=';
+    }
+
+    const payloadJson = decodeURIComponent(
+      atob_poly(base64)
+        .split('')
+        .map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    ).replace(/\0+$/, '').trim();
+
     return JSON.parse(payloadJson) as JwtClaims;
   } catch {
     return null;
   }
 };
+
+const B64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+function atob_poly(input: string) {
+  let str = String(input).replace(/=+$/, '');
+  let output = '';
+  if (str.length % 4 === 1) return '';
+  for (
+    let bc = 0, bs = 0, buffer, i = 0;
+    (buffer = str.charAt(i++));
+    ~buffer && (bs = bc % 4 ? bs * 64 + buffer : buffer, bc++ % 4)
+      ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6))))
+      : 0
+  ) {
+    buffer = B64_CHARS.indexOf(buffer);
+  }
+  return output;
+}
 
 const extractStringClaim = (
   payload: JwtClaims | null,
@@ -96,5 +116,15 @@ export const authTokenService = {
   getCurrentWorkerProfileId: async (): Promise<string | null> => {
     const payload = await authTokenService.getTokenPayload();
     return extractStringClaim(payload, WORKER_PROFILE_ID_CLAIM_KEYS);
+  },
+
+  isTokenExpired: (token: string): boolean => {
+    const payload = parseJwtPayload(token);
+    if (!payload || !payload.exp || typeof payload.exp !== "number") {
+      return false; // If no exp, assume not expired (or let backend handle it)
+    }
+    // Convert current time to seconds
+    const currentTime = Math.floor(Date.now() / 1000);
+    return payload.exp < currentTime;
   },
 };

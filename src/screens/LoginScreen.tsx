@@ -20,6 +20,7 @@ import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config";
+import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 if (CONFIG.GOOGLE_WEB_CLIENT_ID) {
   GoogleSignin.configure({
@@ -40,47 +41,68 @@ export function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
   const { login, loginWithGoogle, demoLogin } = useAuth();
+
+  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
+    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
+  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const handleLogin = async () => {
     const identifier = activeTab === "phone" ? phoneNumber.trim() : email.trim();
-    if (!identifier || !password) { Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin"); return; }
+    if (!identifier || !password) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
     if (activeTab === "phone") {
-      if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(identifier)) { Alert.alert("Lỗi", "Số điện thoại không hợp lệ"); return; }
+      if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(identifier)) { showFeedback({ title: "Lỗi định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
     } else {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) { Alert.alert("Lỗi", "Email không hợp lệ"); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) { showFeedback({ title: "Lỗi định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
     }
     setLoading(true);
     try { await login(identifier, password); }
-    catch { Alert.alert("Lỗi", "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại."); }
+    catch (error: any) { 
+      if (error?.message === "UNAUTHORIZED_ROLE") {
+        showFeedback({ title: "Không có quyền", message: "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng dành cho Người lao động (Worker).", variant: "error" });
+      } else {
+        showFeedback({ title: "Đăng nhập thất bại", message: "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.", variant: "error" }); 
+      }
+    }
     finally { setLoading(false); }
   };
 
   const handleGoogleLogin = async () => {
-    if (!CONFIG.GOOGLE_WEB_CLIENT_ID) { Alert.alert("Cấu hình chưa đủ", "GOOGLE_WEB_CLIENT_ID chưa được cấu hình."); return; }
+    if (!CONFIG.GOOGLE_WEB_CLIENT_ID) { showFeedback({ title: "Cấu hình thiếu", message: "GOOGLE_WEB_CLIENT_ID chưa được cấu hình.", variant: "error" }); return; }
     try {
       setLoading(true);
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
-      if (!idToken) { Alert.alert("Lỗi", "Không lấy được Google ID token."); return; }
+      if (!idToken) { showFeedback({ title: "Lỗi kết nối", message: "Không lấy được Google ID token.", variant: "error" }); return; }
       await loginWithGoogle(idToken, 3);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
+      if (error?.message === "UNAUTHORIZED_ROLE") {
+        showFeedback({ title: "Không có quyền", message: "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng cho Worker.", variant: "error" });
+        return;
+      }
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       else if (error.code === statusCodes.IN_PROGRESS) return;
-      else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) Alert.alert("Lỗi", "Google Play Services không khả dụng.");
+      else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) showFeedback({ title: "Lỗi Google", message: "Google Play Services không khả dụng.", variant: "error" });
       else {
-        // Hiển thị chi tiết lỗi để debug
-        Alert.alert("Lỗi Đăng Nhập", `Chi tiết: ${error.message || "Unknown error"}\nCode: ${error.code || "No code"}`);
+        showFeedback({ title: "Lỗi Đăng Nhập", message: `Đã có lỗi xảy ra trong quá trình đăng nhập Google. Code: ${error.code || "No code"}`, variant: "error" });
       }
     } finally { setLoading(false); }
   };
 
   return (
-    <ImageBackground source={require("../../assets/login.jpg")} className="flex-1" resizeMode="cover">
-      {/* Overlay xanh lá đậm */}
-      <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+    <View className="flex-1 bg-primary-900">
+      {/* Tuyệt đối ghim ảnh nền chết phía dưới, tách biệt khỏi ScrollView để chống chập chờn/vỡ khi xài web emulator */}
+      <View style={{ position: "absolute", width: "100%", height: "100%" }}>
+        <Image 
+          source={require("../../assets/login.jpg")} 
+          style={{ width: "100%", height: "100%" }} 
+          resizeMode="cover" 
+        />
+        <View className="absolute inset-0" style={{ backgroundColor: "rgba(5,100,75,0.78)" }} />
+      </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
@@ -198,7 +220,7 @@ export function LoginScreen({ navigation }: any) {
               onPress={handleGoogleLogin}
               activeOpacity={0.88}
             >
-              <Image source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" }} style={{ width: 20, height: 20 }} />
+              <Image source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }} style={{ width: 22, height: 22 }} />
               <Text className="text-[15px] font-semibold text-slate-700">Tiếp tục với Google</Text>
             </TouchableOpacity>
           </View>
@@ -218,6 +240,15 @@ export function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        variant={feedback.variant}
+        onConfirm={closeFeedback}
+        onClose={closeFeedback}
+      />
+    </View>
   );
 }

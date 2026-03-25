@@ -25,13 +25,14 @@ export const API_ENDPOINTS = {
     GOOGLE_LOGIN: `${API_PREFIX}/google-login`,
     LOGOUT: `${API_PREFIX}/logout`,
     REFRESH_TOKEN: `${API_PREFIX}/refresh`,
-    FORGOT_PASSWORD: `${API_PREFIX}/forgot-password`,
-    RESET_PASSWORD: `${API_PREFIX}/reset-password`,
+    FORGOT_PASSWORD: `${API_PREFIX}/forget`,
+    RESET_PASSWORD: `${API_PREFIX}/reset`,
     VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
   },
   // Worker profile
   WORKER_PROFILE: {
-    BASE: `${API_PREFIX}/worker-profile`,
+    BASE: `${API_PREFIX}/worker`,
+    UPLOAD_AVATAR: `${API_PREFIX}/worker/upload-avatar`,
   },
   // User
   USER: {
@@ -46,19 +47,22 @@ export const API_ENDPOINTS = {
     CATEGORY_DETAIL: (id: string) => `${API_PREFIX}/job/category/${id}`,
     POST_LIST: `${API_PREFIX}/job/post`,
     POST_DETAIL: (id: string) => `${API_PREFIX}/job/post/${id}`,
+    APPLICATION: `${API_PREFIX}/job/application`,
+    APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
   },
-  // Attendance
-  ATTENDANCE: {
-    CHECK_IN: `${API_PREFIX}/attendance/check-in`,
-    CHECK_OUT: `${API_PREFIX}/attendance/check-out`,
-    APPROVE: `${API_PREFIX}/attendance/approve`,
-    DETAIL: (id: string) => `${API_PREFIX}/attendance/${id}`,
-    WORKER: (workerProfileId: string) =>
-      `${API_PREFIX}/attendance/worker/${workerProfileId}`,
-    FARM: (farmerProfileId: string) =>
-      `${API_PREFIX}/attendance/farm/${farmerProfileId}`,
-    FARM_WORKER: (farmerProfileId: string, workerProfileId: string) =>
-      `${API_PREFIX}/attendance/farm/${farmerProfileId}/worker/${workerProfileId}`,
+  // Job Detail (Replaces Attendance/Daily Report)
+  JOB_DETAIL: {
+    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
+    APPROVE: (id: string) => `${API_PREFIX}/JobDetail/${id}/approve`,
+    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
+    FARM: (jobPostId: string) => `${API_PREFIX}/JobDetail/job-post/${jobPostId}`,
+  },
+  // Disputes
+  DISPUTE: {
+    CREATE: `${API_PREFIX}/disputes`,
+    MY: `${API_PREFIX}/disputes/my`,
+    DETAIL: (id: string) => `${API_PREFIX}/disputes/${id}`,
   },
   // Media
   MEDIA: {
@@ -73,10 +77,12 @@ export const API_ENDPOINTS = {
   },
   // Notifications
   NOTIFICATIONS: {
-    LIST: `${API_PREFIX}/notifications`,
-    READ: (id: string) => `${API_PREFIX}/notifications/${id}/read`,
-    READ_ALL: `${API_PREFIX}/notifications/read-all`,
-    DELETE: (id: string) => `${API_PREFIX}/notifications/${id}`,
+    LIST: `${API_PREFIX}/notification`,
+    UNREAD: `${API_PREFIX}/notification/unread`,
+    READ: `${API_PREFIX}/notification/read`, // Note: use PATCH { notificationId: string }
+    READ_ALL: `${API_PREFIX}/notification/read-all`,
+    DELETE: (id: string) => `${API_PREFIX}/notification/${id}`,
+    REGISTER_TOKEN: `${API_PREFIX}/notification/register-token`,
   },
   // Wallet
   WALLET: {

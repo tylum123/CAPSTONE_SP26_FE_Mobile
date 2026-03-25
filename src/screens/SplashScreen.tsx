@@ -1,10 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, Animated, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../context/AuthContext";
 
 export function SplashScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const { isAuthenticated } = useAuth();
+  // Use a ref so the timer callback always reads the latest value
+  // without re-triggering the effect every time auth state changes.
+  const isAuthRef = useRef(isAuthenticated);
+  isAuthRef.current = isAuthenticated;
 
   useEffect(() => {
     Animated.parallel([
@@ -14,12 +20,17 @@ export function SplashScreen({ navigation }: any) {
 
     const timer = setTimeout(() => {
       Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
-        navigation.replace("Login");
+        // If user is already authenticated, RootNavigator will auto-switch —
+        // no need to navigate manually (and "Login" won't exist in the stack).
+        if (!isAuthRef.current) {
+          navigation.replace("Login");
+        }
       });
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, navigation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>

@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
@@ -9,44 +9,162 @@ import { SectionHeader } from "../components/ui";
 import { EmptyState } from "../components/ui";
 import { COLORS } from "../constants/theme";
 import { Job, UpcomingJob } from "../types";
-import { jobService, JobPostDTO, workerProfileService } from "../services";
+import { jobService, JobPostDTO, workerProfileService, nominatimService } from "../services";
 import { useAuth } from "../context/AuthContext";
-
+import { JobMap } from "../components/ui/JobMap";
 export function WorkerHomeScreen({ navigation }: any) {
   const { user, isAuthenticated } = useAuth();
   const [nearbyJobs, setNearbyJobs]             = useState<Job[]>([]);
+  const [pendingApplications, setPendingApplications] = useState<any[]>([]);
+  const [activeApplications, setActiveApplications]   = useState<any[]>([]);
   const [profileRating, setProfileRating]       = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(10);
 
   const demoNearbyJobs: Job[] = [
-    { id: 1, title: "Thu hoạch lúa",      farmer: "Nguyễn Văn A", location: "Cần Thơ",   distance: "2.5 km", wage: "250,000", duration: "1 ngày",  rating: 4.8, urgent: true  },
-    { id: 2, title: "Chăm sóc vườn cam",  farmer: "Trần Thị B",   location: "Vĩnh Long", distance: "5 km",   wage: "200,000", duration: "3 ngày",  rating: 4.5, urgent: false },
-    { id: 3, title: "Làm đất trồng rau",  farmer: "Lê Văn C",     location: "Sóc Trăng", distance: "8 km",   wage: "300,000", duration: "2 ngày",  rating: 4.9, urgent: false },
-    { id: 4, title: "Phun thuốc sâu",     farmer: "Phạm Văn D",   location: "An Giang",  distance: "12 km",  wage: "180,000", duration: "4 giờ",   rating: 4.3, urgent: false },
+    { id: "101", title: "Thu hoạch lúa",      farmer: "Nguyễn Văn A", location: "Cần Thơ",   distance: "2.5 km", wage: "250,000", duration: "1 ngày",  rating: 4.8, urgent: true, date: "23/03/2026"  },
+    { id: "502", title: "Hái tiêu khoán",     farmer: "Lê Văn T",    location: "Sóc Trăng",   distance: "7 km",    wage: "2,000,000", duration: "2 ngày",   rating: 4.6, urgent: false, date: "28/03/2026" },
+    { id: "102", title: "Chăm sóc vườn cam",  farmer: "Trần Thị B",   location: "Vĩnh Long", distance: "5 km",   wage: "200,000", duration: "3 ngày",  rating: 4.5, urgent: false, date: "24/03/2026" },
+    { id: "103", title: "Làm đất trồng rau",  farmer: "Lê Văn C",     location: "Sóc Trăng", distance: "8 km",   wage: "300,000", duration: "2 ngày",  rating: 4.9, urgent: false, date: "26/03/2026" },
   ];
-  const demoUpcomingJobs: UpcomingJob[] = [
-    { id: 1, title: "Phun thuốc trừ sâu", farmer: "Phạm Văn D", date: "15/01/2026", time: "06:00", status: "confirmed" },
+  const demoPendingApps = [
+    { id: 1001, jobPostId: 201, title: "Hái cà phê", farmer: "Trần Văn D", date: "18/01/2026", time: "07:00 - 16:00", status: "pending" },
+    { id: 1002, jobPostId: 202, title: "Thu hoạch rau", farmer: "Nguyễn Văn E", date: "15/01/2026", time: "08:00 - 17:00", status: "rejected" }
   ];
+  const demoActiveApps = [
+    { id: 1003, jobPostId: 301, title: "Tưới nước vườn cam", farmer: "Lê Thị C", date: "23/03/2026", time: "06:00 - 10:00", status: "accepted" },
+    { id: 1004, jobPostId: 302, title: "Phun thuốc vườn cam", farmer: "Trần Văn F", date: "26/03/2026", time: "07:00 - 11:00", status: "accepted" },
+    { id: 1005, jobPostId: 401, title: "Làm cỏ vườn mít", farmer: "Nguyễn Văn A", date: "20/02/2026", time: "06:00 - 18:00", status: "accepted" },
+    { id: 1006, jobPostId: 501, title: "Gặt lúa khoán mẫu lớn", farmer: "Trần Văn C", date: "25/03/2026", time: "Khoán", status: "accepted" }
+  ];
+
+  const checkUrgency = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const start = new Date(dateStr).getTime();
+    const diffDays = (start - Date.now()) / (1000 * 3600 * 24);
+    return diffDays > 0 && diffDays <= 3;
+  };
+
+  const loadData = useCallback(async () => {
+    if (!isAuthenticated || user?.isDemo) { 
+      setNearbyJobs(demoNearbyJobs); 
+      setPendingApplications(demoPendingApps);
+      setActiveApplications(demoActiveApps);
+      setProfileRating(4.7); 
+      setTotalJobsCompleted(12); 
+      setRadiusKm(10);
+      setUserLocation({ latitude: 10.762622, longitude: 106.660172 });
+      setRefreshing(false);
+      return; 
+    }
+    
+    try {
+      const [jobs, apps, profile] = await Promise.all([
+        jobService.getJobPosts(),
+        jobService.getApplications(),
+        workerProfileService.getProfile()
+      ]);
+
+      setProfileRating(profile?.averageRating ?? 0);
+      setTotalJobsCompleted(profile?.totalJobsCompleted ?? 0);
+
+      const prefRadius = profile?.travelRadiusKmPreference || 10;
+      setRadiusKm(prefRadius);
+      if (profile?.primaryLocation) {
+        // Run geocoding without blocking other renders drastically
+        nominatimService.geocodeAddress(profile.primaryLocation).then(loc => {
+          if (loc) setUserLocation(loc);
+        }).catch(e => console.log('Geocode error', e));
+      }
+
+      const myAppliedJobIds = new Set(
+        apps
+          .filter(a => (a.worker?.id || (a as any).workerId) === profile.id)
+          .map(a => String(a.jobPostId))
+      );
+      const filteredJobs = jobs.filter(j => !myAppliedJobIds.has(String(j.id)));
+
+      setNearbyJobs(filteredJobs.map((j: JobPostDTO): Job => {
+        const address = j.address && j.address !== "string" ? j.address : "Chưa cập nhật";
+        const contactName = j.contactName && j.contactName !== "string" ? j.contactName : "Chủ nông trại";
+        const trueUrgent = j.isUrgent || checkUrgency(j.startDate);
+        return { 
+          id: j.id, 
+          title: j.title || "Chưa có tiêu đề", 
+          farmer: contactName, 
+          location: address, 
+          distance: "N/A", 
+          wage: j.wageAmount ? j.wageAmount.toLocaleString("vi-VN") : "0", 
+          duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "N/A", 
+          rating: 0, 
+          urgent: trueUrgent 
+        };
+      }));
+
+      // 1. Lọc chỉ lấy đơn ứng tuyển của chính worker hiện tại
+      // 2. Deduplicate: Nếu có nhiều application cho cùng 1 job, chỉ lấy cái mới nhất (Map sẽ ghi đè giá trị cũ)
+      const myAppsMap = new Map();
+      apps.forEach(a => {
+        const workerId = a.worker?.id || (a as any).workerId;
+        if (workerId === profile.id) {
+          myAppsMap.set(String(a.jobPostId), a);
+        }
+      });
+      
+      const myApps = Array.from(myAppsMap.values());
+      const iterApps = [...myApps].reverse(); // Latest are usually at the end of the list
+      
+      const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
+      const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
+      
+      const activeApps = activeAppsUntrimmed.filter(app => {
+        const job = jobs.find(j => String(j.id) === String(app.jobPostId));
+        const jobStatusId = (job as any)?.statusId || 2;
+        return jobStatusId !== 5 && jobStatusId !== 6; 
+      }).slice(0, 3);
+
+      const mapApp = (app: any) => {
+        const job = jobs.find(j => String(j.id) === String(app.jobPostId));
+        const startDate = job?.startDate;
+        const formattedDate = (startDate && !startDate.startsWith("0001")) 
+          ? new Date(startDate).toLocaleDateString("vi-VN") 
+          : "Chưa rõ";
+
+        return {
+          id: app.id,
+          jobPostId: app.jobPostId,
+          title: job?.title || "Công việc",
+          farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
+          date: formattedDate,
+          time: job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A",
+          status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"
+        };
+      };
+
+      setPendingApplications(pendingApps.map(mapApp));
+      setActiveApplications(activeApps.map(mapApp));
+
+    } catch { 
+      setNearbyJobs([]); 
+      setPendingApplications([]);
+      setActiveApplications([]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isAuthenticated, user?.isDemo]);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.isDemo) { setNearbyJobs(demoNearbyJobs); return; }
-    (async () => {
-      try {
-        const jobs = await jobService.getJobPosts();
-        setNearbyJobs(jobs.map((j: JobPostDTO): Job => ({ id: j.id, title: j.title, farmer: "Chủ nông trại", location: j.address, distance: "N/A", wage: j.wageAmount ? j.wageAmount.toLocaleString("vi-VN") : "0", duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "N/A", rating: 0, urgent: j.isUrgent })));
-      } catch { setNearbyJobs([]); }
-    })().catch(() => undefined);
-  }, [isAuthenticated]);
+    loadData();
+    const sub = DeviceEventEmitter.addListener("REFRESH_DATA", loadData);
+    return () => sub.remove();
+  }, [loadData]);
 
-  useEffect(() => {
-    if (!isAuthenticated || user?.isDemo) { setProfileRating(4.7); setTotalJobsCompleted(12); return; }
-    (async () => {
-      try { const p = await workerProfileService.getProfile(); setProfileRating(p.averageRating); setTotalJobsCompleted(p.totalJobsCompleted); }
-      catch { setProfileRating(null); setTotalJobsCompleted(null); }
-    })().catch(() => undefined);
-  }, [isAuthenticated]);
-
-  const upcomingJobs = useMemo(() => (isAuthenticated && !user?.isDemo ? [] : demoUpcomingJobs), [isAuthenticated, user?.isDemo]);
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
 
   const getGreeting = () => { const h = new Date().getHours(); if (h < 12) return "Chào buổi sáng"; if (h < 18) return "Chào buổi chiều"; return "Chào buổi tối"; };
   const displayName = user?.name?.split(" ").pop() || "Bạn";
@@ -64,6 +182,7 @@ export function WorkerHomeScreen({ navigation }: any) {
         contentContainerStyle={{ paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
         data={nearbyJobs}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
           <>
@@ -118,27 +237,54 @@ export function WorkerHomeScreen({ navigation }: any) {
               ))}
             </View>
 
-            {/* UPCOMING */}
-            {upcomingJobs.length > 0 && (
-              <View className="px-4 mb-1">
-                <SectionHeader title="Lịch sắp tới" />
-                {upcomingJobs.map((j) => (
-                  <Card key={j.id} variant="elevated" className="mb-2">
-                    <CardContent>
-                      <View className="flex-row items-center gap-2">
-                        <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[48px]">
-                          <Text className="text-xl font-extrabold text-primary-600">15</Text>
-                          <Text className="text-[11px] text-primary-500 font-semibold">Th1</Text>
+            {pendingApplications.length > 0 && (
+              <View className="px-4 mb-3">
+                <SectionHeader title="Đã ứng tuyển" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "applied" })} />
+                {pendingApplications.map((j) => (
+                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
+                    <Card variant="elevated" className="mb-2">
+                      <CardContent>
+                        <View className="flex-row items-center gap-2">
+                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 5)}</Text>
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
+                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
+                          </View>
+                          <Badge variant={j.status === "rejected" ? "danger" : "warning"}>
+                            {j.status === "rejected" ? "Từ chối" : "Chờ duyệt"}
+                          </Badge>
                         </View>
-                        <View className="flex-1">
-                          <Text className="text-sm font-bold text-slate-800 mb-0.5">{j.title}</Text>
-                          <Text className="text-xs text-slate-500 mb-1">{j.farmer}</Text>
-                          <View className="flex-row items-center gap-1"><Clock size={12} color="#059669" /><Text className="text-xs text-primary-600 font-semibold">{j.time}</Text></View>
+                      </CardContent>
+                    </Card>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {activeApplications.length > 0 && (
+              <View className="px-4 mb-3">
+                <SectionHeader title="Đang thực hiện" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "upcoming" })} />
+                {activeApplications.map((j) => (
+                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
+                    <Card variant="elevated" className="mb-2">
+                      <CardContent>
+                        <View className="flex-row items-center gap-2">
+                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 5)}</Text>
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
+                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
+                          </View>
+                          <Badge variant="success">Đang làm</Badge>
                         </View>
-                        <Badge variant="success">Xác nhận</Badge>
-                      </View>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -146,6 +292,16 @@ export function WorkerHomeScreen({ navigation }: any) {
             {/* NEARBY HEADER */}
             <View className="px-4 mb-1">
               <SectionHeader title="Việc gần bạn" subtitle="Phù hợp với khu vực của bạn" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
+            </View>
+
+            {/* JOB MAP SECTION */}
+            <View className="px-4 mb-4">
+              <JobMap
+                userLocation={userLocation}
+                radiusKm={radiusKm}
+                jobs={nearbyJobs}
+                onCalloutPress={(job) => navigation.navigate("JobDetail", { jobId: job.id })}
+              />
             </View>
           </>
         }
@@ -171,6 +327,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="flex-row items-center flex-wrap gap-2">
                   <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
                   <View className="flex-row items-center gap-1"><Clock size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.duration}</Text></View>
+                  {job.date && <View className="flex-row items-center gap-1"><Calendar size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.date}</Text></View>}
                   <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5">
                     <Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.wage}đ</Text>
                   </View>

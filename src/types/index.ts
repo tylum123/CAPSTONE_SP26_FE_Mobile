@@ -9,6 +9,7 @@ export interface Job {
   duration: string;
   rating: number;
   urgent?: boolean;
+  date?: string;
 }
 
 export interface UpcomingJob {
@@ -39,3 +40,4 @@ export interface Stat {
 }
 
 export * from "./api";
+export * from "./worker";
