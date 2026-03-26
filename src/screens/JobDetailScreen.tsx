@@ -1,20 +1,24 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Platform, RefreshControl, ActivityIndicator, DeviceEventEmitter } from "react-native";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Platform, RefreshControl, ActivityIndicator, Alert,
+  DeviceEventEmitter,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapPin, Clock, Banknote, Star, Calendar, Users, Wrench, Briefcase, MessageCircle, ArrowLeft, CheckCircle } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { authService, jobService, workerProfileService, notificationService } from "../services";
+import { authService, jobService, workerProfileService, notificationService, reportService } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { isPastDate } from "../utils/helpers";
+import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function JobDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { jobId } = route.params;
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const { isAuthenticated, user } = useAuth();
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isApplied, setIsApplied] = useState(false);
   const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number }>({});
   const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
@@ -23,187 +27,111 @@ export function JobDetailScreen({ navigation, route }: any) {
     setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
   const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
-  const demoJobDetail = {
-    id: jobId,
-    title: "Thu hoạch lúa mùa",
-    description: "Cần tuyển người thu hoạch lúa cho 5 mẫu ruộng. Công việc bao gồm: gặt lúa, phơi lúa, và vận chuyển vào kho. Yêu cầu có kinh nghiệm làm việc ngoài trời và chịu khó.",
-    farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12", rating: 4.8, totalJobs: 45 },
-    location: { address: "Ấp Tân Thạnh, xã Tân Lộc, huyện Thốt Nốt, TP. Cần Thơ", distance: 2.5 },
-    wage: 250000, duration: "1 ngày", workload: "5 mẫu ruộng (~2000m²)",
-    requiredWorkers: 5, appliedWorkers: 2, requiredSkills: "Thu hoạch, Vận chuyển",
-    genderPreference: "Không yêu cầu", ageRequirement: "18-55",
-    wageTypeId: "Theo ngày", paymentMethodId: "Tiền mặt",
-    requiredTools: ["Liềm cắt lúa", "Găng tay bảo hộ", "Nón lá", "Bao tải đựng lúa"],
-    providedTools: ["Máy gặt lúa", "Xe vận chuyển"],
-    timeSlots: [
-      { id: 1, date: "20/03/2026", available: true, reportedAt: null as string | null },
-      { id: 2, date: "21/03/2026", available: true, reportedAt: "21/03/2026 18:05" },
-      { id: 3, date: "23/03/2026", available: true, reportedAt: null as string | null },
-      { id: 4, date: "26/03/2026", available: true, reportedAt: null as string | null },
-    ],
-    jobType: "Thu hoạch", urgent: true, postedDate: "20/01/2026",
-    startDate: "23/03/2026",
-    endDate: "26/03/2026",
-    date: "23/03/2026",
-  };
-  const emptyJobDetail = { ...demoJobDetail, title: "", description: "", location: { ...demoJobDetail.location, address: "", distance: 0 }, wage: 0, duration: "", workload: "", requiredWorkers: 0, appliedWorkers: 0, requiredSkills: "", genderPreference: "", ageRequirement: "", wageTypeId: "", paymentMethodId: "", jobType: "", urgent: false, postedDate: "", startDate: "", endDate: "", date: "" };
-
-  const getDemoData = (idStr: string) => {
-    let base = { ...demoJobDetail, id: idStr }; // Start with default realistic data, just override specifics
-    let appInfo: { id: string; statusId: number } | null = null;
-    let isAppliedMock = false;
-
-    if (idStr === "201") {
-      base.title = "Hái cà phê";
-      base.startDate = "18/01/2026";
-      base.endDate = "18/01/2026";
-      appInfo = { id: "1001", statusId: 1 }; // Pending
-      isAppliedMock = true;
-    } else if (idStr === "202") {
-      base.title = "Thu hoạch rau";
-      base.startDate = "15/01/2026";
-      base.endDate = "15/01/2026";
-      appInfo = { id: "1002", statusId: 3 }; // Rejected
-      isAppliedMock = true;
-    } else if (idStr === "301") {
-      base.title = "Tưới nước vườn cam";
-      base.startDate = "23/03/2026";
-      base.endDate = "23/03/2026";
-      appInfo = { id: "1003", statusId: 2 }; // Accepted
-      isAppliedMock = true;
-    } else if (idStr === "302") {
-      base.title = "Phun thuốc vườn cam";
-      base.startDate = "26/03/2026";
-      base.endDate = "28/03/2026";
-      appInfo = { id: "1004", statusId: 2 }; // Accepted
-      isAppliedMock = true;
-    } else if (idStr === "401") {
-      base.title = "Làm cỏ vườn mít";
-      base.startDate = "20/02/2026";
-      base.endDate = "20/02/2026";
-      appInfo = { id: "1005", statusId: 2 }; // Accepted
-      isAppliedMock = true;
-    } else if (idStr === "501") {
-      base.title = "Gặt lúa khoán mẫu lớn";
-      base.wageTypeId = "Khoán";
-      base.wage = 5000000;
-      base.duration = "5 ngày";
-      base.workload = "10 mẫu ruộng";
-      base.startDate = "25/03/2026";
-      base.endDate = "30/03/2026";
-      base.timeSlots = []; // No slots for Khoán
-      appInfo = { id: "1006", statusId: 2 }; // Accepted
-      isAppliedMock = true;
-    } else if (idStr === "502") {
-      base.title = "Hái tiêu khoán";
-      base.wageTypeId = "Khoán";
-      base.wage = 2000000;
-      base.duration = "2 ngày";
-      base.workload = "20 gốc tiêu";
-      base.startDate = "28/03/2026";
-      base.endDate = "29/03/2026";
-      base.timeSlots = [];
-      appInfo = null;
-      isAppliedMock = false;
-    } else {
-      base.title = idStr === "101" ? "Thu hoạch lúa" : "Công việc mẫu (Chưa ứng tuyển)";
-      base.startDate = "23/03/2026";
-      base.endDate = "26/03/2026";
-    }
-
-    return { jobData: base, appInfo, isAppliedMock };
-  };
-
-  const [jobDetail, setJobDetail] = useState(emptyJobDetail);
+  const [jobDetail, setJobDetail] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadJobData = useCallback(async () => {
-    if (!isAuthenticated || user?.isDemo) { 
-      const { jobData, appInfo, isAppliedMock } = getDemoData(String(jobId));
-      setJobDetail(jobData); 
-      if (appInfo) setApplicationInfo(appInfo);
-      setIsApplied(isAppliedMock);
-      setIsLoading(false);
-      setRefreshing(false);
-      return; 
-    }
-    try {
-      const [data, categories, profile] = await Promise.all([
-        jobService.getJobPostDetail(String(jobId)),
-        jobService.getCategories(),
-        workerProfileService.getProfile()
-      ]);
+    setIsLoading(true);
+    let sourceJob: any = null;
+    let sourceApps: any[] = [];
+    let sourceProfile: any = null;
 
-        // Kiểm tra xem đã ứng tuyển chưa (trừ khi bị Reject)
-        if (isAuthenticated && !user?.isDemo) {
-          const apps = await jobService.getApplications();
-          const existing = apps.find(a => 
-            String(a.jobPostId) === String(jobId) && 
-            (a.worker?.id === profile.id || (a as any).workerId === profile.id)
-          );
-          // statusId 3 = Rejected. Cho phép apply lại nếu bị reject.
-          if (existing && existing.statusId !== 3) {
-            setIsApplied(true);
-            setApplicationInfo({ id: existing.id, statusId: existing.statusId });
-          }
-        }
-        const mapWageType = (typeId: number | string) => {
-          if (typeId === 1 || typeId === "1") return "Theo ngày";
-          if (typeId === 2 || typeId === "2") return "Khoán";
-          if (typeId === 3 || typeId === "3") return "Theo giờ";
-          return "Thỏa thuận";
-        };
-        const mapPaymentMethod = (methodId: number | string) => {
-          if (methodId === 1 || methodId === "1") return "Tiền mặt";
-          if (methodId === 2 || methodId === "2") return "Chuyển khoản";
-          return "Thỏa thuận";
-        };
-        const mapGender = (gender: string) => {
-          if (!gender || gender === "string" || gender.toLowerCase() === "any") return "Không yêu cầu";
-          if (gender.toLowerCase() === "male") return "Nam";
-          if (gender.toLowerCase() === "female") return "Nữ";
-          return gender;
-        };
-
-        const address = data.address && data.address !== "string" ? data.address : "Chưa cập nhật địa chỉ";
-        const contactName = data.contactName && data.contactName !== "string" ? data.contactName : "Chủ nông trại";
-        const categoryName = categories.find(c => String(c.id) === String(data.jobCategoryId))?.name || "Việc làm";
-        
-        // NOTE: BE hiện tại chưa Join Metadata (JobTitle, FarmName) vào JobApplicationDTO (Item 10.2 Spec)
-        // FE đang tạm thời hiển thị từ JobPostDetail fetch trực tiếp.
-        const formatDateStr = (d: string | undefined) => (d && !d.startsWith("0001")) ? new Date(d).toLocaleDateString("vi-VN") : "N/A";
-        
-        setJobDetail({ 
-          ...demoJobDetail, 
-          id: String(data.id),
-          title: data.title || "Chi tiết công việc",
-          description: data.description || "Chưa có mô tả chi tiết cho công việc này.",
-          location: { ...demoJobDetail.location, address, distance: 2.5 },
-          wage: data.wageAmount || 0,
-          duration: data.estimatedHours ? `${data.estimatedHours} giờ` : "N/A",
-          workload: "N/A",
-          requiredWorkers: data.workersNeeded || 1,
-          appliedWorkers: data.workersAccepted || 0,
-          requiredSkills: categoryName,
-          genderPreference: mapGender(data.genderPreference || ""),
-          ageRequirement: "18-50",
-          wageTypeId: mapWageType(data.wageTypeId || 1),
-          paymentMethodId: mapPaymentMethod(data.paymentMethodId || 1),
-          jobType: categoryName,
-          urgent: data.isUrgent || false,
-          postedDate: formatDateStr(data.publishedAt),
-          startDate: formatDateStr(data.startDate),
-          endDate: formatDateStr(data.endDate),
-          date: formatDateStr(data.startDate),
-          timeSlots: []
-        });
-      } catch { 
-        setJobDetail(emptyJobDetail); 
-      } finally {
+    if (!isAuthenticated || user?.isDemo) {
+      sourceJob = DEMO_JOB_POSTS.find((j: any) => String(j.id) === String(jobId));
+      sourceApps = DEMO_APPLICATIONS;
+      sourceProfile = DEMO_WORKER_PROFILE;
+    } else {
+      try {
+        const [data, apps, profile] = await Promise.all([
+          jobService.getJobPostDetail(String(jobId)),
+          jobService.getApplications(),
+          workerProfileService.getProfile()
+        ]);
+        sourceJob = data;
+        sourceApps = apps;
+        sourceProfile = profile;
+      } catch (error) {
+        console.error("Load job detail error:", error);
+        setJobDetail(null);
         setIsLoading(false);
         setRefreshing(false);
+        return;
       }
+    }
+
+    if (sourceJob) {
+      const existing = sourceApps.find((a: any) => 
+        String(a.jobPostId) === String(jobId) && 
+        (a.worker?.id === sourceProfile?.id || (a as any).workerId === sourceProfile?.id)
+      );
+
+      if (existing && existing.statusId !== 3) {
+        setIsApplied(true);
+        setApplicationInfo({ id: existing.id, statusId: existing.statusId });
+        // Pre-populate selected slots from existing application
+        if (existing.workDates && existing.workDates.length > 0) {
+          // Normalize to YYYY-MM-DD for consistent internal state
+          setSelectedTimeSlots(existing.workDates.map((d: string) => d.substring(0, 10)));
+        }
+      } else {
+        setIsApplied(false);
+        setApplicationInfo({});
+        setSelectedTimeSlots([]);
+      }
+
+      // Fetch Reports for this job
+      let reports: any[] = [];
+      try {
+        if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
+          const allWorkerReports = await reportService.getWorkerReports(sourceProfile.id);
+          reports = allWorkerReports.filter(r => String(r.jobPostId) === String(jobId));
+        } else if (user?.isDemo || !isAuthenticated) {
+          // Mock some reports for demo
+          reports = [
+            { id: "r1", workDate: "2026-03-22T08:00:00Z", farmerApprovedPercent: 100, workerPaymentAmount: 250000, farmerFeedback: "Làm tốt lắm!" },
+            { id: "r2", workDate: "2026-03-23T08:00:00Z", farmerApprovedPercent: 80, workerPaymentAmount: 200000, farmerFeedback: "Cần chú ý hơn phần làm cỏ." }
+          ];
+        }
+      } catch (err) {
+        console.error("Fetch reports error", err);
+      }
+
+      const mappedData = mapJobPostToUI(sourceJob);
+      const timeSlots = (sourceJob.jobTypeId === 1) ? [] : (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
+        const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+        return {
+          id: index + 1,
+          date: formattedSlotDate,
+          rawDate: dateStr.substring(0, 10),
+          available: true,
+          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate
+        };
+      });
+
+      // Special case for backward compatibility or if selectedDays is empty for Daily jobs
+      if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
+        timeSlots.push({
+          id: 1,
+          date: mappedData.startDateFormatted,
+          rawDate: sourceJob.startDate,
+          available: true,
+          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate
+        });
+      }
+
+      const mapped = {
+        ...mappedData,
+        reports: reports.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime()),
+        timeSlots
+      };
+      setJobDetail(mapped as any);
+    } else {
+      setJobDetail(null);
+    }
+    
+    setIsLoading(false);
+    setRefreshing(false);
   }, [isAuthenticated, user?.isDemo, jobId]);
 
   useEffect(() => {
@@ -222,10 +150,13 @@ export function JobDetailScreen({ navigation, route }: any) {
   };
 
   const toggleTimeSlot = (slotId: number) => {
-    const slot = jobDetail.timeSlots.find((s) => s.id === slotId);
+    if (isApplied) return; // Cannot change selection after applying
+    const slot = jobDetail.timeSlots.find((s: any) => s.id === slotId);
     if (!slot?.available) return;
-    const key = String(slot.date);
-    setSelectedTimeSlots((p) => p.includes(key) ? p.filter((s) => s !== key) : [...p, key]);
+    const key = String(slot.rawDate || slot.date).substring(0, 10);
+    setSelectedTimeSlots((p: string[]) => p.some((s: string) => s.substring(0, 10) === key) 
+      ? p.filter((s: string) => s.substring(0, 10) !== key) 
+      : [...p, key]);
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,29 +171,44 @@ export function JobDetailScreen({ navigation, route }: any) {
 
     setIsSubmitting(true);
     try {
-      // NOTE: Hiện tại Backend (BE) yêu cầu gửi các trường StatusId, AppliedAt trong body 
-      // mặc dù BE sẽ tự động ghi đè lại các giá trị này. 
-      // Cần lưu ý chỉnh lại khi BE nâng cấp API sạch hơn (chỉ cần JobPostId và CoverLetter).
+      const isDailyJob = jobDetail?.timeSlots && jobDetail.timeSlots.length > 0;
+      
+      if (isDailyJob && selectedTimeSlots.length === 0) {
+        Alert.alert("Thông báo", "Vui lòng chọn ít nhất một ngày làm việc.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Ensure dates are sent as UTC-compliant ISO strings to avoid Npgsql timestamp kind exceptions
+      const workDates = isDailyJob 
+        ? selectedTimeSlots.map(date => date.includes('T') ? date : `${date}T00:00:00Z`)
+        : [];
+
       await jobService.applyJob({
-        jobPostId: jobId,
+        jobPostId: jobId, // Use jobId from route params
         statusId: 1, // Pending
         coverLetter: "Tôi rất mong muốn được nhận công việc này.",
         appliedAt: new Date().toISOString(),
         respondedAt: new Date().toISOString(),
         responseMessage: null,
+        workDates: workDates, // Include selected days formatted as UTC
       });
       setIsApplied(true);
       DeviceEventEmitter.emit("REFRESH_DATA");
+      Alert.alert("Thành công", "Đã gửi đơn ứng tuyển!");
       showFeedback({ 
         title: "Thành công", 
         message: "Bạn đã gửi đơn ứng tuyển thành công. Vui lòng chờ phản hồi từ farmer.", 
-        variant: "success",
+        variant: "success", 
         onConfirm: () => navigation.goBack() 
       });
-    } catch (err: any) {
+    } catch (error: any) {
+      console.error("Apply error:", error);
+      const apiErrorMessage = error.response?.data?.message || "";
+      Alert.alert("Lỗi", `Không thể gửi đơn ứng tuyển. ${apiErrorMessage}`.trim() || "Vui lòng thử lại.");
       showFeedback({ 
         title: "Lỗi ứng tuyển", 
-        message: err.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.", 
+        message: error.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.", 
         variant: "error" 
       });
     } finally {
@@ -270,17 +216,20 @@ export function JobDetailScreen({ navigation, route }: any) {
     }
   };
 
-  const infoRows = [
-    { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location.address, hint: `Cách bạn ${jobDetail.location.distance} km` },
-    { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
-    { Icon: Briefcase, label: "Khối lượng",       value: jobDetail.workload },
-    { Icon: Users,     label: "Số người tuyển",   value: `${jobDetail.requiredWorkers} người (đã có ${jobDetail.appliedWorkers})` },
-    { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
-    { Icon: Users,     label: "Giới tính",         value: jobDetail.genderPreference || "Không yêu cầu" },
-    { Icon: Calendar,  label: "Độ tuổi",           value: jobDetail.ageRequirement || "Không yêu cầu" },
-    { Icon: Banknote,  label: "Hình thức lương",   value: jobDetail.wageTypeId || "N/A" },
-    { Icon: Briefcase, label: "Thanh toán",        value: jobDetail.paymentMethodId || "N/A" },
-  ];
+  const infoRows = useMemo(() => {
+    if (!jobDetail) return [];
+    return [
+      { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location?.address, hint: jobDetail.location?.distance ? `Cách bạn ${jobDetail.location.distance} km` : "" },
+      { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
+      { Icon: Briefcase, label: "Khối lượng",       value: (jobDetail as any).workload || "N/A" },
+      { Icon: Users,     label: "Số người tuyển",   value: `${jobDetail.requiredWorkers || 0} người (đã có ${jobDetail.appliedWorkers || 0})` },
+      { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
+      { Icon: Users,     label: "Giới tính",         value: jobDetail.genderPreference || "Không yêu cầu" },
+      { Icon: Calendar,  label: "Độ tuổi",           value: jobDetail.ageRequirement || "Không yêu cầu" },
+      { Icon: Banknote,  label: "Hình thức lương",   value: jobDetail.wageTypeId || "N/A" },
+      { Icon: Briefcase, label: "Thanh toán",        value: jobDetail.paymentMethodId || "N/A" },
+    ];
+  }, [jobDetail]);
 
   // FIX SCROLL WEB: Trên React Native Web, flex:1 không đủ để giới hạn chiều cao.
   // Container cha phải có chiều cao tường minh (100vh) thì ScrollView mới có thể scroll.
@@ -307,6 +256,11 @@ export function JobDetailScreen({ navigation, route }: any) {
       {isLoading ? (
         <View style={[scrollStyle, { justifyContent: "center", alignItems: "center" }]}>
           <ActivityIndicator size="large" color="#059669" />
+        </View>
+      ) : !jobDetail ? (
+        <View style={[scrollStyle, { justifyContent: "center", alignItems: "center", padding: 20 }]}>
+          <Text className="text-slate-500 font-medium text-center">Không tìm thấy thông tin công việc hoặc có lỗi xảy ra.</Text>
+          <Button variant="outline" onPress={loadJobData} className="mt-4">Thử lại</Button>
         </View>
       ) : (
         <>
@@ -380,7 +334,7 @@ export function JobDetailScreen({ navigation, route }: any) {
         <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
           <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Thông tin chi tiết</Text>
           <View className="gap-3">
-            {infoRows.map((row, i) => (
+            {infoRows.map((row: any, i: number) => (
               <View key={i} className="flex-row items-start gap-2">
                 <View className="w-[34px] h-[34px] rounded-lg bg-primary-50 justify-center items-center flex-shrink-0">
                   <row.Icon size={16} color="#059669" />
@@ -395,23 +349,34 @@ export function JobDetailScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* TOOLS */}
-        {(!isAuthenticated || user?.isDemo) && (
+        {/* REQUIREMENTS */}
+        {jobDetail.requiredTools?.length > 0 && (
           <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
-            <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Dụng cụ</Text>
+            <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Yêu cầu công việc</Text>
             <View className="gap-2">
-              {jobDetail.requiredTools.map((tool, i) => (
-                <View key={`r-${i}`} className="flex-row items-center gap-2 p-2 bg-rice-50 border border-rice-200 rounded-xl">
-                  <Wrench size={13} color="#d97706" />
-                  <Text className="flex-1 text-[13px] text-slate-700">{tool}</Text>
-                  <Text className="text-[11px] font-bold text-rice-600">Tự mang</Text>
+              {jobDetail.requiredTools.map((tool: any, i: number) => (
+                <View key={`r-${i}`} className="flex-row items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                  <View className="w-5 h-5 rounded-full bg-amber-200 justify-center items-center">
+                    <Wrench size={10} color="#92400e" />
+                  </View>
+                  <Text className="flex-1 text-[13px] text-slate-700 font-medium">{tool}</Text>
                 </View>
               ))}
-              {jobDetail.providedTools.map((tool, i) => (
-                <View key={`p-${i}`} className="flex-row items-center gap-2 p-2 bg-primary-50 border border-primary-200 rounded-xl">
-                  <CheckCircle size={13} color="#059669" />
-                  <Text className="flex-1 text-[13px] text-slate-700">{tool}</Text>
-                  <Text className="text-[11px] font-bold text-primary-600">Có sẵn</Text>
+            </View>
+          </View>
+        )}
+
+        {/* PRIVILEGES */}
+        {jobDetail.providedTools?.length > 0 && (
+          <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+            <Text className="text-base font-bold text-slate-800 mb-4" style={{ letterSpacing: -0.2 }}>Quyền lợi người lao động</Text>
+            <View className="gap-2">
+              {jobDetail.providedTools.map((tool: any, i: number) => (
+                <View key={`p-${i}`} className="flex-row items-center gap-2 p-3 bg-primary-50 border border-primary-100 rounded-xl">
+                  <View className="w-5 h-5 rounded-full bg-primary-200 justify-center items-center">
+                    <CheckCircle size={10} color="#065f46" />
+                  </View>
+                  <Text className="flex-1 text-[13px] text-slate-700 font-medium">{tool}</Text>
                 </View>
               ))}
             </View>
@@ -419,62 +384,102 @@ export function JobDetailScreen({ navigation, route }: any) {
         )}
 
         {/* TIME SLOTS / REPORTING */}
-        {(!isAuthenticated || user?.isDemo) && jobDetail.wageTypeId !== "Khoán" && (
+        {applicationInfo.statusId === 2 && (
           <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
-            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>
-              {applicationInfo.statusId === 2 ? "Lịch làm việc & Báo cáo" : "Chọn khung giờ"}
-            </Text>
-            <Text className="text-[13px] text-slate-400 mb-4">
-              {applicationInfo.statusId === 2 ? "Theo dõi tiến độ báo cáo hàng ngày" : "Chọn các khung giờ bạn có thể làm việc"}
-            </Text>
-            <View className="gap-2.5">
-              {jobDetail.timeSlots.map((slot) => {
-                const key = String(slot.date);
-                const selected = selectedTimeSlots.includes(key);
-                const isPast = isPastDate(slot.date);
-                const isToday = slot.date === "23/03/2026";
-                const isReported = !!slot.reportedAt;
-                
-                // Trạng thái cho Reporting (đã được duyệt)
-                if (applicationInfo.statusId === 2) {
-                  return (
-                    <View 
-                      key={slot.id}
-                      className={["flex-row items-center gap-2 p-4 rounded-2xl border-2", isReported ? "bg-primary-50 border-primary-100" : isPast ? "bg-slate-50 border-slate-100" : isToday ? "bg-white border-primary-500" : "bg-white border-slate-100"].join(" ")}
-                    >
-                      <Calendar size={18} color={isReported ? "#059669" : isPast ? "#94a3b8" : "#059669"} />
-                      <View className="flex-1">
-                        <Text className={["text-[15px] font-bold", isPast && !isReported ? "text-slate-400" : "text-slate-800"].join(" ")}>{slot.date}</Text>
+            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Báo cáo chi tiết</Text>
+            <Text className="text-[13px] text-slate-400 mb-4">Lịch sử báo cáo và tiến độ được duyệt</Text>
+            
+            <View className="gap-3">
+              {jobDetail.reports?.length > 0 ? (
+                jobDetail.reports.map((report: any, i: number) => (
+                  <View key={report.id || i} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                    <View className="flex-row justify-between items-start mb-3">
+                      <View>
+                        <Text className="text-sm font-bold text-slate-800">{new Date(report.workDate).toLocaleDateString("vi-VN")}</Text>
+                        <Text className="text-[11px] text-slate-500 mt-0.5">{report.workerDescription || "Báo cáo công việc hàng ngày"}</Text>
                       </View>
-                      {isReported ? (
-                        <View className="items-end">
-                          <Badge variant="success">Đã báo cáo</Badge>
-                          <Text className="text-[10px] text-slate-400 mt-1">{slot.reportedAt}</Text>
-                        </View>
-                      ) : isPast ? (
-                        <Badge variant="secondary">Đã qua</Badge>
-                      ) : isToday ? (
-                        <Badge variant="warning">Hôm nay</Badge>
-                      ) : (
-                        <Badge variant="secondary">Đang chờ</Badge>
-                      )}
+                      <Badge variant={report.farmerApprovedPercent === 100 ? "success" : report.farmerApprovedPercent > 0 ? "warning" : "secondary"}>
+                        {report.farmerApprovedPercent === 100 ? "Đã duyệt 100%" : report.farmerApprovedPercent > 0 ? `Đã duyệt ${report.farmerApprovedPercent}%` : "Chờ duyệt"}
+                      </Badge>
                     </View>
-                  );
-                }
 
-                // Trạng thái cho Application (đang chọn giờ)
+                    {/* Progress Bar */}
+                    <View className="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+                      <View 
+                        className="h-full bg-primary-500" 
+                        style={{ width: `${report.farmerApprovedPercent || 0}%` }} 
+                      />
+                    </View>
+
+                    <View className="flex-row justify-between items-center bg-white px-3 py-2 rounded-xl">
+                      <View className="flex-row items-center gap-1.5">
+                        <Banknote size={14} color="#059669" />
+                        <Text className="text-xs text-slate-600 font-medium">Lương nhận:</Text>
+                      </View>
+                      <Text className="text-sm font-extrabold text-primary-600">
+                        {report.workerPaymentAmount ? `${report.workerPaymentAmount.toLocaleString("vi-VN")}₫` : "---"}
+                      </Text>
+                    </View>
+                    
+                    {report.farmerFeedback && (
+                      <View className="mt-3 bg-amber-50 p-2.5 rounded-xl border border-amber-100 flex-row gap-2">
+                        <MessageCircle size={14} color="#d97706" />
+                        <Text className="flex-1 text-[11px] text-amber-800 leading-4 italic">"{report.farmerFeedback}"</Text>
+                      </View>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <View className="py-8 items-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <Clock size={24} color="#cbd5e1" className="mb-2" />
+                  <Text className="text-sm text-slate-400">Chưa có báo cáo nào được gửi</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {jobDetail.wageTypeId !== "Khoán" && applicationInfo.statusId !== 2 && (
+          <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
+            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Chọn khung giờ</Text>
+            <Text className="text-[13px] text-slate-400 mb-4">Bạn muốn làm việc vào những ngày nào?</Text>
+            <View className="gap-2.5">
+              {jobDetail.timeSlots.map((slot: any) => {
+                const key = String(slot.rawDate || slot.date).substring(0, 10);
+                const selected = selectedTimeSlots.some(s => s.substring(0, 10) === key);
+                const isSelectedAndApplied = isApplied && selected;
+
                 return (
                   <TouchableOpacity
                     key={slot.id}
-                    className={["flex-row items-center gap-2 p-4 rounded-2xl border-2", !slot.available ? "bg-slate-50 border-slate-100" : selected ? "bg-primary-600 border-primary-700" : "bg-white border-slate-200"].join(" ")}
+                    className={[
+                      "flex-row items-center gap-2 p-4 rounded-2xl border-2", 
+                      !slot.available ? "bg-slate-50 border-slate-100" : 
+                      isSelectedAndApplied ? "bg-green-50 border-green-200" :
+                      selected ? "bg-primary-600 border-primary-700" : 
+                      "bg-white border-slate-200"
+                    ].join(" ")}
                     onPress={() => toggleTimeSlot(slot.id)}
-                    disabled={!slot.available}
+                    disabled={!slot.available || isApplied}
                     activeOpacity={0.85}
                   >
-                    <Calendar size={18} color={selected ? "#ffffff" : slot.available ? "#059669" : "#cbd5e1"} />
-                    <Text className={["text-[15px] font-bold", selected ? "text-white" : !slot.available ? "text-slate-300" : "text-slate-800"].join(" ")}>{slot.date}</Text>
+                    <Calendar size={18} color={isSelectedAndApplied ? "#059669" : selected ? "#ffffff" : slot.available ? "#059669" : "#cbd5e1"} />
+                    <Text className={[
+                      "text-[15px] font-bold", 
+                      isSelectedAndApplied ? "text-green-700" :
+                      selected ? "text-white" : 
+                      !slot.available ? "text-slate-300" : 
+                      "text-slate-800"
+                    ].join(" ")}>{slot.date}</Text>
+                    
                     {!slot.available && <Badge variant="secondary">Đã đủ</Badge>}
-                    {selected && slot.available && (
+                    {isSelectedAndApplied && (
+                      <View className="ml-auto bg-green-100 px-2 py-1 rounded-lg border border-green-200">
+                        <Text className="text-[10px] font-bold text-green-700 uppercase">✓ Đã ứng tuyển</Text>
+                      </View>
+                    )}
+                    
+                    {selected && !isApplied && (
                       <View className="ml-auto w-6 h-6 rounded-full bg-white justify-center items-center">
                         <Text className="text-sm font-extrabold text-primary-600">✓</Text>
                       </View>
@@ -493,11 +498,13 @@ export function JobDetailScreen({ navigation, route }: any) {
             <View className="flex-1">
               <Text className="text-xs text-slate-500">Thu nhập dự kiến</Text>
               <Text className="text-[22px] font-extrabold text-primary-700">
-                {(!isAuthenticated || user?.isDemo) 
-                    ? (jobDetail.wage * (selectedTimeSlots.length || 1)).toLocaleString("vi-VN") 
-                    : jobDetail.wage.toLocaleString("vi-VN")} đ
+                {(jobDetail.wage * (selectedTimeSlots.length || 1)).toLocaleString("vi-VN")} đ
               </Text>
-              {(!isAuthenticated || user?.isDemo) && selectedTimeSlots.length > 0 && <Text className="text-xs text-slate-400">{selectedTimeSlots.length} khung giờ</Text>}
+              {selectedTimeSlots.length > 0 && (
+                <Text className="text-xs text-slate-400">
+                  {selectedTimeSlots.length} khung giờ {isApplied ? "(Đã ứng tuyển)" : ""}
+                </Text>
+              )}
             </View>
             
             {applicationInfo.statusId === 2 ? (
@@ -505,16 +512,16 @@ export function JobDetailScreen({ navigation, route }: any) {
                 onPress={() => navigation.navigate("SubmitReport", { jobApplicationId: applicationInfo.id })}
                 size="lg"
                 variant="default"
-                disabled={isPastDate(jobDetail.endDate || jobDetail.startDate) || !!jobDetail.timeSlots.find(s => s.date === "23/03/2026" && s.reportedAt)}
+                disabled={isPastDate(jobDetail.endDate || jobDetail.startDate) || !!jobDetail.timeSlots.find((s: any) => s.date === "23/03/2026" && s.reportedAt)}
               >
-                {!!jobDetail.timeSlots.find(s => s.date === "23/03/2026" && s.reportedAt) 
+                {!!jobDetail.timeSlots.find((s: any) => s.date === "23/03/2026" && s.reportedAt) 
                   ? "Đã báo cáo hôm nay" 
                   : "Nộp Báo Cáo (Hôm nay)"}
               </Button>
             ) : (
               <Button 
                 onPress={handleQuickApply} 
-                disabled={isApplied || isSubmitting || ((!isAuthenticated || user?.isDemo) && jobDetail.wageTypeId !== "Khoán" && selectedTimeSlots.length === 0)} 
+                disabled={isApplied || isSubmitting || (jobDetail.wageTypeId !== "Khoán" && selectedTimeSlots.length === 0)} 
                 size="lg"
                 variant={isApplied ? "ghost" : "default"}
               >

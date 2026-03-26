@@ -1,45 +1,15 @@
 import api from "../config/axios";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse, CreateJobApplicationRequest, JobApplicationDTO } from "../types";
-
-export interface JobCategoryDTO {
-  id: string;
-  name: string;
-  description: string;
-  isActive: boolean;
-}
-
-export interface JobSkillRequirementSummaryDTO {
-  id: string;
-  name: string;
-}
-
-export interface JobPostDTO {
-  id: string;
-  farmerProfileId: string;
-  contactName: string;
-  jobSkillRequirements: JobSkillRequirementSummaryDTO[];
-  farmId: string;
-  jobCategoryId: string;
-  title: string;
-  description: string;
-  address: string;
-  startDate: string;
-  endDate: string;
-  estimatedHours: number;
-  workersNeeded: number;
-  workersAccepted: number;
-  wageTypeId: number;
-  wageAmount: number;
-  paymentMethodId: number;
-  requiredSkills: string;
-  genderPreference: string;
-  publishedAt: string;
-  createdAt: string;
-  updatedAt: string;
-  isUrgent: boolean;
-  status: string;
-}
+import { 
+  ApiResponse, 
+  CreateJobApplicationRequest, 
+  JobApplicationDTO, 
+  JobPostDTO, 
+  JobCategoryDTO,
+  JobSearchFilterRequest,
+  PaginatedJobDiscoveryResponse,
+  JobDiscoveryDTO
+} from "../types";
 
 export const jobService = {
   getCategories: async (): Promise<JobCategoryDTO[]> => {
@@ -59,6 +29,41 @@ export const jobService = {
   getJobPosts: async (): Promise<JobPostDTO[]> => {
     const response = await api.get<ApiResponse<JobPostDTO[]>>(
       API_ENDPOINTS.JOB.POST_LIST,
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  getNearbyJobs: async (params: {
+    latitude: number;
+    longitude: number;
+    maxDistanceKm?: number;
+  }): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.NEARBY,
+      { params },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  searchJobs: async (
+    data: JobSearchFilterRequest,
+  ): Promise<PaginatedJobDiscoveryResponse> => {
+    const response = await api.post<ApiResponse<PaginatedJobDiscoveryResponse>>(
+      API_ENDPOINTS.JOB.SEARCH,
+      data,
+    );
+    return response.data.data;
+  },
+
+  filterJobs: async (params: {
+    title?: string;
+    category?: string;
+    address?: string;
+    skill?: string;
+  }): Promise<JobPostDTO[]> => {
+    const response = await api.get<ApiResponse<JobPostDTO[]>>(
+      API_ENDPOINTS.JOB.FILTER,
+      { params },
     );
     return Array.isArray(response.data.data) ? response.data.data : [];
   },

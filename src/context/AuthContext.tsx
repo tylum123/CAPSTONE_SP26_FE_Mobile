@@ -29,7 +29,8 @@ interface User {
   name: string;
   email: string;
   roleID: string;
-  isDemo?: boolean; // cờ đánh dấu tài khoản demo
+  isDemo?: boolean; 
+  isNewUser?: boolean; // cờ đánh dấu người dùng chưa có profile
 }
 
 // Hàm format tên hiển thị, không để lộ @gmail.com
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email?: string;
       roleID?: string;
       isDemo?: boolean;
+      isNewUser?: boolean;
     }) => {
       setUser({
         id: profile.id,
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: profile.email || "",
         roleID: profile.roleID || "worker",
         isDemo: profile.isDemo,
+        isNewUser: profile.isNewUser,
       });
     },
     [],
@@ -112,13 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (pushToken) {
           await notificationService.registerPushToken(pushToken);
         }
-      } catch {
+      } catch (error: any) {
         const fbEmail = response.email || email;
         applyUserProfile({
           id: "me",
           fullName: resolveName(undefined, fbEmail),
           email: fbEmail,
           roleID: "worker",
+          isNewUser: true,
         });
       }
     },
@@ -155,19 +159,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (pushToken) {
           await notificationService.registerPushToken(pushToken);
         }
-      } catch {
+      } catch (error: any) {
+        // Nếu không lấy được profile (404 hoặc 500 profile not found)
+        // thì đánh dấu là người dùng mới để vào onboarding
         applyUserProfile({
           id: "me",
           fullName: resolveName(undefined, response.email),
           email: response.email,
           roleID: "worker",
+          isNewUser: true,
         });
       }
     },
     [applyUserProfile],
   );
 
-  const demoLogin = useCallback(() => {
+  const demoLogin = useCallback(async () => {
+    // Clear any existing tokens to avoid leaking stale auth to Demo Mode headers
+    authTokenService.setTokenToMemory(null);
+    await AsyncStorage.multiRemove([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_DATA]).catch(() => undefined);
+
     applyUserProfile({
       id: "demo",
       fullName: "Tài khoản Demo",
@@ -235,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: resolveName(undefined, fEmail),
           email: fEmail,
           roleID: String(payload.roleId),
+          isNewUser: true,
         });
       }
     },
@@ -251,18 +263,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      setUser(null);
+      authTokenService.setTokenToMemory(null);
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.AUTH_TOKEN,
+        STORAGE_KEYS.USER_DATA,
+        STORAGE_KEYS.REFRESH_TOKEN,
+      ]);
       await GoogleSignin.signOut();
-    } catch {
-      // ignore if user was not logged in via Google
+    } catch { 
+      // silent
     }
-
-    setUser(null);
-    authTokenService.setTokenToMemory(null);
-    await AsyncStorage.multiRemove([
-      STORAGE_KEYS.AUTH_TOKEN,
-      STORAGE_KEYS.USER_DATA,
-      STORAGE_KEYS.REFRESH_TOKEN,
-    ]).catch(() => undefined);
   }, [user?.isDemo]);
 
   // Set global reference
@@ -275,22 +286,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      if (user?.isDemo) return;
+      if (user) return; // Already have a user session in memory
+      
       const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      if (!token) {
+        authTokenService.setTokenToMemory(null);
+        return;
+      }
+
       authTokenService.setTokenToMemory(token);
       
-      if (!token || authTokenService.isTokenExpired(token)) {
-        if (token) {
-          // Token exists but is expired, clear everything
-          await logout();
-        }
+      if (authTokenService.isTokenExpired(token)) {
+        await logout();
         return;
       }
 
       const cachedProfileRaw = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       try {
         if (cachedProfileRaw) {
-          // Temporarily apply cached profile to show UI while verifying
           applyUserProfile(JSON.parse(cachedProfileRaw));
         }
 
@@ -318,7 +331,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Given the USER's feedback about backend being down, let's clear it
         // if we can't verify the session to avoid "fake" login state.
         if (error?.response?.status === 401 || !cachedProfileRaw) {
-          await logout();
+          const checkToken = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+          if (checkToken || error?.response?.status === 401) {
+            await logout();
+          }
         } else {
           // It's a network error but we have cached data.
           // Let's check if the backend is truly unreachable.

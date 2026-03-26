@@ -11,20 +11,16 @@ import { workerProfileService } from "../services";
 import { WorkerProfileDTO } from "../types/worker";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 
+import { DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { parseLocation } from "../utils/locationUtils";
+
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<WorkerProfileDTO | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const demoProfile: WorkerProfileDTO = {
-    id: "demo", userId: "demo", fullName: "Demo", age: "35-44", ageRange: "35-44", primaryLocation: "Thốt Nốt, Cần Thơ",
-    travelRadiusKmPreference: 15, experienceLevelId: 2, experienceLevel: "Có kinh nghiệm",
-    averageRating: 4.9, availabilitySchedule: "Thứ 2 - Thứ 7 (Sáng)", totalJobsCompleted: 45,
-    avatarUrl: "", createdAt: "", updatedAt: "",
-  };
-
   useEffect(() => {
-    if (!isAuthenticated || user?.isDemo) { setProfile(demoProfile); return; }
+    if (!isAuthenticated || user?.isDemo) { setProfile(DEMO_WORKER_PROFILE); return; }
     (async () => {
       try { setProfile(await workerProfileService.getProfile()); }
       catch { setProfile(null); }
@@ -32,9 +28,9 @@ export function WorkerProfileScreen({ navigation }: any) {
   }, [isAuthenticated, user?.isDemo]);
 
   const displayProfile = useMemo(() => {
-    if (!isAuthenticated || user?.isDemo) return demoProfile;
+    if (!isAuthenticated || user?.isDemo) return DEMO_WORKER_PROFILE;
     if (profile) return profile;
-    return { ...demoProfile, fullName: user?.name || "", primaryLocation: "", experienceLevel: "", availabilitySchedule: "", averageRating: 0, totalJobsCompleted: 0, travelRadiusKmPreference: null };
+    return { ...DEMO_WORKER_PROFILE, fullName: user?.name || "", primaryLocation: "", experienceLevel: "", availabilitySchedule: "", averageRating: 0, totalJobsCompleted: 0, travelRadiusKmPreference: null };
   }, [profile, isAuthenticated, user?.isDemo, user?.name]);
 
   const handleLogout = () => {
@@ -98,7 +94,11 @@ export function WorkerProfileScreen({ navigation }: any) {
             <Text className="text-[13px] text-primary-200 font-medium mb-2">Người lao động nông nghiệp</Text>
             <View className="flex-row items-center gap-1 rounded-full px-3 py-1.5" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
               <MapPin size={13} color="#a7f3d0" />
-              <Text className="text-white text-xs font-medium">{displayProfile.primaryLocation || "Chưa cập nhật vị trí"}</Text>
+              <Text className="text-white text-xs font-medium">
+                {displayProfile.primaryLocation 
+                  ? parseLocation(displayProfile.primaryLocation).provinceName 
+                  : "Chưa cập nhật vị trí"}
+              </Text>
             </View>
           </View>
         </View>

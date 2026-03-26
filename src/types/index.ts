@@ -4,8 +4,11 @@ export interface Job {
   farmer: string;
   farmerAvatar?: string;
   location: string;
-  distance: string;
+  distance?: string; 
+  distanceKm?: number;
+  matchScore?: number;
   wage: string;
+  wageAmount?: number;
   duration: string;
   rating: number;
   urgent?: boolean;

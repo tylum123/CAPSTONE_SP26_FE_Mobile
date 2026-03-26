@@ -30,7 +30,61 @@ export interface UpdateWorkerProfileRequest {
   avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
 }
 
-import { JobPostDTO } from "../services/job.service";
+export interface JobCategoryDTO {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface JobSkillRequirementSummaryDTO {
+  id: string;
+  name: string;
+}
+
+export interface JobPostDTO {
+  id: string;
+  farmerProfileId: string;
+  contactName: string;
+  jobSkillRequirements: JobSkillRequirementSummaryDTO[];
+  farmId: string;
+  jobCategoryId: string;
+  title: string;
+  description: string;
+  address: string;
+  startDate: string;
+  endDate: string;
+  selectedDays: string[];
+  startTime: string;
+  endTime: string;
+  workersNeeded: number;
+  workersAccepted: number;
+  jobTypeId: number;
+  wageAmount: number;
+  requirements: string[];
+  privileges: string[];
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  isUrgent: boolean;
+  statusId: number;
+  estimatedHours?: number; // Optional calculated field for FE
+  workload?: string;       // Optional custom field for FE/Demo
+}
+
+export interface JobDiscoveryDTO extends JobPostDTO {
+  jobTypeName: string;
+  distanceKm: number;
+  farmerAverageRating: number;
+  locationName: string;
+  skillsMatchCount: number;
+  allSkillsMatched: boolean;
+  availablePositions: number;
+  durationType: string;
+  isUpcoming: boolean;
+  matchScore: number;
+  similarJobsCompleted: number;
+}
 
 export interface JobDetailDTO {
   id: string;
@@ -48,12 +102,14 @@ export interface JobDetailDTO {
   completedAt?: string;
   createdAt: string;
   updatedAt?: string;
-  jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
+  evidenceUrl?: string; // Added to support report images
+  jobPost?: Partial<JobPostDTO>; 
 }
 
 export interface CreateDailyReportRequest {
   jobApplicationId: string;
   workerDescription: string;
+  evidenceUrl?: string; // Added to support image uploads
 }
 
 export interface ApproveJobDetailRequest {
@@ -89,6 +145,7 @@ export interface JobApplicationDTO {
   id: string;
   jobPostId: string;
   statusId: number;
+  workerId?: string;
   coverLetter: string | null;
   appliedAt: string;
   respondedAt: string;
@@ -105,7 +162,40 @@ export interface CreateJobApplicationRequest {
   appliedAt: string;
   respondedAt: string;
   responseMessage: string | null;
-  availableDates?: string[]; // Added for Daily jobs
+  workDates?: string[]; // Renamed from availableDates to match spec
+}
+
+export interface JobSearchFilterRequest {
+  workerLatitude?: number;
+  workerLongitude?: number;
+  maxDistanceKm?: number;
+  minWageAmount?: number;
+  maxWageAmount?: number;
+  jobTypeId?: number;
+  jobCategoryId?: string;
+  searchKeyword?: string;
+  requiredSkills?: string[];
+  dateFilter?: string; // today | tomorrow | weekend | upcoming
+  startDateFrom?: string;
+  startDateTo?: string;
+  durationType?: string; // Daily | PerJob | LongTerm
+  paymentMethod?: string;
+  onlyUrgent?: boolean;
+  minWorkerRating?: number;
+  pageNumber?: number;
+  pageSize?: number;
+  sortBy?: string; // distance | wage | date
+}
+
+export interface PaginatedJobDiscoveryResponse {
+  jobs: JobDiscoveryDTO[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  message: string;
 }
 
 export interface NotificationDTO {
@@ -119,4 +209,72 @@ export interface NotificationDTO {
   isRead: boolean;
   sentAt: string;
   readAt: string | null;
+}
+
+export interface WalletDTO {
+  id: string;
+  userId: string;
+  balance: number;
+  lockedBalance: number;
+  escrowBalance: number;
+  isActive: boolean;
+}
+
+export interface WalletTransactionDTO {
+  id: string;
+  walletId: string;
+  amount: number;
+  type: number;
+  description: string;
+  status: string;
+  createdAt: string;
+  jobPostTitle?: string;
+}
+
+export interface WithdrawalResponse {
+  id: string;
+  payoutId?: string;
+  amount: number;
+  status: string;
+  approvalState?: string;
+  bankName?: string;
+  accountHolderName?: string;
+  bankAccountNumber?: string;
+  referenceCode?: string;
+  description?: string;
+  createdAt?: string;
+  processedAt?: string;
+}
+
+export interface WithdrawalAccountBalanceResponse {
+  balance: number;
+  availableBalance: number;
+  currency: string;
+}
+
+export interface SkillResponse {
+  id: string;
+  name: string;
+  description: string;
+  categoryId: number;
+  isActive: boolean;
+}
+
+export interface WeatherDTO {
+  city: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  temperature: number;
+  feelsLike: number;
+  tempMin: number;
+  tempMax: number;
+  humidity: number;
+  windSpeed: number;
+  description: string;
+  icon: string;
+  iconUrl: string;
+  sunrise: string;
+  sunset: string;
+  fetchedAt: string;
 }

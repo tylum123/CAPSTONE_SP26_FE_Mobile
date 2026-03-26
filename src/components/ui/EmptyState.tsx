@@ -1,36 +1,61 @@
 import React from "react";
-import { View, Text, ViewStyle } from "react-native";
+import { View, Text } from "react-native";
+import { LucideIcon } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "./Button";
+import { cn } from "../../utils/helpers";
 
 interface EmptyStateProps {
+  icon?: LucideIcon;
   title: string;
-  description?: string;
+  message?: string;
   actionLabel?: string;
   onAction?: () => void;
-  icon?: React.ReactNode;
-  style?: ViewStyle;
+  className?: string;
 }
 
-export function EmptyState({
-  title,
-  description,
-  actionLabel,
+export function EmptyState({ 
+  icon: Icon, 
+  title, 
+  message, 
+  actionLabel, 
   onAction,
-  icon,
-  style,
+  className 
 }: EmptyStateProps) {
   return (
-    <View className="items-center p-6 gap-2" style={style}>
-      {icon ? <View className="mb-1">{icon}</View> : null}
-      <Text className="text-base font-semibold text-slate-800 text-center">{title}</Text>
-      {description ? (
-        <Text className="text-[15px] text-slate-600 text-center mb-2">{description}</Text>
-      ) : null}
-      {actionLabel && onAction ? (
-        <Button onPress={onAction} variant="outline" fullWidth>
+    <View className={cn("items-center justify-center py-12 px-6", className)}>
+      <View className="relative mb-6">
+        <LinearGradient
+          colors={["#f8fafb", "#f1f5f9"]}
+          className="w-24 h-24 rounded-full justify-center items-center border border-slate-100 shadow-sm"
+        >
+          {Icon ? <Icon size={44} color="#94a3b8" strokeWidth={1.5} /> : null}
+        </LinearGradient>
+        <View className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white items-center justify-center shadow-sm border border-slate-50">
+           <Text className="text-[10px]">🍃</Text>
+        </View>
+      </View>
+      
+      <Text className="text-[18px] font-extrabold text-slate-800 text-center mb-2" style={{ letterSpacing: -0.4 }}>
+        {title}
+      </Text>
+      
+      {message && (
+        <Text className="text-[14px] text-slate-400 text-center leading-[20px] max-w-[260px] mb-6">
+          {message}
+        </Text>
+      )}
+      
+      {actionLabel && onAction && (
+        <Button 
+          variant="default" 
+          size="md" 
+          onPress={onAction}
+          className="px-10 rounded-full"
+        >
           {actionLabel}
         </Button>
-      ) : null}
+      )}
     </View>
   );
 }

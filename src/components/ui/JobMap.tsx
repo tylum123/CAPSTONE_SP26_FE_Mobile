@@ -220,7 +220,7 @@ function JobMapNative({ userLocation, radiusKm, jobs, onCalloutPress, style, mar
                         {selectedJob.urgent && <View style={styles.urgentBadge}><Text style={styles.urgentText}>GẤP</Text></View>}
                     </View>
                     <Text style={styles.calloutFarmer}>{selectedJob.farmer}</Text>
-                    <Text style={styles.calloutWage}>{(selectedJob.wage || 0).toLocaleString()}đ</Text>
+                    <Text style={styles.calloutWage}>{(selectedJob.wageAmount || 0).toLocaleString()}đ</Text>
                     <View style={styles.calloutActions}>
                         <TouchableOpacity 
                             style={[styles.calloutButton, { flex: 1, marginRight: 6 }]} 
@@ -313,7 +313,7 @@ function JobMapWeb({ userLocation, radiusKm, onCalloutPress, markers }: any) {
           var marker = L.marker([job.lat, job.lng]).addTo(map);
           var html = '<div class="popup-card">' +
             '<div class="popup-job">' + job.title + '</div>' +
-            '<div class="popup-wage">' + job.wage.toLocaleString() + 'đ</div>' +
+            '<div class="popup-wage">' + (job.wageAmount || 0).toLocaleString() + 'đ</div>' +
             '<button class="popup-btn" onclick="window.ReactNativeWebView.postMessage(\\\'detail:\\\' + ' + job.id + ')">XEM CHI TIẾT</button>' +
             '</div>';
           marker.bindPopup(html);

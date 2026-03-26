@@ -1,88 +1,147 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl, DeviceEventEmitter } from "react-native";
+import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame, Map as MapIcon, List } from "lucide-react-native";
+import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame, Map as MapIcon, List, CheckCircle2 } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
+import { SkeletonCard, EmptyState } from "../components/ui";
+import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { jobService, JobCategoryDTO, JobPostDTO, workerProfileService, nominatimService } from "../services";
+import { jobService, workerProfileService, nominatimService, skillService } from "../services";
+import { JobCategoryDTO, JobDiscoveryDTO, SkillResponse } from "../types";
 import { JobMap } from "../components/ui/JobMap";
+import { DEMO_JOB_POSTS, DEMO_CATEGORIES, DEMO_SKILLS } from "../constants/demoData";
 
-interface FilterOptions { jobType: string[]; sortBy: "distance" | "wage" | "rating"; }
-
-const mockCategories: JobCategoryDTO[] = [
-  { id: "1", name: "Trồng trọt",  description: "", isActive: true },
-  { id: "2", name: "Chăn nuôi",   description: "", isActive: true },
-  { id: "3", name: "Thu hoạch",   description: "", isActive: true },
-  { id: "4", name: "Vận chuyển",  description: "", isActive: true },
-  { id: "5", name: "Làm đất",     description: "", isActive: true },
-];
-const _base = { statusId: "1", requiredSkills: "", latitude: 0, longitude: 0, startDate: "2026-01-20", endDate: "2026-01-22", workersNeeded: 5, workersAccepted: 1, wageTypeId: "1", paymentMethodId: "1", genderPreference: "none", ageRequirement: "any", publishedAt: "2026-01-01", createdAt: "2026-01-01", updatedAt: "2026-01-01" };
-const mockJobs = [
-  { ..._base, id: "1", title: "Thu hoạch lúa",    address: "Cần Thơ",   wageAmount: 250000, estimatedHours: 8, jobCategoryId: "3", isUrgent: true,  farmerProfileId: "abc", description: "Thu hoạch 5 mẫu ruộng lúa mùa đông" },
-  { ..._base, id: "2", title: "Chăm sóc lợn",     address: "Đồng Tháp", wageAmount: 300000, estimatedHours: 6, jobCategoryId: "2", isUrgent: false, farmerProfileId: "def", description: "Vệ sinh chuồng trại và cho ăn" },
-  { ..._base, id: "3", title: "Phun thuốc trừ sâu", address: "Sóc Trăng", wageAmount: 200000, estimatedHours: 4, jobCategoryId: "1", isUrgent: false, farmerProfileId: "ghi", description: "Phun thuốc cho vườn cam 2 héc-ta" },
-  { ..._base, id: "4", title: "Vận chuyển phân bón", address: "An Giang", wageAmount: 180000, estimatedHours: 5, jobCategoryId: "4", isUrgent: false, farmerProfileId: "jkl", description: "Bốc dỡ và vận chuyển 3 tấn phân bón" },
-  { ..._base, id: "5", title: "Cày đất trồng rau",  address: "Vĩnh Long", wageAmount: 280000, estimatedHours: 7, jobCategoryId: "5", isUrgent: true,  farmerProfileId: "mno", description: "Cày xới 1 héc-ta đất chuẩn bị gieo hạt" },
-  { ..._base, id: "6", title: "Hái cà phê",         address: "Đắk Lắk",  wageAmount: 220000, estimatedHours: 8, jobCategoryId: "3", isUrgent: false, farmerProfileId: "pqr", description: "Hái cà phê chín trên 3 héc-ta vườn" },
-] as unknown as JobPostDTO[];
+interface FilterOptions { 
+  jobTypeIds: string[]; 
+  skillIds: string[];
+  sortBy: "distance" | "wage" | "rating" | "matchScore"; 
+}
 
 export function WorkerSearchScreen({ navigation }: any) {
-  const { isAuthenticated, user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
-  const [jobs, setJobs] = useState<JobPostDTO[]>([]);
-  const [filters, setFilters] = useState<FilterOptions>({ jobType: [], sortBy: "distance" });
+  const [skills, setSkills] = useState<SkillResponse[]>([]);
+  const [jobs, setJobs] = useState<JobDiscoveryDTO[]>([]);
+  const [filters, setFilters] = useState<FilterOptions>({ jobTypeIds: [], skillIds: [], sortBy: "distance" });
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isMapView, setIsMapView] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
 
   const loadData = useCallback(async () => {
-    if (!isAuthenticated || user?.isDemo) { 
-      setCategories(mockCategories); 
-      setJobs(mockJobs); 
-      setRadiusKm(10);
-      setUserLocation({ latitude: 10.762622, longitude: 106.660172 });
-      setRefreshing(false);
-      return; 
-    }
     try { 
-      const [jobPosts, jobCats, applications, profile] = await Promise.all([
-        jobService.getJobPosts(), 
-        jobService.getCategories(),
-        jobService.getApplications(),
-        workerProfileService.getProfile()
-      ]); 
+      setIsLoading(true);
+      let jobCats: JobCategoryDTO[] = [];
+      let skillRes: SkillResponse[] = [];
+      let profile: any = null;
+      let myApps: any[] = [];
 
-      // 1. Lọc đơn ứng tuyển của chính mình
-      const myAppliedJobIds = new Set(
-        applications
-          .filter(a => (a.worker?.id || (a as any).workerId) === profile.id)
-          .map(a => String(a.jobPostId))
-      );
+      if (user?.isDemo) {
+        jobCats = DEMO_CATEGORIES;
+        skillRes = DEMO_SKILLS;
+        profile = { travelRadiusKmPreference: 15, primaryLocation: "Thốt Nốt, Cần Thơ" };
+      } else {
+        const [cats, skills, prof, apps] = await Promise.all([
+          jobService.getCategories(),
+          skillService.getSkills(),
+          workerProfileService.getProfile(),
+          jobService.getApplications()
+        ]); 
+        jobCats = cats;
+        skillRes = skills;
+        profile = prof;
+        myApps = apps;
+      }
+      
+      setCategories(jobCats);
+      setSkills(skillRes);
 
       const prefRadius = profile?.travelRadiusKmPreference || 10;
       setRadiusKm(prefRadius);
-      if (profile?.primaryLocation) {
-        nominatimService.geocodeAddress(profile.primaryLocation).then(loc => {
-          if (loc) setUserLocation(loc);
-        }).catch(e => console.log('Geocode error', e));
+      
+      let lat = 10.762622; // Default for demo
+      let lon = 106.660172;
+
+      if (profile?.primaryLocation && !user?.isDemo) {
+        const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
+        if (loc) {
+          setUserLocation(loc);
+          lat = loc.latitude;
+          lon = loc.longitude;
+        }
+      } else {
+         setUserLocation({ latitude: lat, longitude: lon });
       }
 
-      // 2. Lọc bỏ các job đã ứng tuyển khỏi danh sách tìm kiếm
-      const availableJobs = jobPosts.filter(j => !myAppliedJobIds.has(String(j.id)));
-      
-      setJobs(availableJobs); 
-      setCategories(jobCats); 
-    } catch { 
-      setJobs([]); 
-      setCategories([]); 
+      let nearbyJobs: JobDiscoveryDTO[] = [];
+      if (user?.isDemo) {
+        nearbyJobs = DEMO_JOB_POSTS.map(j => ({
+          ...j,
+          jobTypeName: j.jobTypeId === 1 ? "Khoán" : "Ngày",
+          distanceKm: 2.5,
+          farmerAverageRating: 4.5,
+          locationName: "Cần Thơ",
+          skillsMatchCount: 2,
+          allSkillsMatched: true,
+          availablePositions: j.workersNeeded - j.workersAccepted,
+          durationType: j.jobTypeId === 1 ? "PerJob" : "Daily",
+          isUpcoming: true,
+          matchScore: 85,
+          similarJobsCompleted: 5
+        }));
+      } else {
+        try {
+          nearbyJobs = await jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius });
+        } catch (err: any) {
+          console.error("Search screen fetch nearby error", err);
+          nearbyJobs = (await jobService.getJobPosts()) as any; 
+        }
+      }
+
+      // If nearby returns empty, also fallback (matching Home screen behavior)
+      if (nearbyJobs.length === 0) {
+        nearbyJobs = (await jobService.getJobPosts()) as any;
+      }
+
+      const myAppliedJobIds = new Set(
+        myApps
+          .filter(a => (a.worker?.id || (a as any).workerId) === profile?.id)
+          .map(a => String(a.jobPostId))
+      );
+      const filteredJobs = nearbyJobs.filter(j => !myAppliedJobIds.has(String(j.id)));
+
+      // If fallbacked from JobPostDTO, we need to map to JobDiscoveryDTO structure for the UI
+      setJobs(filteredJobs.map(j => {
+        if ('distanceKm' in j) return j as JobDiscoveryDTO;
+        const jp = j as any;
+        return {
+          ...jp,
+          jobTypeName: jp.jobTypeId === 1 ? "Khoán" : "Ngày",
+          distanceKm: 0,
+          farmerAverageRating: profile?.averageRating || 0,
+          locationName: jp.address || "N/A",
+          skillsMatchCount: 0,
+          allSkillsMatched: false,
+          availablePositions: (jp.workersNeeded || 0) - (jp.workersAccepted || 0),
+          durationType: jp.jobTypeId === 1 ? "PerJob" : "Daily",
+          isUpcoming: true,
+          matchScore: 0,
+          similarJobsCompleted: 0
+        } as JobDiscoveryDTO;
+      }));
+    } catch (err: any) { 
+      if (isAuthenticated) {
+        console.error("Search screen load error", err?.response?.data || err.message);
+      }
     } finally {
+      setIsLoading(false);
       setRefreshing(false);
     }
-  }, [isAuthenticated, user?.isDemo]);
+  }, [user?.isDemo, isAuthenticated]);
 
   useEffect(() => {
     loadData();
@@ -90,29 +149,65 @@ export function WorkerSearchScreen({ navigation }: any) {
     return () => subscription.remove();
   }, [loadData]);
 
+  const handleSearch = async () => {
+    setIsLoading(true);
+    try {
+      const [results, myApps] = await Promise.all([
+        jobService.searchJobs({
+          searchKeyword: searchQuery || undefined,
+          jobCategoryId: filters.jobTypeIds.length > 0 ? filters.jobTypeIds[0] : undefined,
+          requiredSkills: filters.skillIds.length > 0 ? filters.skillIds : undefined,
+          maxDistanceKm: radiusKm,
+          workerLatitude: userLocation?.latitude,
+          workerLongitude: userLocation?.longitude,
+          sortBy: filters.sortBy === "distance" ? "distance" : filters.sortBy === "wage" ? "wage" : "match" 
+        }),
+        jobService.getApplications()
+      ]);
+
+      const myAppliedJobIds = new Set(myApps.map(a => String(a.jobPostId)));
+      const filteredResults = results.jobs.filter((j: any) => !myAppliedJobIds.has(String(j.id)));
+      setJobs(filteredResults);
+    } catch (error) {
+      console.error("Search failed", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
   };
 
-  const categoryMap = useMemo(() => { const m = new Map<string, string>(); categories.forEach((c) => m.set(c.id, c.name)); return m; }, [categories]);
-  const jobTypes = useMemo(() => categories.map((c) => c.name), [categories]);
-  const toggleJobType = (type: string) => setFilters((p) => ({ ...p, jobType: p.jobType.includes(type) ? p.jobType.filter((t) => t !== type) : [...p.jobType, type] }));
+  const toggleJobType = (id: string) => {
+    setFilters(p => ({
+      ...p,
+      jobTypeIds: p.jobTypeIds.includes(id) ? p.jobTypeIds.filter(t => t !== id) : [...p.jobTypeIds, id]
+    }));
+  };
 
-  const mappedJobs = useMemo(() => jobs.map((j) => ({ id: j.id, title: j.title, farmer: "Chủ nông trại", location: j.address, distance: 0, wage: j.wageAmount, duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "", rating: 0, jobType: categoryMap.get(j.jobCategoryId) || j.jobCategoryId, urgent: j.isUrgent })), [jobs, categoryMap]);
-
-  const sortedJobs = useMemo(() => {
-    const filtered = mappedJobs.filter((j) => (j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.location.toLowerCase().includes(searchQuery.toLowerCase())) && (filters.jobType.length === 0 || filters.jobType.includes(j.jobType)));
-    return [...filtered].sort((a, b) => filters.sortBy === "wage" ? b.wage - a.wage : filters.sortBy === "rating" ? b.rating - a.rating : a.distance - b.distance);
-  }, [mappedJobs, searchQuery, filters]);
+  const toggleSkill = (id: string) => {
+    setFilters(p => ({
+      ...p,
+      skillIds: p.skillIds.includes(id) ? p.skillIds.filter(s => s !== id) : [...p.skillIds, id]
+    }));
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-primary-50" edges={["top"]}>
-      {/* Search header */}
       <View className="flex-row items-center gap-2 px-4 py-2 bg-white border-b border-slate-100">
         <View className="flex-1 flex-row items-center gap-2 bg-slate-50 rounded-2xl border-[1.5px] border-slate-200 px-4 h-[46px]">
           <Search size={18} color="#94a3b8" />
-          <TextInput className="flex-1 text-[15px] text-slate-800" placeholder="Tìm công việc, địa điểm..." value={searchQuery} onChangeText={setSearchQuery} placeholderTextColor="#cbd5e1" returnKeyType="search" />
+          <TextInput 
+            className="flex-1 text-[15px] text-slate-800" 
+            placeholder="Tìm công việc, địa điểm..." 
+            value={searchQuery} 
+            onChangeText={setSearchQuery} 
+            placeholderTextColor="#cbd5e1" 
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
           {searchQuery.length > 0 && <TouchableOpacity onPress={() => setSearchQuery("")}><X size={16} color="#94a3b8" /></TouchableOpacity>}
         </View>
         <TouchableOpacity
@@ -129,92 +224,145 @@ export function WorkerSearchScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Filters */}
       {showFilters && (
-        <View className="bg-white border-b border-slate-100 py-2">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-            {jobTypes.map((type) => (
-              <TouchableOpacity key={type} className={["px-3.5 py-1.5 rounded-full border", filters.jobType.includes(type) ? "bg-primary-50 border-primary-500" : "bg-slate-100 border-slate-200"].join(" ")} onPress={() => toggleJobType(type)}>
-                <Text className={["text-[13px] font-semibold", filters.jobType.includes(type) ? "text-primary-700" : "text-slate-600"].join(" ")}>{type}</Text>
+        <View className="bg-white border-b border-slate-100 pb-4">
+          <View className="px-4 py-2">
+            <Text className="text-[13px] text-slate-500 font-bold mb-2 uppercase">Loại công việc</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {categories.map((cat) => (
+                <TouchableOpacity 
+                  key={cat.id} 
+                  className={["px-3.5 py-1.5 rounded-full border", filters.jobTypeIds.includes(cat.id) ? "bg-primary-50 border-primary-500" : "bg-slate-100 border-slate-200"].join(" ")} 
+                  onPress={() => toggleJobType(cat.id)}
+                >
+                  <Text className={["text-[13px] font-semibold", filters.jobTypeIds.includes(cat.id) ? "text-primary-700" : "text-slate-600"].join(" ")}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View className="px-4 py-2">
+            <Text className="text-[13px] text-slate-500 font-bold mb-2 uppercase">Kỹ năng</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {skills.map((skill) => (
+                <TouchableOpacity 
+                  key={skill.id} 
+                  className={["px-3.5 py-1.5 rounded-full border", filters.skillIds.includes(skill.id) ? "bg-primary-50 border-primary-500" : "bg-slate-100 border-slate-200"].join(" ")} 
+                  onPress={() => toggleSkill(skill.id)}
+                >
+                  <Text className={["text-[13px] font-semibold", filters.skillIds.includes(skill.id) ? "text-primary-700" : "text-slate-600"].join(" ")}>{skill.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View className="flex-row items-center px-4 gap-2 mt-2">
+            <Text className="text-[13px] text-slate-500 font-bold uppercase">Sắp xếp:</Text>
+            {[
+              { value: "distance", label: "Gần nhất" }, 
+              { value: "wage", label: "Lương cao" }, 
+              { value: "matchScore", label: "Phù hợp" }
+            ].map((opt) => (
+              <TouchableOpacity 
+                key={opt.value} 
+                className={["px-3 py-1 rounded-full", filters.sortBy === opt.value ? "bg-primary-600" : "bg-slate-100"].join(" ")} 
+                onPress={() => setFilters((p) => ({ ...p, sortBy: opt.value as any }))}
+              >
+                <Text className={["text-[12px]", filters.sortBy === opt.value ? "text-white font-bold" : "text-slate-600 font-medium"].join(" ")}>{opt.label}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
-          <View className="flex-row items-center px-4 gap-2 mt-1">
-            <Text className="text-[13px] text-slate-500 font-medium">Sắp xếp:</Text>
-            {[{ value: "distance", label: "Gần nhất" }, { value: "wage", label: "Lương cao" }, { value: "rating", label: "Đánh giá" }].map((opt) => (
-              <TouchableOpacity key={opt.value} className={["px-3 py-1 rounded-full", filters.sortBy === opt.value ? "bg-primary-600" : "bg-slate-100"].join(" ")} onPress={() => setFilters((p) => ({ ...p, sortBy: opt.value as any }))}>
-                <Text className={["text-[13px]", filters.sortBy === opt.value ? "text-white font-bold" : "text-slate-600 font-medium"].join(" ")}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
+          </View>
+
+          <View className="px-4 mt-4">
+            <Button size="sm" onPress={handleSearch} className="rounded-xl">Áp dụng bộ lọc</Button>
           </View>
         </View>
       )}
 
-      {/* Results bar */}
-      <View className="flex-row items-center justify-between px-4 py-2.5 bg-white border-b border-slate-100">
-        <Text className="text-[13px] text-slate-500"><Text className="font-bold text-slate-800">{sortedJobs.length}</Text> công việc phù hợp</Text>
-        {(filters.jobType.length > 0 || filters.sortBy !== "distance") && (
-          <TouchableOpacity onPress={() => setFilters({ jobType: [], sortBy: "distance" })}>
-            <Text className="text-[13px] text-primary-600 font-semibold">Xóa bộ lọc</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Main Content Area */}
       {isMapView ? (
         <View className="flex-1">
           <JobMap 
             userLocation={userLocation} 
             radiusKm={radiusKm} 
-            jobs={sortedJobs as any} 
+            jobs={jobs as any} 
             onCalloutPress={(job) => navigation.navigate("JobDetail", { jobId: job.id })}
             style={{ borderRadius: 0, height: "100%" }}
           />
         </View>
       ) : (
         <FlatList
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
-        data={sortedJobs}
-        keyExtractor={(item) => item.id.toString()}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
-        renderItem={({ item: job }) => (
-          <TouchableOpacity className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }} activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}>
-            <View className={["w-1", job.urgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
-            <View className="flex-1 p-4">
-              <View className="flex-row items-center gap-2 mb-2">
-                <Avatar fallback={job.farmer[0]} size={46} />
-                <View className="flex-1"><Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text><Text className="text-xs text-slate-500">{job.farmer}</Text></View>
-                <View className="items-end gap-0.5">
-                  {job.urgent && <Flame size={13} color="#f43f5e" />}
-                  <Text className="text-[15px] font-extrabold text-primary-600">{job.wage.toLocaleString("vi-VN")}đ</Text>
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
+          data={jobs}
+          keyExtractor={(item) => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
+          renderItem={({ item: job }) => (
+            <TouchableOpacity 
+              className="mb-3 bg-white rounded-2xl flex-row overflow-hidden border border-slate-100" 
+              style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }} 
+              activeOpacity={0.9} 
+              onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
+            >
+              <View className={["w-1.5", job.isUrgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
+              <View className="flex-1 p-4">
+                <View className="flex-row items-center gap-3 mb-3">
+                  <Avatar fallback={job.contactName?.[0] || "?"} size={42} />
+                  <View className="flex-1">
+                    <Text className="text-[16px] font-bold text-slate-800" numberOfLines={1}>{job.title}</Text>
+                    <Text className="text-xs text-slate-500">{job.contactName || "Chủ nông trại"}</Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-[17px] font-extrabold text-primary-600">{job.wageAmount.toLocaleString("vi-VN")}₫</Text>
+                    {job.isUrgent && <Badge variant="danger">Cần gấp</Badge>}
+                  </View>
                 </View>
-              </View>
-              <View className="h-px bg-slate-100 mb-2" />
-              <View className="flex-row items-center gap-3 mb-2">
-                <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500" numberOfLines={1}>{job.location}</Text></View>
-                {job.duration ? <View className="flex-row items-center gap-1"><Clock size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.duration}</Text></View> : null}
-                {job.rating > 0 && <View className="flex-row items-center gap-1"><Star size={13} color="#fbbf24" fill="#fbbf24" /><Text className="text-xs text-slate-500">{job.rating}</Text></View>}
-                <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: "auto" }} />
-              </View>
-              {job.jobType && (
+
+                <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
+                  <View className="flex-row items-center gap-1.5">
+                    <MapPin size={14} color="#64748b" />
+                    <Text className="text-xs text-slate-600 font-medium">
+                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : "Gần bạn"}
+                    </Text>
+                  </View>
+                  <View className="w-px h-3 bg-slate-200" />
+                  <View className="flex-row items-center gap-1.5">
+                    <CheckCircle2 size={14} color="#059669" />
+                    <Text className="text-xs text-primary-700 font-bold">
+                      {job.matchScore !== undefined && job.matchScore !== null ? `${Math.round(job.matchScore > 1 ? job.matchScore : job.matchScore * 100)}% khớp` : "Phù hợp"}
+                    </Text>
+                  </View>
+                  <View className="w-px h-3 bg-slate-200" />
+                  <View className="flex-row items-center gap-1.5">
+                    <Clock size={14} color="#64748b" />
+                    <Text className="text-xs text-slate-600 font-medium">
+                      {job.startTime && job.endTime ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` : (job.estimatedHours ? `${job.estimatedHours}h` : "N/A")}
+                    </Text>
+                  </View>
+                </View>
+
                 <View className="flex-row gap-1.5 flex-wrap">
-                  <Badge variant="secondary">{job.jobType}</Badge>
-                  {job.urgent && <Badge variant="danger">🔥 Cần gấp</Badge>}
+                  {job.jobSkillRequirements?.slice(0, 3).map((s: any) => (
+                    <Badge key={s.id} variant="secondary">{s.name}</Badge>
+                  ))}
+                  {job.jobSkillRequirements?.length > 3 && (
+                    <Text className="text-[10px] text-slate-400 self-center">+{job.jobSkillRequirements.length - 3}</Text>
+                  )}
                 </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View className="items-center pt-16 gap-2">
-            <Search size={48} color="#e2e8f0" />
-            <Text className="text-base font-bold text-slate-600">Không tìm thấy việc phù hợp</Text>
-            <Text className="text-sm text-slate-400 text-center">Thử thay đổi từ khóa hoặc xóa bộ lọc</Text>
-          </View>
-        }
-      />
+              </View>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            !isLoading ? (
+              <EmptyState 
+                title="Không tìm thấy việc phù hợp"
+                icon={Search}
+                onAction={() => setFilters({ jobTypeIds: [], skillIds: [], sortBy: "distance" })}
+              />
+            ) : null
+          }
+          ListFooterComponent={isLoading ? <View className="py-4"><ActivityIndicator color="#059669" /></View> : null}
+        />
       )}
     </SafeAreaView>
   );

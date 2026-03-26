@@ -14,17 +14,10 @@ export const reportService = {
   },
 
   /**
-   * Worker: Get worker's reports over a date range
+   * Worker: Get worker's reports
    */
-  getWorkerReports: async (workerProfileId: string, startDate?: string, endDate?: string): Promise<JobDetailDTO[]> => {
-    let url = API_ENDPOINTS.JOB_DETAIL.WORKER(workerProfileId);
-    if (startDate || endDate) {
-      const query = new URLSearchParams();
-      if (startDate) query.append("startDate", startDate);
-      if (endDate) query.append("endDate", endDate);
-      url += `?${query.toString()}`;
-    }
-
+  getWorkerReports: async (workerProfileId: string): Promise<JobDetailDTO[]> => {
+    const url = API_ENDPOINTS.JOB_DETAIL.WORKER(workerProfileId);
     const response = await api.get<{ message: string; status_code: number; data: JobDetailDTO[] }>(url);
     return response.data.data || [];
   },

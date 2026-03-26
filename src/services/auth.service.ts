@@ -24,6 +24,13 @@ export interface GoogleLoginRequest {
   roleId?: number;
 }
 
+// Reset password request
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
 // Auth response interface
 export interface LoginResponse {
   token: string;
@@ -72,24 +79,7 @@ export const authService = {
   },
 
   // Reset password
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-      token,
-      newPassword,
-    });
-  },
-
-  // Verify email
-  verifyEmail: async (token: string): Promise<void> => {
-    await api.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
-  },
-
-  // Refresh token
-  refreshToken: async (refreshToken: string): Promise<LoginResponse> => {
-    const response = await api.post<ApiResponse<LoginResponse>>(
-      API_ENDPOINTS.AUTH.REFRESH_TOKEN,
-      { refreshToken },
-    );
-    return response.data.data;
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
   },
 };

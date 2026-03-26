@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2 } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
-import { SectionHeader } from "../components/ui";
-import { EmptyState } from "../components/ui";
-import { COLORS } from "../constants/theme";
-import { Job, UpcomingJob } from "../types";
-import { jobService, JobPostDTO, workerProfileService, nominatimService } from "../services";
+import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui";
+import { Job } from "../types";
+import { jobService, workerProfileService, nominatimService, reportService } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { JobMap } from "../components/ui/JobMap";
+import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { mapJobPostToUI } from "../utils/mapperUtils";
+import { WelcomeModal } from "../components/ui/WelcomeModal";
+import { mapApplicationToUI } from "../utils/mapperUtils";
+
 export function WorkerHomeScreen({ navigation }: any) {
   const { user, isAuthenticated } = useAuth();
   const [nearbyJobs, setNearbyJobs]             = useState<Job[]>([]);
@@ -19,141 +23,151 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [activeApplications, setActiveApplications]   = useState<any[]>([]);
   const [profileRating, setProfileRating]       = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
+  const [profileAvatar, setProfileAvatar]       = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
 
-  const demoNearbyJobs: Job[] = [
-    { id: "101", title: "Thu hoạch lúa",      farmer: "Nguyễn Văn A", location: "Cần Thơ",   distance: "2.5 km", wage: "250,000", duration: "1 ngày",  rating: 4.8, urgent: true, date: "23/03/2026"  },
-    { id: "502", title: "Hái tiêu khoán",     farmer: "Lê Văn T",    location: "Sóc Trăng",   distance: "7 km",    wage: "2,000,000", duration: "2 ngày",   rating: 4.6, urgent: false, date: "28/03/2026" },
-    { id: "102", title: "Chăm sóc vườn cam",  farmer: "Trần Thị B",   location: "Vĩnh Long", distance: "5 km",   wage: "200,000", duration: "3 ngày",  rating: 4.5, urgent: false, date: "24/03/2026" },
-    { id: "103", title: "Làm đất trồng rau",  farmer: "Lê Văn C",     location: "Sóc Trăng", distance: "8 km",   wage: "300,000", duration: "2 ngày",  rating: 4.9, urgent: false, date: "26/03/2026" },
-  ];
-  const demoPendingApps = [
-    { id: 1001, jobPostId: 201, title: "Hái cà phê", farmer: "Trần Văn D", date: "18/01/2026", time: "07:00 - 16:00", status: "pending" },
-    { id: 1002, jobPostId: 202, title: "Thu hoạch rau", farmer: "Nguyễn Văn E", date: "15/01/2026", time: "08:00 - 17:00", status: "rejected" }
-  ];
-  const demoActiveApps = [
-    { id: 1003, jobPostId: 301, title: "Tưới nước vườn cam", farmer: "Lê Thị C", date: "23/03/2026", time: "06:00 - 10:00", status: "accepted" },
-    { id: 1004, jobPostId: 302, title: "Phun thuốc vườn cam", farmer: "Trần Văn F", date: "26/03/2026", time: "07:00 - 11:00", status: "accepted" },
-    { id: 1005, jobPostId: 401, title: "Làm cỏ vườn mít", farmer: "Nguyễn Văn A", date: "20/02/2026", time: "06:00 - 18:00", status: "accepted" },
-    { id: 1006, jobPostId: 501, title: "Gặt lúa khoán mẫu lớn", farmer: "Trần Văn C", date: "25/03/2026", time: "Khoán", status: "accepted" }
-  ];
-
-  const checkUrgency = (dateStr?: string) => {
-    if (!dateStr) return false;
-    const start = new Date(dateStr).getTime();
-    const diffDays = (start - Date.now()) / (1000 * 3600 * 24);
-    return diffDays > 0 && diffDays <= 3;
-  };
 
   const loadData = useCallback(async () => {
-    if (!isAuthenticated || user?.isDemo) { 
-      setNearbyJobs(demoNearbyJobs); 
-      setPendingApplications(demoPendingApps);
-      setActiveApplications(demoActiveApps);
-      setProfileRating(4.7); 
-      setTotalJobsCompleted(12); 
-      setRadiusKm(10);
-      setUserLocation({ latitude: 10.762622, longitude: 106.660172 });
-      setRefreshing(false);
-      return; 
+    let sourceJobs: any[] = [];
+    let sourceApps: any[] = [];
+    let sourceProfile: any = null;
+
+    if (user?.isDemo) { 
+      sourceJobs = DEMO_JOB_POSTS;
+      sourceApps = DEMO_APPLICATIONS;
+      sourceProfile = DEMO_WORKER_PROFILE;
+    } else {
+      try {
+        const [jobs, apps, profile] = await Promise.all([
+          jobService.getJobPosts(),
+          jobService.getApplications(),
+          workerProfileService.getProfile()
+        ]);
+        sourceJobs = jobs;
+        sourceApps = apps;
+        sourceProfile = profile;
+      } catch (err: any) {
+        if (isAuthenticated) {
+          console.error("Home screen load error", err?.response?.data || err.message);
+        }
+      }
     }
-    
-    try {
-      const [jobs, apps, profile] = await Promise.all([
-        jobService.getJobPosts(),
-        jobService.getApplications(),
-        workerProfileService.getProfile()
-      ]);
 
-      setProfileRating(profile?.averageRating ?? 0);
-      setTotalJobsCompleted(profile?.totalJobsCompleted ?? 0);
-
-      const prefRadius = profile?.travelRadiusKmPreference || 10;
+    if (sourceProfile) {
+      setProfileRating(sourceProfile.averageRating ?? 0);
+      setTotalJobsCompleted(sourceProfile.totalJobsCompleted ?? 0);
+      setProfileAvatar(sourceProfile.avatarUrl || null);
+      
+      const prefRadius = sourceProfile?.travelRadiusKmPreference || 10;
       setRadiusKm(prefRadius);
-      if (profile?.primaryLocation) {
-        // Run geocoding without blocking other renders drastically
-        nominatimService.geocodeAddress(profile.primaryLocation).then(loc => {
-          if (loc) setUserLocation(loc);
-        }).catch(e => console.log('Geocode error', e));
+      
+      let lat = 10.762622;
+      let lon = 106.660172;
+
+      if (sourceProfile?.primaryLocation && sourceProfile.id !== "demo-worker-123") {
+        try {
+          const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
+          if (loc) {
+            setUserLocation(loc);
+            lat = loc.latitude;
+            lon = loc.longitude;
+          }
+        } catch (e) {
+          console.log('Geocode error', e);
+        }
+      } else {
+        setUserLocation({ latitude: lat, longitude: lon });
+      }
+
+      // Fetch NEARBY jobs specifically to get distance and match score
+      let finalizedNearby: any[] = [];
+      let todayReports: any[] = [];
+      try {
+        if (user?.isDemo) {
+          finalizedNearby = sourceJobs; 
+          // Mock today's report for one job in demo
+          todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
+        } else {
+          const fetchReportsPromise = sourceProfile?.id 
+            ? reportService.getWorkerReports(sourceProfile.id)
+            : Promise.resolve([]);
+
+          const [nearby, reports] = await Promise.all([
+            jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius }),
+            fetchReportsPromise
+          ]);
+          finalizedNearby = nearby;
+          todayReports = reports;
+        }
+      } catch (e: any) {
+        console.error("Failed to fetch nearby jobs/reports", e?.response?.data || e.message);
+        finalizedNearby = sourceJobs;
       }
 
       const myAppliedJobIds = new Set(
-        apps
-          .filter(a => (a.worker?.id || (a as any).workerId) === profile.id)
+        sourceApps
+          .filter(a => (a.worker?.id || (a as any).workerId) === sourceProfile?.id)
           .map(a => String(a.jobPostId))
       );
-      const filteredJobs = jobs.filter(j => !myAppliedJobIds.has(String(j.id)));
+      
+      const availableJobs = finalizedNearby.filter(j => !myAppliedJobIds.has(String(j.id)));
 
-      setNearbyJobs(filteredJobs.map((j: JobPostDTO): Job => {
-        const address = j.address && j.address !== "string" ? j.address : "Chưa cập nhật";
-        const contactName = j.contactName && j.contactName !== "string" ? j.contactName : "Chủ nông trại";
-        const trueUrgent = j.isUrgent || checkUrgency(j.startDate);
-        return { 
-          id: j.id, 
-          title: j.title || "Chưa có tiêu đề", 
-          farmer: contactName, 
-          location: address, 
-          distance: "N/A", 
-          wage: j.wageAmount ? j.wageAmount.toLocaleString("vi-VN") : "0", 
-          duration: j.estimatedHours ? `${j.estimatedHours} giờ` : "N/A", 
-          rating: 0, 
-          urgent: trueUrgent 
+      setNearbyJobs(availableJobs.map((j: any): Job => {
+        const mapped = mapJobPostToUI(j);
+        return {
+          id: j.id,
+          title: mapped.title,
+          farmer: mapped.farmer.name,
+          location: mapped.location.address,
+          distanceKm: mapped.location.distance || 0,
+          matchScore: mapped.matchScore ?? undefined,
+          wage: mapped.wage.toLocaleString("vi-VN"),
+          wageAmount: mapped.wage,
+          duration: mapped.duration,
+          rating: mapped.farmer.rating,
+          urgent: mapped.urgent
         };
       }));
 
-      // 1. Lọc chỉ lấy đơn ứng tuyển của chính worker hiện tại
-      // 2. Deduplicate: Nếu có nhiều application cho cùng 1 job, chỉ lấy cái mới nhất (Map sẽ ghi đè giá trị cũ)
       const myAppsMap = new Map();
-      apps.forEach(a => {
+      sourceApps.forEach(a => {
         const workerId = a.worker?.id || (a as any).workerId;
-        if (workerId === profile.id) {
+        if (workerId === sourceProfile?.id) {
           myAppsMap.set(String(a.jobPostId), a);
         }
       });
       
       const myApps = Array.from(myAppsMap.values());
-      const iterApps = [...myApps].reverse(); // Latest are usually at the end of the list
+      const iterApps = [...myApps].reverse();
       
       const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
       const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
       
       const activeApps = activeAppsUntrimmed.filter(app => {
-        const job = jobs.find(j => String(j.id) === String(app.jobPostId));
+        const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
         const jobStatusId = (job as any)?.statusId || 2;
         return jobStatusId !== 5 && jobStatusId !== 6; 
       }).slice(0, 3);
 
       const mapApp = (app: any) => {
-        const job = jobs.find(j => String(j.id) === String(app.jobPostId));
-        const startDate = job?.startDate;
-        const formattedDate = (startDate && !startDate.startsWith("0001")) 
-          ? new Date(startDate).toLocaleDateString("vi-VN") 
-          : "Chưa rõ";
-
-        return {
-          id: app.id,
-          jobPostId: app.jobPostId,
-          title: job?.title || "Công việc",
-          farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
-          date: formattedDate,
-          time: job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A",
-          status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"
-        };
+        const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
+        const uiApp = mapApplicationToUI(app, job);
+        
+        // Check if reported today
+        const reportedToday = todayReports.some(r => String(r.jobApplicationId) === String(app.id));
+        return { ...uiApp, reportedToday };
       };
 
       setPendingApplications(pendingApps.map(mapApp));
       setActiveApplications(activeApps.map(mapApp));
-
-    } catch { 
-      setNearbyJobs([]); 
-      setPendingApplications([]);
-      setActiveApplications([]);
-    } finally {
-      setRefreshing(false);
     }
-  }, [isAuthenticated, user?.isDemo]);
+
+    setIsLoading(false);
+    setRefreshing(false);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     loadData();
@@ -165,9 +179,6 @@ export function WorkerHomeScreen({ navigation }: any) {
     setRefreshing(true);
     loadData();
   };
-
-  const getGreeting = () => { const h = new Date().getHours(); if (h < 12) return "Chào buổi sáng"; if (h < 18) return "Chào buổi chiều"; return "Chào buổi tối"; };
-  const displayName = user?.name?.split(" ").pop() || "Bạn";
 
   const STATS = [
     { label: "Việc đã làm", value: String(totalJobsCompleted ?? 0), Icon: Briefcase, iconColor: "#059669", bg: "#d1fae5" },
@@ -187,41 +198,42 @@ export function WorkerHomeScreen({ navigation }: any) {
         ListHeaderComponent={
           <>
             {/* HERO */}
-            <View className="bg-primary-600 px-4 pt-4 pb-10 rounded-b-[28px] overflow-hidden relative mb-4">
-              {/* Decorative circles */}
-              <View className="absolute w-[200px] h-[200px] rounded-full top-[-70px] right-[-50px]" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
-              <View className="absolute w-[130px] h-[130px] rounded-full bottom-2 left-[-30px]" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
+            <View className="mb-4">
+              <LinearGradient 
+                colors={["#059669", "#065f46"]} 
+                className="px-4 pt-4 pb-12 rounded-b-[32px] overflow-hidden relative"
+              >
+                <View className="absolute w-[200px] h-[200px] rounded-full top-[-70px] right-[-50px]" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
+                <View className="absolute w-[130px] h-[130px] rounded-full bottom-2 left-[-30px]" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
 
-              {/* Top row */}
-              <View className="flex-row justify-between items-start mb-2">
-                <View>
-                  <Text className="text-primary-200 text-[13px] font-medium mb-0.5">{getGreeting()} 👋</Text>
-                  <Text className="text-white text-2xl font-extrabold" style={{ letterSpacing: -0.4 }}>{displayName}</Text>
+                <View className="flex-row justify-between items-start mb-2">
+                  <View>
+                    <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào 👋</Text>
+                    <Text className="text-white text-2xl font-extrabold" style={{ letterSpacing: -0.4 }}>{user?.name?.split(" ").pop() || "Bạn"}</Text>
+                  </View>
+                  <View className="flex-row items-center gap-2.5">
+                    <TouchableOpacity className="w-[42px] h-[42px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
+                      <Bell size={20} color="#ffffff" />
+                      <View className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full bg-rice-400 border-[1.5px] border-primary-600" />
+                    </TouchableOpacity>
+                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={44} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
+                  </View>
                 </View>
-                <View className="flex-row items-center gap-2.5">
-                  <TouchableOpacity className="w-[42px] h-[42px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
-                    <Bell size={20} color="#ffffff" />
-                    <View className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full bg-rice-400 border-[1.5px] border-primary-600" />
-                  </TouchableOpacity>
-                  <Avatar fallback={displayName[0]} size={44} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
-                </View>
-              </View>
 
-              {/* Stat pills */}
-              <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
-                <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>
-                <View className="w-px h-3" style={{ backgroundColor: "rgba(255,255,255,0.3)" }} />
-                <View className="flex-row items-center gap-1"><Briefcase size={13} color="#6ee7b7" /><Text className="text-white text-xs font-semibold">{totalJobsCompleted ?? 0} việc</Text></View>
-              </View>
-
-              {/* Search bar */}
-              <TouchableOpacity className="flex-row items-center gap-2 bg-white rounded-[20px] pl-4 pr-1.5 h-[50px]" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 4 }} onPress={() => navigation.navigate("Search")} activeOpacity={0.9}>
-                <Search size={17} color="#94a3b8" />
-                <Text className="flex-1 text-slate-400 text-sm">Tìm kiếm công việc...</Text>
-                <View className="bg-primary-50 rounded-2xl px-3 py-2">
-                  <Text className="text-xs font-bold text-primary-600">Lọc</Text>
+                <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
+                  <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>
+                  <View className="w-px h-3" style={{ backgroundColor: "rgba(255,255,255,0.3)" }} />
+                  <View className="flex-row items-center gap-1"><Briefcase size={13} color="#6ee7b7" /><Text className="text-white text-xs font-semibold">{totalJobsCompleted ?? 0} việc</Text></View>
                 </View>
-              </TouchableOpacity>
+
+                <TouchableOpacity className="flex-row items-center gap-2 bg-white rounded-[20px] pl-4 pr-1.5 h-[50px]" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 4 }} onPress={() => navigation.navigate("Search")} activeOpacity={0.9}>
+                  <Search size={17} color="#94a3b8" />
+                  <Text className="flex-1 text-slate-400 text-sm">Tìm kiếm công việc...</Text>
+                  <View className="bg-primary-50 rounded-2xl px-3 py-2">
+                    <Text className="text-xs font-bold text-primary-600">Lọc</Text>
+                  </View>
+                </TouchableOpacity>
+              </LinearGradient>
             </View>
 
             {/* STATS ROW */}
@@ -247,7 +259,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                         <View className="flex-row items-center gap-2">
                           <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
                             <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 5)}</Text>
+                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
                           </View>
                           <View className="flex-1">
                             <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
@@ -274,13 +286,17 @@ export function WorkerHomeScreen({ navigation }: any) {
                         <View className="flex-row items-center gap-2">
                           <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
                             <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 5)}</Text>
+                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 4)}</Text>
                           </View>
                           <View className="flex-1">
                             <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
                             <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
                           </View>
-                          <Badge variant="success">Đang làm</Badge>
+                          {j.reportedToday ? (
+                            <Badge variant="success">Đã báo cáo</Badge>
+                          ) : (
+                            <Badge variant="danger">Cần báo cáo</Badge>
+                          )}
                         </View>
                       </CardContent>
                     </Card>
@@ -289,12 +305,10 @@ export function WorkerHomeScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* NEARBY HEADER */}
             <View className="px-4 mb-1">
-              <SectionHeader title="Việc gần bạn" subtitle="Phù hợp với khu vực của bạn" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
+              <SectionHeader title="Việc gần bạn" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
             </View>
 
-            {/* JOB MAP SECTION */}
             <View className="px-4 mb-4">
               <JobMap
                 userLocation={userLocation}
@@ -306,42 +320,63 @@ export function WorkerHomeScreen({ navigation }: any) {
           </>
         }
         renderItem={({ item: job }) => (
-          <TouchableOpacity className="px-4 mb-2" activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}>
-            <View className="bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-              <View className={["w-1", job.urgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
+          <TouchableOpacity 
+            className="px-4 mb-3" 
+            activeOpacity={0.9} 
+            onPress={() => navigation.navigate("JobDetail", { jobId: job.id })}
+          >
+            <View className="bg-white rounded-2xl flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+              <View className={["w-1.5", job.urgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
               <View className="flex-1 p-4">
-                <View className="flex-row items-center gap-2 mb-2">
+                <View className="flex-row items-center gap-3 mb-3">
                   <Avatar fallback={job.farmer[0]} size={42} />
                   <View className="flex-1">
-                    <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text>
-                    <Text className="text-xs text-slate-500">{job.farmer}</Text>
+                    <Text className="text-[16px] font-bold text-slate-800" numberOfLines={1}>{job.title}</Text>
                   </View>
-                  {job.urgent && (
-                    <View className="flex-row items-center gap-1 bg-rose-50 rounded-full px-2 py-1 border border-rose-500/25">
-                      <Flame size={11} color="#f43f5e" />
-                      <Text className="text-[11px] font-bold text-rose-500">Gấp</Text>
-                    </View>
-                  )}
+                  <View className="items-end">
+                    <Text className="text-[17px] font-extrabold text-primary-600">{job.wage}₫</Text>
+                    {job.urgent && <Badge variant="danger">Gấp</Badge>}
+                  </View>
                 </View>
-                <View className="h-px bg-slate-100 mb-2" />
-                <View className="flex-row items-center flex-wrap gap-2">
-                  <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
-                  <View className="flex-row items-center gap-1"><Clock size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.duration}</Text></View>
-                  {job.date && <View className="flex-row items-center gap-1"><Calendar size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.date}</Text></View>}
-                  <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5">
-                    <Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.wage}đ</Text>
+
+                {/* New Metadata Row */}
+                <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
+                  <View className="flex-row items-center gap-1.5">
+                    <MapPin size={14} color="#64748b" />
+                    <Text className="text-xs text-slate-600 font-medium">
+                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : "Gần bạn"}
+                    </Text>
                   </View>
-                  <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: "auto" }} />
+                  <View className="w-px h-3 bg-slate-200" />
+                  <View className="flex-row items-center gap-1.5">
+                    <CheckCircle2 size={14} color="#059669" />
+                    <Text className="text-xs text-primary-700 font-bold">
+                      {(job.matchScore !== undefined && job.matchScore !== null) ? `${Math.round(job.matchScore > 1 ? job.matchScore : job.matchScore * 100)}% khớp` : "Phù hợp"}
+                    </Text>
+                  </View>
+                  <View className="w-px h-3 bg-slate-200" />
+                  <View className="flex-row items-center gap-1.5">
+                    <Clock size={14} color="#64748b" />
+                    <Text className="text-xs text-slate-600 font-medium">{job.duration}</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-center flex-wrap gap-2">
+                   <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500" numberOfLines={1}>{job.location}</Text></View>
+                   <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: "auto" }} />
                 </View>
               </View>
             </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View className="px-4">
-            <Card variant="tinted"><CardContent><EmptyState title="Chưa có việc gần bạn" description="Khi có việc phù hợp, chúng tôi sẽ gợi ý tại đây." /></CardContent></Card>
-          </View>
+          !isLoading ? (
+            <View className="px-4">
+              <EmptyState title="Không tìm thấy việc" icon={Briefcase} />
+            </View>
+          ) : null
         }
+        ListFooterComponent={isLoading ? <View className="py-4"><ActivityIndicator color="#059669" /></View> : null}
       />
     </SafeAreaView>
   );

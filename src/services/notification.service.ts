@@ -41,4 +41,9 @@ export const notificationService = {
   registerPushToken: async (token: string, deviceName: string = "Mobile Device"): Promise<void> => {
     await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { token, deviceName });
   },
+
+  // Unregister push notification token
+  unregisterPushToken: async (token: string): Promise<void> => {
+    await api.post(API_ENDPOINTS.NOTIFICATIONS.UNREGISTER_TOKEN, { token });
+  },
 };

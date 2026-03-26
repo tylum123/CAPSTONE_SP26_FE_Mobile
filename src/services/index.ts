@@ -9,3 +9,7 @@ export * from "./media.service";
 export * from "./auth-token.service";
 export * from "./location.service";
 export * from "./nominatimService";
+export * from "./wallet.service";
+export * from "./skill.service";
+export * from "./weather.service";
+export * from "./dispute.service";

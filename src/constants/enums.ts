@@ -1,9 +1,14 @@
 // src/constants/enums.ts
 
 export enum JobType {
-  Daily = 1,      // Theo Công nhật
-  PerPlot = 2,    // Theo Khoán / Từng Lô
-  PerJob = 3,     // Khoán Trọn Gói
+  PerJob = 1,     // Khoán Trọn Gói
+  Daily = 2,      // Theo Công nhật
+}
+
+export enum JobStatus {
+  InProgress = 1, // Đang tiến hành
+  Reported = 2,   // Đã báo cáo
+  Completed = 3,  // Đã hoàn thành
 }
 
 export enum JobPostStatus {
@@ -22,6 +27,21 @@ export enum ApplicationStatus {
   Cancelled = 4,
 }
 
+export enum DisputeStatus {
+  Pending = 1,
+  UnderReview = 2,
+  Resolved = 3,
+  Rejected = 4,
+}
+
+export enum WalletTransactionType {
+  Deposit = 1,
+  Withdraw = 2,
+  JobPayment = 3,
+  Refund = 4,
+  JobLock = 5,
+}
+
 export enum ExperienceLevel {
   Beginner = 1,     // Mới Định Hướng
   Intermediate = 2, // Đã Có Kinh Nghiệm
@@ -36,9 +56,14 @@ export enum NotificationType {
 }
 
 export const JobTypeLabels: Record<JobType, string> = {
-  [JobType.Daily]: 'Làm theo công nhật',
-  [JobType.PerPlot]: 'Làm theo lô',
   [JobType.PerJob]: 'Khoán trọn gói',
+  [JobType.Daily]: 'Làm theo công nhật',
+};
+
+export const JobStatusLabels: Record<JobStatus, string> = {
+  [JobStatus.InProgress]: 'Đang tiến hành',
+  [JobStatus.Reported]: 'Đã báo cáo',
+  [JobStatus.Completed]: 'Đã hoàn thành',
 };
 
 export const ApplicationStatusLabels: Record<ApplicationStatus, string> = {
@@ -52,4 +77,19 @@ export const ExperienceLevelLabels: Record<ExperienceLevel, string> = {
   [ExperienceLevel.Beginner]: 'Mới làm quen',
   [ExperienceLevel.Intermediate]: 'Có kinh nghiệm',
   [ExperienceLevel.Experienced]: 'Thợ lành nghề',
+};
+
+export const DisputeStatusLabels: Record<DisputeStatus, string> = {
+  [DisputeStatus.Pending]: 'Đang chờ',
+  [DisputeStatus.UnderReview]: 'Đang xử lý',
+  [DisputeStatus.Resolved]: 'Đã giải quyết',
+  [DisputeStatus.Rejected]: 'Bị từ chối',
+};
+
+export const WalletTransactionTypeLabels: Record<WalletTransactionType, string> = {
+  [WalletTransactionType.Deposit]: 'Nạp tiền',
+  [WalletTransactionType.Withdraw]: 'Rút tiền',
+  [WalletTransactionType.JobPayment]: 'Thanh toán lương',
+  [WalletTransactionType.Refund]: 'Hoàn tiền',
+  [WalletTransactionType.JobLock]: 'Tạm khóa',
 };

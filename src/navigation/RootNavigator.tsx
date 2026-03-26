@@ -18,6 +18,7 @@ import { SubmitReportScreen } from "../screens/SubmitReportScreen";
 import { ReportHistoryScreen } from "../screens/ReportHistoryScreen";
 import { ReportDetailScreen } from "../screens/ReportDetailScreen";
 import { EditProfileScreen } from "../screens/EditProfileScreen";
+import { WithdrawalScreen } from "../screens/WithdrawalScreen";
 
 const Stack = createStackNavigator();
 
@@ -43,8 +44,15 @@ export function RootNavigator() {
         await workerProfileService.getProfile();
         setProfileStatus("hasProfile");
       } catch (error: any) {
-        if (error?.response?.status === 404) {
+        const errorMessage = error?.response?.data?.message || "";
+        const isProfileNotFound = errorMessage.toLowerCase().includes("profile not found") || error?.response?.status === 404;
+
+        if (isProfileNotFound) {
           setProfileStatus("needsProfile");
+        } else if (error?.response?.status === 401) {
+          // If it's a real 401 (not profile missing), logout is handled by axios interceptor
+          // but we set unknown to be safe
+          setProfileStatus("unknown");
         } else {
           setProfileStatus("hasProfile");
         }
@@ -71,6 +79,7 @@ export function RootNavigator() {
         component={ReportDetailScreen}
       />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
     </>
   );
 
@@ -91,6 +100,9 @@ export function RootNavigator() {
             component={ForgotPasswordScreen}
           />
         </>
+      ) : profileStatus === "unknown" ? (
+        // Loading state while checking profile
+        <Stack.Screen name="RootLoading" component={SplashScreen} />
       ) : profileStatus === "needsProfile" ? (
         <>
           <Stack.Screen

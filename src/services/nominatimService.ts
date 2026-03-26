@@ -24,7 +24,6 @@ class NominatimService {
           limit: 1,
         },
         headers: {
-          // Nominatim requires a User-Agent to avoid blocking
           "User-Agent": "Capstone_SP26_FE_Mobile/1.0",
           "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
         },
@@ -41,6 +40,36 @@ class NominatimService {
     } catch (error) {
       console.error("Nominatim geocoding error:", error);
       return null;
+    }
+  }
+
+  /**
+   * Search for multiple address suggestions for autocomplete.
+   * @param query Search string
+   * @returns List of display names and their details
+   */
+  async searchAddress(query: string): Promise<any[]> {
+    if (!query || query.trim().length < 3) return [];
+
+    try {
+      const response = await axios.get(this.baseUrl, {
+        params: {
+          q: query,
+          format: "json",
+          limit: 5,
+          addressdetails: 1,
+          countrycodes: "vn", // Restrict to Vietnam
+        },
+        headers: {
+          "User-Agent": "Capstone_SP26_FE_Mobile/1.0",
+          "Accept-Language": "vi-VN,vi;q=0.9",
+        },
+      });
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Nominatim search error:", error);
+      return [];
     }
   }
 
