@@ -1,0 +1,162 @@
+/* AI CONTEXT:
+ * Action: Manages states and fetches details for a specific farming job.
+ * Inputs: Job ID, auth status, user data.
+ * Outputs: Loading states, job detail, application status, selected time slots, and refresh functions.
+ * Dependencies: jobService, workerProfileService, reportService, Demo Data. */
+
+import { useState, useCallback, useEffect } from "react";
+import { DeviceEventEmitter } from "react-native";
+import { jobService, workerProfileService, reportService } from "../services/export_services";
+import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { mapJobPostToUI } from "../utils/mapperUtils";
+
+export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
+  const [isApplied, setIsApplied] = useState(false);
+  const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number }>({});
+  const [jobDetail, setJobDetail] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadJobData = useCallback(async () => {
+    setIsLoading(true);
+    let sourceJob: any = null;
+    let sourceApps: any[] = [];
+    let sourceProfile: any = null;
+
+    if (!isAuthenticated || user?.isDemo) {
+      sourceJob = DEMO_JOB_POSTS.find((j: any) => String(j.id) === String(jobId));
+      sourceApps = DEMO_APPLICATIONS;
+      sourceProfile = DEMO_WORKER_PROFILE;
+    } else {
+      try {
+        const [data, apps, profile] = await Promise.all([
+          jobService.getJobPostDetail(String(jobId)),
+          jobService.getApplications(),
+          workerProfileService.getProfile()
+        ]);
+        sourceJob = data;
+        sourceApps = apps;
+        sourceProfile = profile;
+      } catch (error) {
+        console.error("Load job detail error:", error);
+        setJobDetail(null);
+        setIsLoading(false);
+        setRefreshing(false);
+        return;
+      }
+    }
+
+    if (sourceJob) {
+      const existing = sourceApps.find((a: any) => 
+        String(a.jobPostId) === String(jobId) && 
+        (a.worker?.id === sourceProfile?.id || (a as any).workerId === sourceProfile?.id)
+      );
+
+      if (existing && existing.statusId !== 3) {
+        setIsApplied(true);
+        setApplicationInfo({ id: existing.id, statusId: existing.statusId });
+        // Pre-populate selected slots from existing application
+        if (existing.workDates && existing.workDates.length > 0) {
+          // Normalize to YYYY-MM-DD for consistent internal state
+          setSelectedTimeSlots(existing.workDates.map((d: string) => d.substring(0, 10)));
+        }
+      } else {
+        setIsApplied(false);
+        setApplicationInfo({});
+        setSelectedTimeSlots([]);
+      }
+
+      // Fetch Reports for this job
+      let reports: any[] = [];
+      try {
+        if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
+          const allWorkerReports = await reportService.getWorkerReports(sourceProfile.id);
+          reports = allWorkerReports.filter(r => String(r.jobPostId) === String(jobId));
+        } else if (user?.isDemo || !isAuthenticated) {
+          // Mock some reports for demo
+          reports = [
+            { id: "r1", workDate: "2026-03-22T08:00:00Z", farmerApprovedPercent: 100, workerPaymentAmount: 250000, farmerFeedback: "Làm tốt lắm!" },
+            { id: "r2", workDate: "2026-03-23T08:00:00Z", farmerApprovedPercent: 80, workerPaymentAmount: 200000, farmerFeedback: "Cần chú ý hơn phần làm cỏ." }
+          ];
+        }
+      } catch (err) {
+        console.error("Fetch reports error", err);
+      }
+
+      const mappedData = mapJobPostToUI(sourceJob);
+      const timeSlots = (sourceJob.jobTypeId === 1) ? [] : (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
+        const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+        return {
+          id: index + 1,
+          date: formattedSlotDate,
+          rawDate: dateStr.substring(0, 10),
+          available: true,
+          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate
+        };
+      });
+
+      // Special case for backward compatibility or if selectedDays is empty for Daily jobs
+      if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
+        timeSlots.push({
+          id: 1,
+          date: mappedData.startDateFormatted,
+          rawDate: sourceJob.startDate,
+          available: true,
+          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate
+        });
+      }
+
+      const mapped = {
+        ...mappedData,
+        reports: reports.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime()),
+        timeSlots
+      };
+      setJobDetail(mapped as any);
+    } else {
+      setJobDetail(null);
+    }
+    
+    setIsLoading(false);
+    setRefreshing(false);
+  }, [isAuthenticated, user?.isDemo, jobId]);
+
+  useEffect(() => {
+    loadJobData();
+    
+    // Auto-refresh when push notification is received in foreground
+    const subscription = DeviceEventEmitter.addListener("REFRESH_DATA", () => {
+      loadJobData();
+    });
+    return () => subscription.remove();
+  }, [loadJobData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadJobData();
+  };
+
+  const toggleTimeSlot = (slotId: number) => {
+    if (isApplied) return; // Cannot change selection after applying
+    const slot = jobDetail?.timeSlots?.find((s: any) => s.id === slotId);
+    if (!slot?.available) return;
+    const key = String(slot.rawDate || slot.date).substring(0, 10);
+    setSelectedTimeSlots((p: string[]) => p.some((s: string) => s.substring(0, 10) === key) 
+      ? p.filter((s: string) => s.substring(0, 10) !== key) 
+      : [...p, key]);
+  };
+
+  return {
+    jobDetail,
+    isLoading,
+    refreshing,
+    isApplied,
+    setIsApplied,
+    applicationInfo,
+    selectedTimeSlots,
+    setSelectedTimeSlots,
+    loadJobData,
+    onRefresh,
+    toggleTimeSlot
+  };
+}
