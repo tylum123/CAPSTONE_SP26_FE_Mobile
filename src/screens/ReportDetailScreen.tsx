@@ -1,10 +1,16 @@
+/* AI CONTEXT:
+ * Action: Shows detailed view of a submitted daily work report.
+ * Inputs: Report ID or Report Object from route params.
+ * Outputs: Read-only UI of text and media evidence.
+ * Dependencies: Report service, Route parameters. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert, Image, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Info, FileText } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
-import { JobDetailDTO } from "../types";
+import { JobDetailDTO } from "../types/export_type_definitions";
 import { reportService } from "../services/report.service";
 import { disputeService } from "../services/dispute.service";
 

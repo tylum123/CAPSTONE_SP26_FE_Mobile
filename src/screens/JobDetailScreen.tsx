@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Displays full details and requirements for a specific farming job.
+ * Inputs: Job ID from route parameters.
+ * Outputs: Job details UI, apply/accept action payloads.
+ * Dependencies: Job service, Route parameters, Navigation. */
+
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Platform, RefreshControl, ActivityIndicator, Alert,
   DeviceEventEmitter,
@@ -7,10 +13,10 @@ import { MapPin, Clock, Banknote, Star, Calendar, Users, Wrench, Briefcase, Mess
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { authService, jobService, workerProfileService, notificationService, reportService } from "../services";
+import { authService, jobService, workerProfileService, notificationService, reportService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
-import { isPastDate } from "../utils/helpers";
+import { isPastDate } from "../utils/provide_formatting_helpers";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 

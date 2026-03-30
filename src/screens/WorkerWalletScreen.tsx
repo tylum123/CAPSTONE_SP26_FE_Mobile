@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Displays user financial balance and recent transaction history.
+ * Inputs: Wallet balance fetch, transaction list payload.
+ * Outputs: Rendered financial ledger UI.
+ * Dependencies: Wallet service, Navigation parameters. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

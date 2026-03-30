@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Submits new daily work proof (images/text) for a job.
+ * Inputs: Text description, selected photos/media.
+ * Outputs: Multipart form data API request.
+ * Dependencies: Report service, Media service, Expo Image Picker. */
+
 import React, { useState, useRef } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

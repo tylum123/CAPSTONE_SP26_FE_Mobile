@@ -1,14 +1,20 @@
+/* AI CONTEXT:
+ * Action: Map and list interface for discovering available farming jobs.
+ * Inputs: User location coordinates, search text, filters.
+ * Outputs: Map markers and job list components.
+ * Dependencies: Job service, Location context, MapLibre UI. */
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, ScrollView, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, SlidersHorizontal, MapPin, Clock, Banknote, Star, X, ChevronRight, Flame, Map as MapIcon, List, CheckCircle2 } from "lucide-react-native";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
-import { SkeletonCard, EmptyState } from "../components/ui";
+import { SkeletonCard, EmptyState } from "../components/ui/export_ui_components";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { jobService, workerProfileService, nominatimService, skillService } from "../services";
-import { JobCategoryDTO, JobDiscoveryDTO, SkillResponse } from "../types";
+import { jobService, workerProfileService, nominatimService, skillService } from "../services/export_services";
+import { JobCategoryDTO, JobDiscoveryDTO, SkillResponse } from "../types/export_type_definitions";
 import { JobMap } from "../components/ui/JobMap";
 import { DEMO_JOB_POSTS, DEMO_CATEGORIES, DEMO_SKILLS } from "../constants/demoData";
 

@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Handles new account creation and registration flow.
+ * Inputs: New user credentials and personal identifiers.
+ * Outputs: Registration API call, navigation to Onboarding.
+ * Dependencies: Auth service, Navigation routing. */
+
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
@@ -10,7 +16,7 @@ import { makeRedirectUri } from "expo-auth-session";
 import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { CONFIG } from "../config";
+import { CONFIG } from "../config/export_configurations";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 WebBrowser.maybeCompleteAuthSession();

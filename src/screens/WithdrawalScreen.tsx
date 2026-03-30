@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Processes requests to withdraw wallet funds to bank accounts.
+ * Inputs: Withdrawal amount, linked banking details.
+ * Outputs: Transaction creation API request.
+ * Dependencies: Wallet service, Auth context. */
+
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,7 +14,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { walletService } from "../services/wallet.service";
 import { useAuth } from "../context/AuthContext";
-import { WalletDTO } from "../types";
+import { WalletDTO } from "../types/export_type_definitions";
 
 export function WithdrawalScreen() {
   const navigation = useNavigation<any>();

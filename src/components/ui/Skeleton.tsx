@@ -1,6 +1,12 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import { View, ViewStyle, StyleProp } from "react-native";
 import { Shimmer } from "./Shimmer";
-import { cn } from "../../utils/helpers";
+import { cn } from "../../utils/provide_formatting_helpers";
 
 interface SkeletonProps {
   width?: number | string;

@@ -1,4 +1,10 @@
-import { JobPostDTO, JobApplicationDTO, JobDiscoveryDTO } from "../types/worker";
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
+import { JobPostDTO, JobApplicationDTO, JobDiscoveryDTO } from "../types/define_worker_interfaces";
 
 /**
  * Utility for mapping backend DTOs to UI-friendly objects.

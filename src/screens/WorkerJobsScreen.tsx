@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Lists user jobs categorized by status (applied, active, completed).
+ * Inputs: Job status filters, pagination data.
+ * Outputs: Filtered lists of job cards.
+ * Dependencies: Job service, Navigation parameters. */
+
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -5,12 +11,12 @@ import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
-import { PillTabs, EmptyState, SkeletonCard } from "../components/ui";
+import { PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
 import { Clock, MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info } from "lucide-react-native";
-import { jobService, workerProfileService } from "../services";
-import { JobPostDTO } from "../types/worker";
+import { jobService, workerProfileService } from "../services/export_services";
+import { JobPostDTO } from "../types/define_worker_interfaces";
 import { useAuth } from "../context/AuthContext";
-import { isPastDate } from "../utils/helpers";
+import { isPastDate } from "../utils/provide_formatting_helpers";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapApplicationToUI } from "../utils/mapperUtils";
 

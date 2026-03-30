@@ -1,8 +1,14 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, Modal, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, TextInput, Keyboard, ScrollView } from "react-native";
 import { MapPin, X, ChevronLeft, ChevronRight, Check, Send } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { locationService, nominatimService } from "../../services";
+import { locationService, nominatimService } from "../../services/export_services";
 import { COLORS } from "../../constants/theme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');

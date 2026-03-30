@@ -1,4 +1,10 @@
-import api from "../config/axios";
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
+import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
 import { 
   ApiResponse, 
@@ -9,7 +15,7 @@ import {
   JobSearchFilterRequest,
   PaginatedJobDiscoveryResponse,
   JobDiscoveryDTO
-} from "../types";
+} from "../types/export_type_definitions";
 
 export const jobService = {
   getCategories: async (): Promise<JobCategoryDTO[]> => {

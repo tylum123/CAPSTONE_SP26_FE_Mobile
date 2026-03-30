@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React, {
   createContext,
   useState,
@@ -10,7 +16,7 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Platform } from "react-native";
-import { authService, workerProfileService, notificationService } from "../services";
+import { authService, workerProfileService, notificationService } from "../services/export_services";
 import { registerForPushNotificationsAsync } from "../services/push-notification.service";
 import { authTokenService } from "../services/auth-token.service";
 import { STORAGE_KEYS } from "../constants/api";

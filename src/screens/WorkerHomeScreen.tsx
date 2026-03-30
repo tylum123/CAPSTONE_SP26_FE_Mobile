@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Primary dashboard for workers displaying key stats and daily quick actions.
+ * Inputs: User statistics, current wallet balance, active job info.
+ * Outputs: Rendered dashboard UI with quick links.
+ * Dependencies: Job service, Wallet service, Auth context. */
+
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -6,9 +12,9 @@ import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, Che
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
-import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui";
-import { Job } from "../types";
-import { jobService, workerProfileService, nominatimService, reportService, walletService } from "../services";
+import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
+import { Job } from "../types/export_type_definitions";
+import { jobService, workerProfileService, nominatimService, reportService, walletService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
 import { JobMap } from "../components/ui/JobMap";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";

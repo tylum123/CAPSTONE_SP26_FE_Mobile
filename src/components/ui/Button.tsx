@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React from "react";
 import {
   Pressable,

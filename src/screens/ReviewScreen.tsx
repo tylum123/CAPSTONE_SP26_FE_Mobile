@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Facilitates submitting or viewing ratings after job completion.
+ * Inputs: Job ID, user rating score, written feedback.
+ * Outputs: Review submission API request.
+ * Dependencies: Rating service, Job context. */
+
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

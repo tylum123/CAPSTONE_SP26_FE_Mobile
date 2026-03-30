@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import { WorkerTabNavigator } from "./WorkerTabNavigator";
@@ -7,7 +13,7 @@ import { ForgotPasswordScreen } from "../screens/ForgotPasswordScreen";
 import { SplashScreen } from "../screens/SplashScreen";
 import { OnboardingProfileScreen } from "../screens/OnboardingProfileScreen";
 import { useAuth } from "../context/AuthContext";
-import { workerProfileService } from "../services";
+import { workerProfileService } from "../services/export_services";
 
 // Standalone screens
 import { JobDetailScreen } from "../screens/JobDetailScreen";

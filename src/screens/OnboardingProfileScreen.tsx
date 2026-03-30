@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Guides new users through initial profile completion after registration.
+ * Inputs: Basic personal details, role preferences.
+ * Outputs: Completed profile state payload.
+ * Dependencies: Auth context, User service. */
+
 import React, { useState, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -6,7 +12,7 @@ import { User, MapPin, Calendar, Clock, Camera, ChevronRight, CheckCircle2, Chec
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
 import { LocationPicker } from "../components/profile/LocationPicker";
-import { mediaService, workerProfileService } from "../services";
+import { mediaService, workerProfileService } from "../services/export_services";
 import { COLORS, TYPOGRAPHY } from "../constants/theme";
 import { formatLocation } from "../utils/locationUtils";
 import { WelcomeModal } from "../components/ui/WelcomeModal";

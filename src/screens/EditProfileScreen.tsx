@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Allows users to modify their profile information and skills.
+ * Inputs: Form data (name, location, avatar, skills).
+ * Outputs: API request to save user profile changes.
+ * Dependencies: User service, Location service, Auth context, Media service. */
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform, DeviceEventEmitter, PanResponder, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,7 +14,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { LocationPicker } from "../components/profile/LocationPicker";
-import { mediaService, workerProfileService } from "../services";
+import { mediaService, workerProfileService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
 import { COLORS, TYPOGRAPHY } from "../constants/theme";
 import { parseLocation, formatLocation } from "../utils/locationUtils";

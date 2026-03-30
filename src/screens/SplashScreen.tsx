@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Controls initial app launch routing and token validation.
+ * Inputs: Local storage tokens, app state.
+ * Outputs: Navigation redirect to Auth or Main tabs.
+ * Dependencies: Auth token service, React Navigation. */
+
 import React, { useEffect, useRef } from "react";
 import { View, Text, Animated, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

@@ -1,10 +1,16 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CONFIG } from "./index";
+import { CONFIG } from "./export_configurations";
 import {
   STORAGE_KEYS,
   REQUEST_HEADERS,

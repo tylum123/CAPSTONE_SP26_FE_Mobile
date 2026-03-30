@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 // API Configuration Constants
 export const API_CONFIG = {
   TIMEOUT: 30000,

@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Displays a historical list of system alerts and user notifications.
+ * Inputs: Notification payload from backend APIs.
+ * Outputs: Rendered notification list, mark-as-read actions.
+ * Dependencies: Notification service, Auth context. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -6,9 +12,9 @@ import {
   X, ChevronLeft, CheckCheck,
 } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
-import { notificationService } from "../services";
+import { notificationService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
-import { SkeletonRow, EmptyState } from "../components/ui";
+import { SkeletonRow, EmptyState } from "../components/ui/export_ui_components";
 
 type NotificationType = "job_accepted" | "job_rejected" | "payment_received" | "reminder" | "new_job" | "job_cancelled";
 

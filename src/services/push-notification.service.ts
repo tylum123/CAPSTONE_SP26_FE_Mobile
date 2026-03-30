@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';

@@ -1,4 +1,10 @@
-import { JobPostDTO, JobApplicationDTO, WorkerProfileDTO, JobDetailDTO, JobCategoryDTO, SkillResponse } from "../types/worker";
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
+import { JobPostDTO, JobApplicationDTO, WorkerProfileDTO, JobDetailDTO, JobCategoryDTO, SkillResponse } from "../types/define_worker_interfaces";
 
 export const DEMO_WORKER_PROFILE: WorkerProfileDTO = {
   id: "demo-worker-123",

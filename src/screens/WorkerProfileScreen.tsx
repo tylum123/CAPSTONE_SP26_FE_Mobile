@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Displays the read-only view of the workers public profile and stats.
+ * Inputs: Current user context data.
+ * Outputs: Profile UI, settings navigation links.
+ * Dependencies: Auth context, User service. */
+
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,8 +13,8 @@ import { ListItem } from "../components/ui/ListItem";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Heart, CreditCard, Users, Settings, LogOut, Edit2, Phone, Mail, Wallet, Briefcase, Star, Bell, FileText, ChevronRight, MapPin, Clock } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
-import { workerProfileService, walletService } from "../services";
-import { WorkerProfileDTO } from "../types/worker";
+import { workerProfileService, walletService } from "../services/export_services";
+import { WorkerProfileDTO } from "../types/define_worker_interfaces";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 import { DEMO_WORKER_PROFILE } from "../constants/demoData";
