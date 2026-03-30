@@ -31,6 +31,7 @@ export function WorkerSearchScreen({ navigation }: any) {
   const [isMapView, setIsMapView] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [showApplied, setShowApplied] = useState(false);
 
   const loadData = useCallback(async () => {
     try { 
@@ -112,16 +113,19 @@ export function WorkerSearchScreen({ navigation }: any) {
           .filter(a => (a.worker?.id || (a as any).workerId) === profile?.id)
           .map(a => String(a.jobPostId))
       );
-      const filteredJobs = nearbyJobs.filter(j => !myAppliedJobIds.has(String(j.id)));
+      
+      const filteredJobs = showApplied 
+        ? nearbyJobs 
+        : nearbyJobs.filter(j => !myAppliedJobIds.has(String(j.id)));
 
       // If fallbacked from JobPostDTO, we need to map to JobDiscoveryDTO structure for the UI
       setJobs(filteredJobs.map(j => {
-        if ('distanceKm' in j) return j as JobDiscoveryDTO;
+        if ('distanceKm' in j && j.distanceKm !== undefined) return j as JobDiscoveryDTO;
         const jp = j as any;
         return {
           ...jp,
           jobTypeName: jp.jobTypeId === 1 ? "Khoán" : "Ngày",
-          distanceKm: 0,
+          distanceKm: jp.distanceKm || 0,
           farmerAverageRating: profile?.averageRating || 0,
           locationName: jp.address || "N/A",
           skillsMatchCount: 0,
@@ -152,24 +156,44 @@ export function WorkerSearchScreen({ navigation }: any) {
   const handleSearch = async () => {
     setIsLoading(true);
     try {
+      const isNational = radiusKm >= 500;
+      
       const [results, myApps] = await Promise.all([
         jobService.searchJobs({
           searchKeyword: searchQuery || undefined,
           jobCategoryId: filters.jobTypeIds.length > 0 ? filters.jobTypeIds[0] : undefined,
           requiredSkills: filters.skillIds.length > 0 ? filters.skillIds : undefined,
-          maxDistanceKm: radiusKm,
-          workerLatitude: userLocation?.latitude,
-          workerLongitude: userLocation?.longitude,
+          maxDistanceKm: isNational ? undefined : radiusKm,
+          workerLatitude: isNational ? undefined : userLocation?.latitude,
+          workerLongitude: isNational ? undefined : userLocation?.longitude,
           sortBy: filters.sortBy === "distance" ? "distance" : filters.sortBy === "wage" ? "wage" : "match" 
         }),
         jobService.getApplications()
       ]);
 
+      let finalJobs = results.jobs;
+
+      // FALLBACK: If search returns nothing but we suspect there's data in DB, fetch all
+      if (finalJobs.length === 0 && !searchQuery && filters.jobTypeIds.length === 0) {
+        try {
+          const allJobs = await jobService.getJobPosts();
+          finalJobs = allJobs as any;
+        } catch (e) {
+          console.error("Search fallback failed", e);
+        }
+      }
+
       const myAppliedJobIds = new Set(myApps.map(a => String(a.jobPostId)));
-      const filteredResults = results.jobs.filter((j: any) => !myAppliedJobIds.has(String(j.id)));
+      const filteredResults = showApplied 
+        ? finalJobs 
+        : finalJobs.filter((j: any) => !myAppliedJobIds.has(String(j.id)));
+      
       setJobs(filteredResults);
     } catch (error) {
       console.error("Search failed", error);
+      // Even if search API fails, try to show something
+      const allJobs = await jobService.getJobPosts();
+      setJobs(allJobs as any);
     } finally {
       setIsLoading(false);
     }
@@ -242,6 +266,27 @@ export function WorkerSearchScreen({ navigation }: any) {
           </View>
 
           <View className="px-4 py-2">
+            <Text className="text-[13px] text-slate-500 font-bold mb-2 uppercase">Bán kính tìm kiếm</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {[
+                { label: "10km", value: 10 },
+                { label: "20km", value: 20 },
+                { label: "50km", value: 50 },
+                { label: "100km", value: 100 },
+                { label: "Toàn quốc", value: 500 }
+              ].map((r) => (
+                <TouchableOpacity 
+                   key={r.label}
+                   className={["px-3.5 py-1.5 rounded-full border", radiusKm === r.value ? "bg-primary-50 border-primary-500" : "bg-slate-100 border-slate-200"].join(" ")}
+                   onPress={() => setRadiusKm(r.value)}
+                >
+                  <Text className={["text-[13px] font-semibold", radiusKm === r.value ? "text-primary-700" : "text-slate-600"].join(" ")}>{r.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View className="px-4 py-2">
             <Text className="text-[13px] text-slate-500 font-bold mb-2 uppercase">Kỹ năng</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {skills.map((skill) => (
@@ -273,8 +318,29 @@ export function WorkerSearchScreen({ navigation }: any) {
             ))}
           </View>
 
-          <View className="px-4 mt-4">
-            <Button size="sm" onPress={handleSearch} className="rounded-xl">Áp dụng bộ lọc</Button>
+          <View className="flex-row items-center justify-between px-4 py-2 mt-2 bg-slate-50 mx-4 rounded-xl border border-slate-200">
+            <View>
+              <Text className="text-[14px] text-slate-700 font-bold">Hiển thị việc đã ứng tuyển</Text>
+              <Text className="text-[11px] text-slate-500">Xem lại các công việc bạn đã nộp đơn</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setShowApplied(!showApplied)}
+              activeOpacity={0.8}
+              className={["w-[50px] h-7 rounded-full px-1 justify-center", showApplied ? "bg-primary-600 items-end" : "bg-slate-300 items-start"].join(" ")}
+            >
+              <View className="w-5 h-5 rounded-full bg-white shadow-sm" />
+            </TouchableOpacity>
+          </View>
+
+          <View className="px-4 mt-4 flex-row gap-2">
+            <Button size="sm" variant="outline" onPress={() => {
+               setFilters({ jobTypeIds: [], skillIds: [], sortBy: "distance" });
+               setSearchQuery("");
+               setRadiusKm(500);
+               setShowApplied(true);
+               handleSearch();
+            }} className="flex-1 rounded-xl">Xóa bộ lọc</Button>
+            <Button size="sm" onPress={handleSearch} className="flex-1 rounded-xl">Áp dụng bộ lọc</Button>
           </View>
         </View>
       )}

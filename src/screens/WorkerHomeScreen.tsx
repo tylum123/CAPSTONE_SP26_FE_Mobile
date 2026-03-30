@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2 } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, Eye, EyeOff } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
 import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui";
 import { Job } from "../types";
-import { jobService, workerProfileService, nominatimService, reportService } from "../services";
+import { jobService, workerProfileService, nominatimService, reportService, walletService } from "../services";
 import { useAuth } from "../context/AuthContext";
 import { JobMap } from "../components/ui/JobMap";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
@@ -24,6 +24,9 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [profileRating, setProfileRating]       = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
   const [profileAvatar, setProfileAvatar]       = useState<string | null>(null);
+  const [walletBalance, setWalletBalance]       = useState<number | null>(null);
+  const [todayEarnings, setTodayEarnings]       = useState<number | null>(null);
+  const [isBalanceVisible, setIsBalanceVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -34,136 +37,161 @@ export function WorkerHomeScreen({ navigation }: any) {
     let sourceJobs: any[] = [];
     let sourceApps: any[] = [];
     let sourceProfile: any = null;
+    let sourceWallet: any = null;
 
     if (user?.isDemo) { 
       sourceJobs = DEMO_JOB_POSTS;
       sourceApps = DEMO_APPLICATIONS;
       sourceProfile = DEMO_WORKER_PROFILE;
+      sourceWallet = { id: "demo-wallet-123", balance: 1250000 };
+      setTodayEarnings(450000); // 450k hôm nay
     } else {
       try {
-        const [jobs, apps, profile] = await Promise.all([
+        const [jobs, apps, profile, wallet] = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
-          workerProfileService.getProfile()
+          workerProfileService.getProfile(),
+          walletService.getWallet()
         ]);
         sourceJobs = jobs;
         sourceApps = apps;
         sourceProfile = profile;
+        sourceWallet = wallet;
+
+        if (wallet?.id) {
+            const txs = await walletService.getTransactions(wallet.id);
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayLocal = `${year}-${month}-${day}`;
+
+            const earnedToday = txs
+                .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
+                .reduce((sum, tx) => sum + tx.amount, 0);
+            setTodayEarnings(earnedToday);
+        }
       } catch (err: any) {
         if (isAuthenticated) {
-          console.error("Home screen load error", err?.response?.data || err.message);
+          console.error("Home screen load error", err?.message);
         }
       }
     }
 
-    if (sourceProfile) {
-      setProfileRating(sourceProfile.averageRating ?? 0);
-      setTotalJobsCompleted(sourceProfile.totalJobsCompleted ?? 0);
-      setProfileAvatar(sourceProfile.avatarUrl || null);
-      
-      const prefRadius = sourceProfile?.travelRadiusKmPreference || 10;
-      setRadiusKm(prefRadius);
-      
-      let lat = 10.762622;
-      let lon = 106.660172;
+    // Handle profile-specific data with optional chaining
+    setProfileRating(sourceProfile?.averageRating ?? 0);
+    setTotalJobsCompleted(sourceProfile?.totalJobsCompleted ?? 0);
+    setWalletBalance(sourceWallet?.balance ?? 0);
+    setProfileAvatar(sourceProfile?.avatarUrl || null);
+    
+    const prefRadius = sourceProfile?.travelRadiusKmPreference || 10;
+    setRadiusKm(prefRadius);
+    
+    // Default location (e.g., Cần Thơ)
+    let lat = 10.762622;
+    let lon = 106.660172;
 
-      if (sourceProfile?.primaryLocation && sourceProfile.id !== "demo-worker-123") {
-        try {
-          const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
-          if (loc) {
-            setUserLocation(loc);
-            lat = loc.latitude;
-            lon = loc.longitude;
-          }
-        } catch (e) {
-          console.log('Geocode error', e);
+    // Try to geocode if profile has location, otherwise use default
+    if (sourceProfile?.primaryLocation && sourceProfile.id !== "demo-worker-123") {
+      try {
+        const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
+        if (loc) {
+          setUserLocation(loc);
+          lat = loc.latitude;
+          lon = loc.longitude;
         }
-      } else {
+      } catch (e) {
+        console.log('Geocode error', e);
         setUserLocation({ latitude: lat, longitude: lon });
       }
-
-      // Fetch NEARBY jobs specifically to get distance and match score
-      let finalizedNearby: any[] = [];
-      let todayReports: any[] = [];
-      try {
-        if (user?.isDemo) {
-          finalizedNearby = sourceJobs; 
-          // Mock today's report for one job in demo
-          todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
-        } else {
-          const fetchReportsPromise = sourceProfile?.id 
-            ? reportService.getWorkerReports(sourceProfile.id)
-            : Promise.resolve([]);
-
-          const [nearby, reports] = await Promise.all([
-            jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius }),
-            fetchReportsPromise
-          ]);
-          finalizedNearby = nearby;
-          todayReports = reports;
-        }
-      } catch (e: any) {
-        console.error("Failed to fetch nearby jobs/reports", e?.response?.data || e.message);
-        finalizedNearby = sourceJobs;
-      }
-
-      const myAppliedJobIds = new Set(
-        sourceApps
-          .filter(a => (a.worker?.id || (a as any).workerId) === sourceProfile?.id)
-          .map(a => String(a.jobPostId))
-      );
-      
-      const availableJobs = finalizedNearby.filter(j => !myAppliedJobIds.has(String(j.id)));
-
-      setNearbyJobs(availableJobs.map((j: any): Job => {
-        const mapped = mapJobPostToUI(j);
-        return {
-          id: j.id,
-          title: mapped.title,
-          farmer: mapped.farmer.name,
-          location: mapped.location.address,
-          distanceKm: mapped.location.distance || 0,
-          matchScore: mapped.matchScore ?? undefined,
-          wage: mapped.wage.toLocaleString("vi-VN"),
-          wageAmount: mapped.wage,
-          duration: mapped.duration,
-          rating: mapped.farmer.rating,
-          urgent: mapped.urgent
-        };
-      }));
-
-      const myAppsMap = new Map();
-      sourceApps.forEach(a => {
-        const workerId = a.worker?.id || (a as any).workerId;
-        if (workerId === sourceProfile?.id) {
-          myAppsMap.set(String(a.jobPostId), a);
-        }
-      });
-      
-      const myApps = Array.from(myAppsMap.values());
-      const iterApps = [...myApps].reverse();
-      
-      const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
-      const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
-      
-      const activeApps = activeAppsUntrimmed.filter(app => {
-        const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
-        const jobStatusId = (job as any)?.statusId || 2;
-        return jobStatusId !== 5 && jobStatusId !== 6; 
-      }).slice(0, 3);
-
-      const mapApp = (app: any) => {
-        const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
-        const uiApp = mapApplicationToUI(app, job);
-        
-        // Check if reported today
-        const reportedToday = todayReports.some(r => String(r.jobApplicationId) === String(app.id));
-        return { ...uiApp, reportedToday };
-      };
-
-      setPendingApplications(pendingApps.map(mapApp));
-      setActiveApplications(activeApps.map(mapApp));
+    } else {
+      setUserLocation({ latitude: lat, longitude: lon });
     }
+
+    // Always fetch nearby/available jobs
+    let finalizedNearby: any[] = [];
+    let todayReports: any[] = [];
+    try {
+      if (user?.isDemo) {
+        finalizedNearby = sourceJobs; 
+        todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
+      } else {
+        const fetchReportsPromise = sourceProfile?.id 
+          ? reportService.getWorkerReports(sourceProfile.id)
+          : Promise.resolve([]);
+
+        const [nearby, reports] = await Promise.all([
+          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius }),
+          fetchReportsPromise
+        ]);
+        finalizedNearby = nearby;
+        todayReports = reports;
+      }
+    } catch (e: any) {
+      console.error("Failed to fetch nearby jobs/reports", e?.response?.data || e.message);
+      finalizedNearby = sourceJobs;
+    }
+
+    // FALLBACK: If nearby is empty but we have sourceJobs (global), show them
+    if (finalizedNearby.length === 0 && sourceJobs.length > 0) {
+      finalizedNearby = sourceJobs;
+    }
+
+    const myProfileId = sourceProfile?.id;
+    const myAppliedJobIds = new Set(
+      sourceApps
+        .filter(a => (a.worker?.id || (a as any).workerId) === myProfileId)
+        .map(a => String(a.jobPostId))
+    );
+    
+    const availableJobs = finalizedNearby.filter(j => !myAppliedJobIds.has(String(j.id)));
+
+    setNearbyJobs(availableJobs.map((j: any): Job => {
+      const mapped = mapJobPostToUI(j);
+      return {
+        id: j.id,
+        title: mapped.title,
+        farmer: mapped.farmer.name,
+        location: mapped.location.address,
+        distanceKm: mapped.location.distance || 0,
+        matchScore: mapped.matchScore ?? undefined,
+        wage: mapped.wage.toLocaleString("vi-VN"),
+        wageAmount: mapped.wage,
+        duration: mapped.duration,
+        rating: mapped.farmer.rating,
+        urgent: mapped.urgent
+      };
+    }));
+
+    const myAppsMap = new Map();
+    sourceApps.forEach(a => {
+      const workerId = a.worker?.id || (a as any).workerId;
+      if (workerId === myProfileId) {
+        myAppsMap.set(String(a.jobPostId), a);
+      }
+    });
+    
+    const myApps = Array.from(myAppsMap.values());
+    const iterApps = [...myApps].reverse();
+    
+    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
+    const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
+    
+    const activeApps = activeAppsUntrimmed.filter(app => {
+      const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
+      const jobStatusId = (job as any)?.statusId || 2;
+      return jobStatusId !== 5 && jobStatusId !== 6; 
+    }).slice(0, 3);
+
+    const mapApp = (app: any) => {
+      const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
+      const uiApp = mapApplicationToUI(app, job);
+      const reportedToday = todayReports.some(r => String(r.jobApplicationId) === String(app.id));
+      return { ...uiApp, reportedToday };
+    };
+
+    setPendingApplications(pendingApps.map(mapApp));
+    setActiveApplications(activeApps.map(mapApp));
 
     setIsLoading(false);
     setRefreshing(false);
@@ -180,11 +208,23 @@ export function WorkerHomeScreen({ navigation }: any) {
     loadData();
   };
 
-  const STATS = [
-    { label: "Việc đã làm", value: String(totalJobsCompleted ?? 0), Icon: Briefcase, iconColor: "#059669", bg: "#d1fae5" },
-    { label: "Đánh giá",    value: String(profileRating ?? "—"),    Icon: Star,      iconColor: "#f59e0b", bg: "#fef3c7" },
-    { label: "Thu nhập",    value: "—",                              Icon: TrendingUp, iconColor: "#0d9488", bg: "#ccfbf1" },
-  ];
+  const formatCompact = (val: number) => {
+    if (val === 0) return "0";
+    if (val >= 1000000) {
+      const millions = Math.floor(val / 1000000);
+      const thousands = Math.floor((val % 1000000) / 1000);
+      if (thousands === 0) return millions + "m";
+      // 1 245 435 -> 1m245
+      // 1 200 000 -> 1m2
+      const thousandsStr = String(thousands).padStart(3, '0').replace(/0+$/, '');
+      return `${millions}m${thousandsStr}`;
+    }
+    if (val >= 1000) return Math.floor(val / 1000) + "k";
+    return val.toString();
+  };
+
+
+
 
   return (
     <SafeAreaView className="flex-1 bg-primary-50" edges={["top"]}>
@@ -206,10 +246,10 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="absolute w-[200px] h-[200px] rounded-full top-[-70px] right-[-50px]" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
                 <View className="absolute w-[130px] h-[130px] rounded-full bottom-2 left-[-30px]" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
 
-                <View className="flex-row justify-between items-start mb-2">
+                <View className="flex-row justify-between items-start mb-3">
                   <View>
                     <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào 👋</Text>
-                    <Text className="text-white text-2xl font-extrabold" style={{ letterSpacing: -0.4 }}>{user?.name?.split(" ").pop() || "Bạn"}</Text>
+                    <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5">{user?.name || "BẠN MỚI"}</Text>
                   </View>
                   <View className="flex-row items-center gap-2.5">
                     <TouchableOpacity className="w-[42px] h-[42px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
@@ -219,6 +259,25 @@ export function WorkerHomeScreen({ navigation }: any) {
                     <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={44} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
                   </View>
                 </View>
+
+                {/* WALLET BALANCE - PRIVATE TOGGLE */}
+                <TouchableOpacity 
+                   onPress={() => setIsBalanceVisible(!isBalanceVisible)}
+                   className="flex-row justify-between items-center bg-white/10 px-4 py-3 rounded-2xl border border-white/20 mb-3"
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <View className="w-8 h-8 rounded-full bg-white/10 justify-center items-center">
+                      <Wallet size={14} color="white" />
+                    </View>
+                    <Text className="text-white font-bold text-[14px]">Số dư ví</Text>
+                  </View>
+                  <View className="flex-row items-center gap-2.5">
+                    <Text className="text-white text-xl font-black tracking-tight">
+                      {isBalanceVisible ? (walletBalance ?? 0).toLocaleString("vi-VN") + "₫" : "******"}
+                    </Text>
+                    {isBalanceVisible ? <EyeOff size={18} color="white" /> : <Eye size={18} color="white" />}
+                  </View>
+                </TouchableOpacity>
 
                 <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
                   <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>
@@ -236,17 +295,37 @@ export function WorkerHomeScreen({ navigation }: any) {
               </LinearGradient>
             </View>
 
-            {/* STATS ROW */}
-            <View className="flex-row px-4 gap-2.5 mb-4">
-              {STATS.map((s) => (
-                <View key={s.label} className="flex-1 bg-white rounded-[20px] p-3.5 items-center gap-1.5 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 }}>
-                  <View className="w-10 h-10 rounded-full justify-center items-center" style={{ backgroundColor: s.bg }}>
-                    <s.Icon size={18} color={s.iconColor} />
+            {/* STATS ROW: 1 LARGE, 2 EQUAL SMALL */}
+            <View className="flex-row px-4 mb-4 gap-2">
+               {/* THU NHẬP HÔM NAY (Wide Primary) */}
+               <View className="bg-white rounded-[16px] p-1.5 items-center border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1, flex: 1.8, gap: 1 }}>
+                  <View className="w-6 h-6 rounded-full justify-center items-center bg-[#ccfbf1]">
+                    <TrendingUp size={10} color="#0d9488" />
                   </View>
-                  <Text className="text-lg font-extrabold text-slate-800">{s.value}</Text>
-                  <Text className="text-[11px] text-slate-500 font-medium text-center">{s.label}</Text>
-                </View>
-              ))}
+                  <Text className="text-[14px] font-black text-slate-900" numberOfLines={1}>
+                    {formatCompact(todayEarnings ?? 0)}
+                    <Text className="text-[9px] text-primary-600 font-bold ml-0.5">₫</Text>
+                  </Text>
+                  <Text className="text-slate-500 font-bold text-center leading-tight" style={{ fontSize: 7.5 }} numberOfLines={1}>Thu nhập hôm nay</Text>
+               </View>
+
+               {/* VIỆC ĐÃ LÀM (Equal Secondary) */}
+               <View className="bg-white rounded-[16px] p-1.5 items-center border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1, flex: 1, gap: 1 }}>
+                  <View className="w-6 h-6 rounded-full justify-center items-center bg-[#d1fae5]">
+                    <Briefcase size={10} color="#059669" />
+                  </View>
+                  <Text className="text-[14px] font-extrabold text-slate-800" numberOfLines={1}>{totalJobsCompleted ?? 0}</Text>
+                  <Text className="text-slate-500 font-bold text-center leading-tight" style={{ fontSize: 7.5 }} numberOfLines={1}>Việc đã làm</Text>
+               </View>
+
+               {/* ĐÁNH GIÁ (Equal Secondary) */}
+               <View className="bg-white rounded-[16px] p-1.5 items-center border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1, flex: 1, gap: 1 }}>
+                  <View className="w-6 h-6 rounded-full justify-center items-center bg-[#fef3c7]">
+                    <Star size={10} color="#f59e0b" />
+                  </View>
+                  <Text className="text-[14px] font-extrabold text-slate-800" numberOfLines={1}>{profileRating ?? "0"}</Text>
+                  <Text className="text-slate-500 font-bold text-center leading-tight" style={{ fontSize: 7.5 }} numberOfLines={1}>Đánh giá</Text>
+               </View>
             </View>
 
             {pendingApplications.length > 0 && (
@@ -295,7 +374,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                           {j.reportedToday ? (
                             <Badge variant="success">Đã báo cáo</Badge>
                           ) : (
-                            <Badge variant="danger">Cần báo cáo</Badge>
+                            <Badge variant="warning">Cần báo cáo</Badge>
                           )}
                         </View>
                       </CardContent>

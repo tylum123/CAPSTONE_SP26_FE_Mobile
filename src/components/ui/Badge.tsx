@@ -20,7 +20,7 @@ const CONFIG: Record<BadgeVariant, { container: string; text: string; borderColo
 };
 
 export function Badge({ children, variant = "default", style }: BadgeProps) {
-  const cfg = CONFIG[variant];
+  const cfg = CONFIG[variant] || CONFIG.default;
   return (
     <View
       className={["px-2.5 py-0.5 rounded-full self-start border", cfg.container].join(" ")}

@@ -439,10 +439,16 @@ export function JobDetailScreen({ navigation, route }: any) {
           </View>
         )}
 
-        {jobDetail.wageTypeId !== "Khoán" && applicationInfo.statusId !== 2 && (
+        {(jobDetail.wageTypeId !== "Khoán") && (
           <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
-            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Chọn khung giờ</Text>
-            <Text className="text-[13px] text-slate-400 mb-4">Bạn muốn làm việc vào những ngày nào?</Text>
+            <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>
+              {applicationInfo.statusId === 2 ? "Lịch làm việc của bạn" : "Chọn khung giờ"}
+            </Text>
+            <Text className="text-[13px] text-slate-400 mb-4">
+              {applicationInfo.statusId === 2 
+                ? "Dưới đây là các ngày bạn đã đăng ký làm việc." 
+                : "Bạn muốn làm việc vào những ngày nào?"}
+            </Text>
             <View className="gap-2.5">
               {jobDetail.timeSlots.map((slot: any) => {
                 const key = String(slot.rawDate || slot.date).substring(0, 10);
@@ -473,9 +479,21 @@ export function JobDetailScreen({ navigation, route }: any) {
                     ].join(" ")}>{slot.date}</Text>
                     
                     {!slot.available && <Badge variant="secondary">Đã đủ</Badge>}
-                    {isSelectedAndApplied && (
+                    {isSelectedAndApplied && !slot.reportedAt && applicationInfo.statusId !== 2 && (
                       <View className="ml-auto bg-green-100 px-2 py-1 rounded-lg border border-green-200">
                         <Text className="text-[10px] font-bold text-green-700 uppercase">✓ Đã ứng tuyển</Text>
+                      </View>
+                    )}
+
+                    {slot.reportedAt && (
+                      <View className="ml-auto bg-primary-100 px-2 py-1 rounded-lg border border-primary-200">
+                        <Text className="text-[10px] font-bold text-primary-700 uppercase">✓ Đã báo cáo</Text>
+                      </View>
+                    )}
+                    
+                    {applicationInfo.statusId === 2 && !slot.reportedAt && (
+                      <View className="ml-auto bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
+                        <Text className="text-[10px] font-bold text-slate-500 uppercase">Chưa báo cáo</Text>
                       </View>
                     )}
                     
@@ -507,17 +525,22 @@ export function JobDetailScreen({ navigation, route }: any) {
               )}
             </View>
             
-            {applicationInfo.statusId === 2 ? (
+            {(applicationInfo.statusId === 2 && !jobDetail.timeSlots.find((s: any) => s.date === new Date().toLocaleDateString("vi-VN") && s.reportedAt)) ? (
               <Button 
                 onPress={() => navigation.navigate("SubmitReport", { jobApplicationId: applicationInfo.id })}
                 size="lg"
                 variant="default"
-                disabled={isPastDate(jobDetail.endDate || jobDetail.startDate) || !!jobDetail.timeSlots.find((s: any) => s.date === "23/03/2026" && s.reportedAt)}
+                disabled={isPastDate(jobDetail.endDate || jobDetail.startDate)}
               >
-                {!!jobDetail.timeSlots.find((s: any) => s.date === "23/03/2026" && s.reportedAt) 
-                  ? "Đã báo cáo hôm nay" 
-                  : "Nộp Báo Cáo (Hôm nay)"}
+                <View className="flex-row items-center gap-2">
+                  <CheckCircle size={18} color="white" />
+                  <Text className="text-white font-bold">Nộp Báo Cáo</Text>
+                </View>
               </Button>
+            ) : applicationInfo.statusId === 2 ? (
+              <View className="bg-primary-50 px-4 py-2 rounded-xl border border-primary-100">
+                <Text className="text-primary-700 font-bold text-center">Đã báo cáo hôm nay ✓</Text>
+              </View>
             ) : (
               <Button 
                 onPress={handleQuickApply} 

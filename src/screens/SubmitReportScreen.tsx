@@ -263,7 +263,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
               <Button 
                 onPress={() => {
                   setShowSuccess(false);
-                  navigation.navigate("Home");
+                  navigation.navigate("Worker", { screen: "Home" });
                 }}
                 className="bg-primary-600 h-14 rounded-2xl"
               >
