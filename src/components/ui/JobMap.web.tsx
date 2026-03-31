@@ -1,8 +1,14 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React, { useMemo, useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Job } from "../../types";
+import { Job } from "../../types/export_type_definitions";
 import { COLORS } from "../../constants/theme";
 
 // Fix Leaflet's default icon path issues

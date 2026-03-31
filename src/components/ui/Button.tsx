@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React from "react";
 import {
   Pressable,
@@ -7,6 +13,7 @@ import {
   Platform,
   ViewStyle,
 } from "react-native";
+import { hapticFeedback } from "../../utils/haptic";
 
 interface ButtonProps {
   onPress?: () => void;
@@ -15,7 +22,8 @@ interface ButtonProps {
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
+  className?: string;
   fullWidth?: boolean;
 }
 
@@ -64,11 +72,13 @@ export function Button({
   disabled = false,
   loading = false,
   style,
+  className = "",
   fullWidth = false,
 }: ButtonProps) {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
+    hapticFeedback.light();
     Animated.spring(scaleAnim, {
       toValue: 0.96,
       useNativeDriver: true,
@@ -119,6 +129,7 @@ export function Button({
           sStyle.container,
           fullWidth ? "self-stretch" : "",
           disabled || loading ? "opacity-45" : "",
+          className
         ]
           .filter(Boolean)
           .join(" ")}
@@ -129,7 +140,7 @@ export function Button({
             size="small"
             color={variant === "default" ? "#ffffff" : "#059669"}
           />
-        ) : (
+        ) : typeof children === "string" ? (
           <Text
             className={[
               "font-bold tracking-tight text-center",
@@ -139,6 +150,8 @@ export function Button({
           >
             {children}
           </Text>
+        ) : (
+          children
         )}
       </Pressable>
     </Animated.View>

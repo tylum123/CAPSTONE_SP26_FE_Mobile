@@ -1,6 +1,12 @@
-import api from "../config/axios";
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
+import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse } from "../types";
+import { ApiResponse } from "../types/export_type_definitions";
 
 // Login credentials interface
 export interface LoginRequest {
@@ -14,7 +20,6 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phoneNumber: string;
-  address: string;
   roleId: number;
 }
 
@@ -22,6 +27,13 @@ export interface RegisterRequest {
 export interface GoogleLoginRequest {
   googleToken: string;
   roleId?: number;
+}
+
+// Reset password request
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
 }
 
 // Auth response interface
@@ -72,24 +84,7 @@ export const authService = {
   },
 
   // Reset password
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-      token,
-      newPassword,
-    });
-  },
-
-  // Verify email
-  verifyEmail: async (token: string): Promise<void> => {
-    await api.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
-  },
-
-  // Refresh token
-  refreshToken: async (refreshToken: string): Promise<LoginResponse> => {
-    const response = await api.post<ApiResponse<LoginResponse>>(
-      API_ENDPOINTS.AUTH.REFRESH_TOKEN,
-      { refreshToken },
-    );
-    return response.data.data;
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
   },
 };

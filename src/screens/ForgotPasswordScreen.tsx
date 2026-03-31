@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Handles password recovery flow for existing users.
+ * Inputs: User email or phone number.
+ * Outputs: Reset token request, navigation to OTP/Login.
+ * Dependencies: Auth service, Navigation routing. */
+
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,

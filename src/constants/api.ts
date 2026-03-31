@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 // API Configuration Constants
 export const API_CONFIG = {
   TIMEOUT: 30000,
@@ -24,7 +30,6 @@ export const API_ENDPOINTS = {
     REGISTER: `${API_PREFIX}/register`,
     GOOGLE_LOGIN: `${API_PREFIX}/google-login`,
     LOGOUT: `${API_PREFIX}/logout`,
-    REFRESH_TOKEN: `${API_PREFIX}/refresh`,
     FORGOT_PASSWORD: `${API_PREFIX}/forget`,
     RESET_PASSWORD: `${API_PREFIX}/reset`,
     VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
@@ -47,6 +52,9 @@ export const API_ENDPOINTS = {
     CATEGORY_DETAIL: (id: string) => `${API_PREFIX}/job/category/${id}`,
     POST_LIST: `${API_PREFIX}/job/post`,
     POST_DETAIL: (id: string) => `${API_PREFIX}/job/post/${id}`,
+    NEARBY: `${API_PREFIX}/job/post/nearby`,
+    SEARCH: `${API_PREFIX}/job/post/search`,
+    FILTER: `${API_PREFIX}/job/post/filter`,
     APPLICATION: `${API_PREFIX}/job/application`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
   },
@@ -61,19 +69,21 @@ export const API_ENDPOINTS = {
   // Disputes
   DISPUTE: {
     CREATE: `${API_PREFIX}/disputes`,
-    MY: `${API_PREFIX}/disputes/my`,
+    MY: `${API_PREFIX}/disputes/mine`,
     DETAIL: (id: string) => `${API_PREFIX}/disputes/${id}`,
   },
   // Media
   MEDIA: {
     UPLOAD_IMAGE: `${API_PREFIX}/media/upload/image`,
   },
-  // Reviews
-  REVIEWS: {
-    LIST: `${API_PREFIX}/reviews`,
-    CREATE: `${API_PREFIX}/reviews`,
-    UPDATE: (id: string) => `${API_PREFIX}/reviews/${id}`,
-    DELETE: (id: string) => `${API_PREFIX}/reviews/${id}`,
+  // Ratings & Reviews
+  RATING: {
+    BASE: `${API_PREFIX}/ratings`,
+    CREATE: `${API_PREFIX}/ratings`,
+    DETAIL: (id: string) => `${API_PREFIX}/ratings/${id}`,
+    USER_SPECIFIC: (userId: string) => `${API_PREFIX}/ratings/user/${userId}`,
+    USER_ALL: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/all`,
+    USER_AVERAGE: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/average`,
   },
   // Notifications
   NOTIFICATIONS: {
@@ -83,12 +93,22 @@ export const API_ENDPOINTS = {
     READ_ALL: `${API_PREFIX}/notification/read-all`,
     DELETE: (id: string) => `${API_PREFIX}/notification/${id}`,
     REGISTER_TOKEN: `${API_PREFIX}/notification/register-token`,
+    UNREGISTER_TOKEN: `${API_PREFIX}/notification/unregister-token`,
   },
-  // Wallet
+  // Wallet & Withdrawals
   WALLET: {
-    BALANCE: `${API_PREFIX}/wallet/balance`,
-    TRANSACTIONS: `${API_PREFIX}/wallet/transactions`,
-    WITHDRAW: `${API_PREFIX}/wallet/withdraw`,
+    ME: `${API_PREFIX}/wallet/me`,
+    TRANSACTIONS: (walletId: string) => `${API_PREFIX}/wallet-transaction/wallet/${walletId}`,
+    WITHDRAW: `${API_PREFIX}/withdraw`,
+    ACCOUNT_BALANCE: `${API_PREFIX}/withdraw/account-balance`,
+  },
+  // Skills
+  SKILLS: {
+    LIST: `${API_PREFIX}/skills`,
+  },
+  // Weather
+  WEATHER: {
+    ME: `${API_PREFIX}/weather/me`,
   },
   // Chat
   CHAT: {
