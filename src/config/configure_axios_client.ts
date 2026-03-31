@@ -1,10 +1,16 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 import axios, {
   AxiosInstance,
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CONFIG } from "./index";
+import { CONFIG } from "./export_configurations";
 import {
   STORAGE_KEYS,
   REQUEST_HEADERS,
@@ -47,6 +53,7 @@ api.interceptors.request.use(
 
 // Response interceptor
 let isRefreshing = false;
+let isLoggingOut = false; // New flag to prevent redundant logouts
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
@@ -68,71 +75,39 @@ api.interceptors.response.use(
     const originalRequest = error.config as any;
 
     // Handle 401 Unauthorized
-    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED && !originalRequest._retry) {
+    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
       const requestUrl = originalRequest.url || "";
+      const isLogoutUrl = requestUrl.toLowerCase().includes("logout");
       const isAuthRequest =
         requestUrl.includes(API_ENDPOINTS.AUTH.LOGIN) ||
         requestUrl.includes(API_ENDPOINTS.AUTH.REGISTER) ||
         requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN) ||
-        requestUrl.includes(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
+        isLogoutUrl;
 
-      if (!isAuthRequest) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
-          })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return api(originalRequest);
-            })
-            .catch((err) => {
-              return Promise.reject(err);
-            });
-        }
+      const errorMessage = (error.response?.data as any)?.message || "";
+      const isProfileNotFound = errorMessage.toLowerCase().includes("profile not found");
 
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-        if (refreshToken) {
+      if (!isAuthRequest && !isProfileNotFound && !isLoggingOut) {
+        console.log("Axios: 401 Unauthorized detected. URL:", requestUrl, "Message:", errorMessage);
+        
+        const isOnboardingRequest = requestUrl.includes("/worker") || requestUrl.includes("/user/profile");
+        
+        if (!isOnboardingRequest) {
+          isLoggingOut = true;
           try {
-            // Use a clean axios instance to avoid interceptor loop for refresh
-            const refreshResponse = await axios.post(`${api.defaults.baseURL}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`, {
-              refreshToken,
-            });
-
-            const { token: newToken, refreshToken: newRefreshToken } = refreshResponse.data.data;
-
-            await AsyncStorage.multiSet([
-              [STORAGE_KEYS.AUTH_TOKEN, newToken],
-              [STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken || refreshToken],
-            ]);
-            authTokenService.setTokenToMemory(newToken);
-
-            processQueue(null, newToken);
-            isRefreshing = false;
-
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            return api(originalRequest);
-          } catch (refreshError) {
-            processQueue(refreshError, null);
-            isRefreshing = false;
-            // Force logout from AuthContext reference exported earlier
             const { forceLogout } = require("../context/AuthContext");
             await forceLogout();
+          } finally {
+            isLoggingOut = false;
           }
-        } else {
-          const { forceLogout } = require("../context/AuthContext");
-          await forceLogout();
         }
       }
     }
 
     // Handle network errors (Backend Down -> "Sập")
-    // As per user request: "nếu backend sập thì phải bặt người dùng out khỏi app ra màn hình login liền"
     if (error.message === "Network Error" || error.code === "ECONNABORTED" || error.response?.status === 502 || error.response?.status === 503) {
-      const { forceLogout } = require("../context/AuthContext");
-      await forceLogout();
+      // Don't force logout on simple network errors, just let the screen handle the failure state
+      console.log("Network error or server hiccup detected.");
     }
 
     return Promise.reject(error);

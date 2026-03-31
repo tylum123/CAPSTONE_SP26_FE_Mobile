@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Displays a historical list of system alerts and user notifications.
+ * Inputs: Notification payload from backend APIs.
+ * Outputs: Rendered notification list, mark-as-read actions.
+ * Dependencies: Notification service, Auth context. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -6,8 +12,9 @@ import {
   X, ChevronLeft, CheckCheck,
 } from "lucide-react-native";
 import { COLORS } from "../constants/theme";
-import { notificationService } from "../services";
+import { notificationService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
+import { SkeletonRow, EmptyState } from "../components/ui/export_ui_components";
 
 type NotificationType = "job_accepted" | "job_rejected" | "payment_received" | "reminder" | "new_job" | "job_cancelled";
 
@@ -35,23 +42,26 @@ const INITIAL: Notification[] = [
   { id: 1, type: "job_accepted",     title: "Ứng tuyển được chấp nhận", message: "Nguyễn Văn A đã chấp nhận ứng tuyển của bạn cho công việc 'Thu hoạch lúa'", timestamp: "5 phút trước",  read: false, actionable: true,  jobId: 1 },
   { id: 2, type: "payment_received", title: "Đã nhận thanh toán 💰",     message: "Bạn đã nhận 250,000 VNĐ cho công việc 'Làm đất trồng rau'",                timestamp: "2 giờ trước",   read: false },
   { id: 3, type: "reminder",         title: "Nhắc nhở công việc ⏰",      message: "Bạn có công việc 'Chăm sóc vườn cam' bắt đầu vào ngày mai lúc 07:00",      timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 2 },
-  { id: 4, type: "new_job",          title: "Việc mới gần bạn 📍",        message: "Có việc 'Phun thuốc sâu' cách 3km, lương 300,000 VNĐ",                       timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 3 },
+  { id: 4, type: "new_job",          title: "Việc mới gần bạn 📍",        message: "Có việc 'Phun thuốc sâu' cách 3km, thù lao 300,000 VNĐ",                       timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 3 },
   { id: 5, type: "job_rejected",     title: "Ứng tuyển không thành công", message: "Trần Thị B đã từ chối ứng tuyển của bạn cho 'Tưới tiêu'",                   timestamp: "2 ngày trước",  read: true },
 ];
 
 export function NotificationsScreen({ navigation }: any) {
   const { isAuthenticated, user } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>(INITIAL);
+  const [notifications, setNotifications] = useState<any[]>(user?.isDemo ? INITIAL : []);
+  const [isLoading, setIsLoading] = useState(!user?.isDemo);
   const [refreshing, setRefreshing] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const loadNotifications = useCallback(async () => {
     if (!isAuthenticated || user?.isDemo) {
       setNotifications(INITIAL);
+      setIsLoading(false);
       setRefreshing(false);
       return;
     }
     try {
+      setIsLoading(true);
       const data = await notificationService.getNotifications();
       const mapType = (typeId: number) => {
         if (typeId === 1) return "job_accepted";
@@ -75,6 +85,7 @@ export function NotificationsScreen({ navigation }: any) {
     } catch {
       setNotifications([]);
     } finally {
+      setIsLoading(false);
       setRefreshing(false);
     }
   }, [isAuthenticated, user?.isDemo]);
@@ -181,13 +192,23 @@ export function NotificationsScreen({ navigation }: any) {
           );
         }}
         ListEmptyComponent={
-          <View className="items-center pt-20 gap-2">
-            <View className="w-20 h-20 rounded-full bg-slate-100 justify-center items-center">
-              <Bell size={40} color="#cbd5e1" />
+          !isLoading ? (
+            <EmptyState 
+              title="Không có thông báo"
+              message="Chúng tôi sẽ thông báo cho bạn khi có tin mới hoặc cập nhật về công việc!"
+              icon={Bell}
+            />
+          ) : null
+        }
+        ListFooterComponent={
+          isLoading ? (
+            <View className="px-4 gap-4 mt-2">
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
             </View>
-            <Text className="text-base font-bold text-slate-600">Không có thông báo</Text>
-            <Text className="text-sm text-slate-400 text-center">Chúng tôi sẽ thông báo khi có việc mới!</Text>
-          </View>
+          ) : null
         }
         ItemSeparatorComponent={() => <View className="h-2" />}
       />

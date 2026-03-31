@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React from "react";
 import { View, Text, ViewStyle } from "react-native";
 
@@ -20,7 +26,7 @@ const CONFIG: Record<BadgeVariant, { container: string; text: string; borderColo
 };
 
 export function Badge({ children, variant = "default", style }: BadgeProps) {
-  const cfg = CONFIG[variant];
+  const cfg = CONFIG[variant] || CONFIG.default;
   return (
     <View
       className={["px-2.5 py-0.5 rounded-full self-start border", cfg.container].join(" ")}

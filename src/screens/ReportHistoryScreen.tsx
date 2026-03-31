@@ -1,10 +1,16 @@
+/* AI CONTEXT:
+ * Action: Lists all past daily reports associated with a specific job.
+ * Inputs: Job ID route parameter.
+ * Outputs: Aggregated list of report summaries.
+ * Dependencies: Job service, Report service. */
+
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ClipboardCheck, Calendar, Info } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import { JobDetailDTO } from "../types";
+import { JobDetailDTO } from "../types/export_type_definitions";
 import { reportService } from "../services/report.service";
 import { useAuth } from "../context/AuthContext";
 

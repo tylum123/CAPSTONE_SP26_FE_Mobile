@@ -1,10 +1,16 @@
+/* AI CONTEXT:
+ * Action: Shows detailed view of a submitted daily work report.
+ * Inputs: Report ID or Report Object from route params.
+ * Outputs: Read-only UI of text and media evidence.
+ * Dependencies: Report service, Route parameters. */
+
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert, Image, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Info, FileText } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
-import { JobDetailDTO } from "../types";
+import { JobDetailDTO } from "../types/export_type_definitions";
 import { reportService } from "../services/report.service";
 import { disputeService } from "../services/dispute.service";
 
@@ -102,6 +108,33 @@ export function ReportDetailScreen({ navigation, route }: any) {
 
           <Text className="font-semibold text-slate-800 mb-2">Mô tả công việc:</Text>
           <Text className="text-[15px] text-slate-700 leading-6 mb-4">{data.workerDescription}</Text>
+          
+          {data.evidenceUrl && (
+            <View className="mt-2">
+              <Text className="font-semibold text-slate-800 mb-2">Hình ảnh minh chứng:</Text>
+              <View className="flex-row gap-2">
+                {data.evidenceUrl.split(",").map((url, i) => (
+                  <TouchableOpacity 
+                    key={i} 
+                    className="flex-1 aspect-square rounded-xl overflow-hidden border border-slate-100 bg-slate-50"
+                    onPress={() => {/* Full screen viewer could be added here */}}
+                  >
+                    <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+                {/* Fillers for alignment */}
+                {data.evidenceUrl.split(",").length === 1 && (
+                  <>
+                    <View className="flex-1 aspect-square" />
+                    <View className="flex-1 aspect-square" />
+                  </>
+                )}
+                {data.evidenceUrl.split(",").length === 2 && (
+                    <View className="flex-1 aspect-square" />
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
         {isApproved && (

@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Facilitates submitting or viewing ratings after job completion.
+ * Inputs: Job ID, user rating score, written feedback.
+ * Outputs: Review submission API request.
+ * Dependencies: Rating service, Job context. */
+
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -5,6 +11,9 @@ import { X, Star } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
+import { ratingService } from "../services/rating.service";
+import { hapticFeedback } from "../utils/haptic";
+import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 export function ReviewScreen({ navigation, route }: any) {
   const { jobId } = route.params;
@@ -14,17 +23,86 @@ export function ReviewScreen({ navigation, route }: any) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const jobInfo = { id: jobId, title: "Thu hoạch lúa", farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12" }, completedDate: "18/01/2026" };
-  const TAGS = ["Nhiệt tình", "Đúng giờ", "Rõ ràng", "Tử tế", "Công việc tốt", "Môi trường an toàn", "Trả lương đúng hạn", "Sẽ làm lại"];
+  const TAGS = ["Nhiệt tình", "Đúng giờ", "Rõ ràng", "Tử tế", "Công việc tốt", "Môi trường an toàn", "Trả thù lao đúng hạn", "Sẽ làm lại"];
   const RATING_LABELS = ["", "Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"];
 
   const handleTagToggle = (tag: string) =>
     setSelectedTags((p) => p.includes(tag) ? p.filter((t) => t !== tag) : [...p, tag]);
 
-  const handleSubmit = () => {
-    if (rating === 0) { alert("Vui lòng chọn số sao đánh giá"); return; }
-    alert("Đánh giá của bạn đã được gửi thành công!");
-    DeviceEventEmitter.emit("REFRESH_DATA");
-    navigation.goBack();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ 
+    visible: boolean; 
+    title: string; 
+    message: string; 
+    variant: "success" | "error" | "info"; 
+    onConfirm?: () => void 
+  }>({ 
+    visible: false, 
+    title: "", 
+    message: "", 
+    variant: "info" 
+  });
+
+  const showFeedback = (params: { 
+    title: string; 
+    message: string; 
+    variant?: "success" | "error" | "info"; 
+    onConfirm?: () => void 
+  }) => setFeedback({ 
+    visible: true, 
+    title: params.title, 
+    message: params.message, 
+    variant: params.variant || "info", 
+    onConfirm: params.onConfirm 
+  });
+
+  const closeFeedback = () => { 
+    const cb = feedback.onConfirm; 
+    setFeedback((p) => ({ ...p, visible: false })); 
+    cb?.(); 
+  };
+
+  const handleRatingPress = (star: number) => {
+    hapticFeedback.medium();
+    setRating(star);
+  };
+
+  const handleSubmit = async () => {
+    if (rating === 0) { 
+      showFeedback({ title: "Thông báo", message: "Vui lòng chọn số sao đánh giá", variant: "info" }); 
+      return; 
+    }
+    
+    setIsSubmitting(true);
+    try {
+      await ratingService.createRating({
+        jobPostId: jobId,
+        ratingValue: rating,
+        comment: selectedTags.length > 0 
+          ? `[${selectedTags.join(", ")}] ${review}` 
+          : review,
+      });
+      
+      hapticFeedback.success();
+      showFeedback({ 
+        title: "Thành công", 
+        message: "Cảm ơn bạn đã đóng góp ý kiến để xây dựng cộng đồng nông nghiệp tốt hơn!", 
+        variant: "success",
+        onConfirm: () => {
+          DeviceEventEmitter.emit("REFRESH_DATA");
+          navigation.goBack();
+        }
+      });
+    } catch (error: any) {
+      hapticFeedback.error();
+      showFeedback({ 
+        title: "Lỗi", 
+        message: error.message || "Không thể gửi đánh giá. Vui lòng thử lại sau.", 
+        variant: "error" 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -59,8 +137,19 @@ export function ReviewScreen({ navigation, route }: any) {
               <Text className="text-base font-semibold text-slate-900 mb-4">Bạn đánh giá thế nào về công việc này?</Text>
               <View className="flex-row justify-center gap-2 my-4">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} className="p-1" onPress={() => setRating(star)} onPressIn={() => setHoveredRating(star)} onPressOut={() => setHoveredRating(0)}>
-                    <Star size={48} color="#fbbf24" fill={star <= (hoveredRating || rating) ? "#fbbf24" : "none"} />
+                  <TouchableOpacity 
+                    key={star} 
+                    className="p-1" 
+                    onPress={() => handleRatingPress(star)} 
+                    onPressIn={() => setHoveredRating(star)} 
+                    onPressOut={() => setHoveredRating(0)}
+                    activeOpacity={0.7}
+                  >
+                    <Star 
+                      size={48} 
+                      color={star <= (hoveredRating || rating) ? "#fbbf24" : "#e2e8f0"} 
+                      fill={star <= (hoveredRating || rating) ? "#fbbf24" : "none"} 
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -114,9 +203,25 @@ export function ReviewScreen({ navigation, route }: any) {
 
         {/* Footer */}
         <View className="p-4 bg-white border-t border-slate-200">
-          <Button onPress={handleSubmit} disabled={rating === 0} fullWidth>Gửi đánh giá</Button>
+          <Button 
+            onPress={handleSubmit} 
+            disabled={rating === 0 || isSubmitting} 
+            loading={isSubmitting}
+            fullWidth
+          >
+            Gửi đánh giá
+          </Button>
         </View>
       </View>
+
+      <FeedbackModal
+        visible={feedback.visible}
+        title={feedback.title}
+        message={feedback.message}
+        variant={feedback.variant}
+        onClose={closeFeedback}
+        onConfirm={feedback.onConfirm}
+      />
     </SafeAreaView>
   );
 }

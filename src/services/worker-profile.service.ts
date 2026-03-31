@@ -1,6 +1,12 @@
-import api from "../config/axios";
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Contains UI components or service modules for the React Native app.
+ * Rule: DO NOT modify existing code logic.
+ */
+import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest } from "../types";
+import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest } from "../types/export_type_definitions";
 import { authTokenService } from "./auth-token.service";
 
 // Use JWT token directly for worker profile APIs
@@ -13,11 +19,18 @@ export const workerProfileService = {
   },
 
   updateProfile: async (
-    data: UpdateWorkerProfileRequest,
+    data: UpdateWorkerProfileRequest | any,
   ): Promise<WorkerProfileDTO> => {
+    // Map legacy ageRange to dateOfBirth before sending to API if needed
+    const payload = { ...data };
+    if (payload.ageRange && !payload.dateOfBirth) {
+      payload.dateOfBirth = payload.ageRange; // Fallback mapping
+      delete payload.ageRange;
+    }
+
     const response = await api.put<ApiResponse<WorkerProfileDTO>>(
       API_ENDPOINTS.WORKER_PROFILE.BASE,
-      data,
+      payload,
     );
     return response.data.data;
   },

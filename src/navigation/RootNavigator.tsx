@@ -1,3 +1,9 @@
+/**
+ * AI CONTEXT:
+ * This file is part of the CAPSTONE_SP26_FE_Mobile project.
+ * Core React Native utility, navigation, state, or hook logic.
+ * Rule: DO NOT modify existing code logic.
+ */
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import { WorkerTabNavigator } from "./WorkerTabNavigator";
@@ -7,7 +13,7 @@ import { ForgotPasswordScreen } from "../screens/ForgotPasswordScreen";
 import { SplashScreen } from "../screens/SplashScreen";
 import { OnboardingProfileScreen } from "../screens/OnboardingProfileScreen";
 import { useAuth } from "../context/AuthContext";
-import { workerProfileService } from "../services";
+import { workerProfileService } from "../services/export_services";
 
 // Standalone screens
 import { JobDetailScreen } from "../screens/JobDetailScreen";
@@ -18,6 +24,7 @@ import { SubmitReportScreen } from "../screens/SubmitReportScreen";
 import { ReportHistoryScreen } from "../screens/ReportHistoryScreen";
 import { ReportDetailScreen } from "../screens/ReportDetailScreen";
 import { EditProfileScreen } from "../screens/EditProfileScreen";
+import { WithdrawalScreen } from "../screens/WithdrawalScreen";
 
 const Stack = createStackNavigator();
 
@@ -43,8 +50,15 @@ export function RootNavigator() {
         await workerProfileService.getProfile();
         setProfileStatus("hasProfile");
       } catch (error: any) {
-        if (error?.response?.status === 404) {
+        const errorMessage = error?.response?.data?.message || "";
+        const isProfileNotFound = errorMessage.toLowerCase().includes("profile not found") || error?.response?.status === 404;
+
+        if (isProfileNotFound) {
           setProfileStatus("needsProfile");
+        } else if (error?.response?.status === 401) {
+          // If it's a real 401 (not profile missing), logout is handled by axios interceptor
+          // but we set unknown to be safe
+          setProfileStatus("unknown");
         } else {
           setProfileStatus("hasProfile");
         }
@@ -71,6 +85,7 @@ export function RootNavigator() {
         component={ReportDetailScreen}
       />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
     </>
   );
 
@@ -91,6 +106,9 @@ export function RootNavigator() {
             component={ForgotPasswordScreen}
           />
         </>
+      ) : profileStatus === "unknown" ? (
+        // Loading state while checking profile
+        <Stack.Screen name="RootLoading" component={SplashScreen} />
       ) : profileStatus === "needsProfile" ? (
         <>
           <Stack.Screen

@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Authenticates users into the mobile application.
+ * Inputs: User credentials (email/phone and password).
+ * Outputs: JWT token, user session state.
+ * Dependencies: Auth service, Auth context, Storage utilities. */
+
 import React, { useState } from "react";
 import {
   View,
@@ -19,7 +25,7 @@ import {
 import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { CONFIG } from "../config";
+import { CONFIG } from "../config/export_configurations";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 if (CONFIG.GOOGLE_WEB_CLIENT_ID) {

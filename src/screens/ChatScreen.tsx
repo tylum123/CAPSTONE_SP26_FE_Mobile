@@ -1,3 +1,9 @@
+/* AI CONTEXT:
+ * Action: Manages real-time messaging between worker and farmer.
+ * Inputs: User IDs, chat messages, route parameters.
+ * Outputs: Sent messages payload, rendered conversation UI.
+ * Dependencies: Chat service, Auth context, Navigation parameters. */
+
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
