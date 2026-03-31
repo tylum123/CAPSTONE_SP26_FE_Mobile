@@ -25,7 +25,6 @@ const EXPO_GO_REDIRECT_URI = "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mo
 export function RegisterScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber]       = useState("");
   const [email, setEmail]                   = useState("");
-  const [address, setAddress]               = useState("");
   const [password, setPassword]             = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword]     = useState(false);
@@ -70,14 +69,14 @@ export function RegisterScreen({ navigation }: any) {
   }, [googleResponse, loginWithGoogle]);
 
   const handleRegister = async () => {
-    if (!phoneNumber || !email || !address || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
+    if (!phoneNumber || !email || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
     if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { showFeedback({ title: "Sai định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFeedback({ title: "Sai định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
     if (password !== confirmPassword) { showFeedback({ title: "Mật khẩu không khớp", message: "Mật khẩu xác nhận không khớp", variant: "error" }); return; }
     if (password.length < 6) { showFeedback({ title: "Mật khẩu yếu", message: "Mật khẩu phải có ít nhất 6 ký tự", variant: "error" }); return; }
     setLoading(true);
     try {
-      await register({ email: email.trim(), phoneNumber: phoneNumber.trim(), password, address: address.trim(), roleId: 3 });
+      await register({ email: email.trim(), phoneNumber: phoneNumber.trim(), password, roleId: 3 });
       showFeedback({ title: "Thành công", message: "Đăng ký tài khoản thành công!", variant: "success", onConfirm: () => navigation.navigate("Login") });
     } catch { showFeedback({ title: "Thất bại", message: "Đăng ký thất bại. Vui lòng thử lại.", variant: "error" }); }
     finally { setLoading(false); }
@@ -86,7 +85,6 @@ export function RegisterScreen({ navigation }: any) {
   const fields = [
     { key: "phone", label: "Số điện thoại", placeholder: "0912 345 678", Icon: Phone, value: phoneNumber, onChangeText: setPhoneNumber, keyboardType: "phone-pad" as const, maxLength: 11 },
     { key: "email", label: "Email", placeholder: "email@example.com", Icon: Mail, value: email, onChangeText: setEmail, keyboardType: "email-address" as const, autoCapitalize: "none" as const },
-    { key: "address", label: "Địa chỉ", placeholder: "Số nhà, đường, phường, tỉnh...", Icon: MapPin, value: address, onChangeText: setAddress },
     { key: "password", label: "Mật khẩu", placeholder: "Tối thiểu 6 ký tự", Icon: Lock, value: password, onChangeText: setPassword, secureTextEntry: !showPassword, showToggle: true, toggleState: showPassword, onToggle: () => setShowPassword(p => !p) },
     { key: "confirm", label: "Xác nhận mật khẩu", placeholder: "Nhập lại mật khẩu", Icon: Lock, value: confirmPassword, onChangeText: setConfirmPassword, secureTextEntry: !showConfirmPassword, showToggle: true, toggleState: showConfirmPassword, onToggle: () => setShowConfirmPassword(p => !p) },
   ];

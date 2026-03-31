@@ -2,9 +2,9 @@
 
 Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase.
 
-Cập nhật lần cuối: **2026-03-25**
+Cập nhật lần cuối: **2026-03-31**
 
-## 1) Thông tin chung
+## 1) Thông trình chung
 
 - Base URL: `/api/v1`
 - Auth: Bearer JWT (`Authorization: Bearer <token>`)
@@ -30,7 +30,7 @@ Cập nhật lần cuối: **2026-03-25**
   "id": "guid",
   "userId": "guid",
   "fullName": "string",
-  "age": "string",
+  "dateOfBirth": "1995-05-20T00:00:00Z",
   "primaryLocation": "string",
   "travelRadiusKmPreference": 10.5,
   "experienceLevelId": 2,
@@ -39,8 +39,8 @@ Cập nhật lần cuối: **2026-03-25**
   "availabilitySchedule": "string",
   "totalJobsCompleted": 12,
   "avatarUrl": "string",
-  "email": "string",
-  "phoneNumber": "string",
+  "email": "worker@example.com",
+  "phoneNumber": "0123456789",
   "createdAt": "2026-03-03T08:00:00Z",
   "updatedAt": "2026-03-03T08:00:00Z"
 }
@@ -51,9 +51,9 @@ Cập nhật lần cuối: **2026-03-25**
 ```json
 {
   "fullName": "Nguyen Van A",
-  "ageRange": "18-25",
+  "dateOfBirth": "1995-05-20T00:00:00Z",
   "primaryLocation": "Can Tho",
-  "travelRadiusKmPreference": 15,
+  "travelRadiusKmPreference": 15.5,
   "experienceLevelId": 2,
   "availabilitySchedule": "Mon-Fri 08:00-17:00",
   "avatarUrl": "https://..."
@@ -62,9 +62,9 @@ Cập nhật lần cuối: **2026-03-25**
 
 Validation chính:
 - `fullName`: required, max 256
-- `ageRange`: required, max 50
+- `dateOfBirth`: required, ISO Date string
 - `primaryLocation`: required
-- `travelRadiusKmPreference`: optional
+- `travelRadiusKmPreference`: optional (double)
 - `experienceLevelId`: required, range 1..3
 - `availabilitySchedule`: required
 - `avatarUrl`: required
@@ -209,7 +209,7 @@ Validation chính:
   "skillsMatchCount": 2,
   "allSkillsMatched": true,
   "availablePositions": 8,
-  "durationType": "string",
+  "durationDays": 5,
   "isUpcoming": true,
   "matchScore": 85,
   "similarJobsCompleted": 5
@@ -538,13 +538,19 @@ Luồng mới: Worker không cần Check-in/Check-out. Worker tự tạo Báo C�
 - **Body**: `CreateJobApplicationRequest`
 - **Response**: `200 OK` (JobApplicationDTO)
 
-### 6.4 GET `/job/application`
+### 6.7 GET `/job/application`
 - **Mục đích**: Lấy danh sách applications.
 - **Response**: `200 OK` (List<JobApplicationDTO>)
 
-### 6.5 GET `/job/application/{id}`
+### 6.8 GET `/job/application/{id}`
 - **Mục đích**: Xem chi tiết application của mình.
 - **Response**: `200 OK` (JobApplicationDTO)
+
+### 6.9 DELETE `/job/application/{id}`
+- **Mục đích**: Hủy (thu hồi) đơn ứng tuyển đã nộp.
+- **Cơ chế**: API này sẽ xóa vật lý record Application khỏi hệ thống (không dùng cờ status kiểu Cancelled). Worker hoàn toàn có thể tự hủy đơn đã nộp bằng cách gọi API này.
+- **UI Note**: Frontend nên ràng buộc điều kiện nội bộ (ví dụ: chỉ hiện nút "Hủy đơn" khi trạng thái đơn là *Chờ Duyệt - Pending*) vì backend hiện tại sẽ xóa đơn bất chấp trạng thái nào nếu gọi API.
+- **Response**: `200 OK` (Xóa thành công), `404 Not Found`
 
 ---
 
@@ -620,7 +626,7 @@ Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
 - Các path API đều tuân thủ `ApiEndpointConstants.cs` (Ví dụ `/api/v1/worker` thay vì `/api/v1/worker-profile`).
 - WorkerProfile APIs (GET/PUT) loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
 - Luồng báo cáo công việc đã được chuyển từ `WorkerAttendance` sang `JobDetail`.
-- `WorkerAttendance` (Check-in/Check-out) vẫn còn trong codebase nhưng khuyến cáo sử dụng `JobDetail` cho luồng báo cáo mới.
+- **[Deprecated]** `WorkerAttendance` (Check-in/Check-out) hiện tại không còn được dùng trong Worker Mobile Workflow, dẫu các API `/api/v1/attendance/...` vẫn tồn tại ở backend để hỗ trợ DB cũ. Khuyến cáo app gọi qua hệ thống `/api/v1/JobDetail/report-daily` để ghi nhận ngày công.
 - Hệ thống Khiếu nại (Dispute/Appeal) đã được tách thành module riêng.
 - Các DTO danh sách (Application) đã được nhúng kèm Object liên quan để tối ưu UI.
 - API Application Job có validate Role để đảm bảo đúng phân quyền ứng tuyển.

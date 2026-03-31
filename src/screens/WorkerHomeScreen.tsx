@@ -8,13 +8,13 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, Eye, EyeOff } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
 import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
 import { Job } from "../types/export_type_definitions";
-import { jobService, workerProfileService, nominatimService, reportService, walletService } from "../services/export_services";
+import { jobService, workerProfileService, nominatimService, reportService, walletService, weatherService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
 import { JobMap } from "../components/ui/JobMap";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
@@ -30,9 +30,8 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [profileRating, setProfileRating]       = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
   const [profileAvatar, setProfileAvatar]       = useState<string | null>(null);
-  const [walletBalance, setWalletBalance]       = useState<number | null>(null);
   const [todayEarnings, setTodayEarnings]       = useState<number | null>(null);
-  const [isBalanceVisible, setIsBalanceVisible] = useState(false);
+  const [weatherData, setWeatherData]           = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -51,18 +50,21 @@ export function WorkerHomeScreen({ navigation }: any) {
       sourceProfile = DEMO_WORKER_PROFILE;
       sourceWallet = { id: "demo-wallet-123", balance: 1250000 };
       setTodayEarnings(450000); // 450k hôm nay
+      setWeatherData({ city: "TP Hồ Chí Minh", temperature: 31, description: "Trời nắng nhẹ", humidity: 65 });
     } else {
       try {
-        const [jobs, apps, profile, wallet] = await Promise.all([
+        const [jobs, apps, profile, wallet, weather] = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
-          walletService.getWallet()
+          walletService.getWallet(),
+          weatherService.getWeather().catch(() => null)
         ]);
         sourceJobs = jobs;
         sourceApps = apps;
         sourceProfile = profile;
         sourceWallet = wallet;
+        setWeatherData(weather);
 
         if (wallet?.id) {
             const txs = await walletService.getTransactions(wallet.id);
@@ -87,7 +89,6 @@ export function WorkerHomeScreen({ navigation }: any) {
     // Handle profile-specific data with optional chaining
     setProfileRating(sourceProfile?.averageRating ?? 0);
     setTotalJobsCompleted(sourceProfile?.totalJobsCompleted ?? 0);
-    setWalletBalance(sourceWallet?.balance ?? 0);
     setProfileAvatar(sourceProfile?.avatarUrl || null);
     
     const prefRadius = sourceProfile?.travelRadiusKmPreference || 10;
@@ -266,24 +267,24 @@ export function WorkerHomeScreen({ navigation }: any) {
                   </View>
                 </View>
 
-                {/* WALLET BALANCE - PRIVATE TOGGLE */}
-                <TouchableOpacity 
-                   onPress={() => setIsBalanceVisible(!isBalanceVisible)}
-                   className="flex-row justify-between items-center bg-white/10 px-4 py-3 rounded-2xl border border-white/20 mb-3"
-                >
-                  <View className="flex-row items-center gap-2.5">
-                    <View className="w-8 h-8 rounded-full bg-white/10 justify-center items-center">
-                      <Wallet size={14} color="white" />
+                {/* WEATHER WIDGET (Replaced Wallet) */}
+                <View className="flex-row justify-between items-center bg-white/10 px-4 py-3 rounded-2xl border border-white/20 mb-3">
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-10 h-10 rounded-xl bg-white/20 justify-center items-center shadow-sm">
+                      <CloudSun size={20} color="white" />
                     </View>
-                    <Text className="text-white font-bold text-[14px]">Số dư ví</Text>
+                    <View>
+                       <Text className="text-white font-bold text-[15px]">{weatherData?.city || "Đang tải vị trí..."}</Text>
+                       <Text className="text-white/80 font-medium text-xs mt-0.5 capitalize">{weatherData?.description || "Cập nhật thời tiết"}</Text>
+                    </View>
                   </View>
-                  <View className="flex-row items-center gap-2.5">
-                    <Text className="text-white text-xl font-black tracking-tight">
-                      {isBalanceVisible ? (walletBalance ?? 0).toLocaleString("vi-VN") + "₫" : "******"}
+                  <View className="flex-row items-start gap-1">
+                    <Text className="text-white text-3xl font-black tracking-tighter">
+                      {weatherData?.temperature ? Math.round(weatherData.temperature) : "--"}
                     </Text>
-                    {isBalanceVisible ? <EyeOff size={18} color="white" /> : <Eye size={18} color="white" />}
+                    <Text className="text-white/80 text-xl font-bold mt-0.5">°C</Text>
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
                   <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>

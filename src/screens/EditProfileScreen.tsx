@@ -246,9 +246,17 @@ export function EditProfileScreen({ navigation, route }: any) {
   const { currentProfile, onUpdated } = route.params || {};
   const insets = useSafeAreaInsets();
 
+  const initialDate = currentProfile?.dateOfBirth ? (() => {
+    const d = new Date(currentProfile.dateOfBirth);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  })() : "";
+
   const [formData, setFormData] = useState({
     fullName: currentProfile?.fullName || "",
-    age: currentProfile?.age?.toString() || currentProfile?.ageRange?.toString() || "",
+    dateOfBirth: initialDate,
     provinceId: null as number | null,
     districtId: null as number | null,
     provinceName: "",
@@ -294,20 +302,32 @@ export function EditProfileScreen({ navigation, route }: any) {
     });
   }, []);
 
+  const handleDateChange = useCallback((text: string) => {
+    let clean = text.replace(/[^0-9]/g, "");
+    if (clean.length > 8) clean = clean.slice(0, 8);
+    let formatted = clean;
+    if (clean.length > 2) formatted = clean.slice(0, 2) + "/" + clean.slice(2);
+    if (clean.length > 4) formatted = formatted.slice(0, 5) + "/" + clean.slice(4);
+    updateField("dateOfBirth", formatted);
+  }, [updateField]);
+
   const handleSave = async () => {
     const primaryLocation = formatLocation(formData);
-    const { fullName, age, availabilitySchedule, experienceLevelId, travelRadiusKmPreference, avatarUrl } = formData;
+    const { fullName, dateOfBirth, availabilitySchedule, experienceLevelId, travelRadiusKmPreference, avatarUrl } = formData;
 
-    if (!fullName || !age || !primaryLocation || !availabilitySchedule) {
-      showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ các trường bắt buộc.", variant: "error" });
+    if (!fullName || !dateOfBirth || dateOfBirth.length < 10 || !primaryLocation || !availabilitySchedule) {
+      showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ các trường bắt buộc, ngày sinh định dạng DD/MM/YYYY.", variant: "error" });
       return;
     }
+
+    const [dd, mm, yyyy] = dateOfBirth.split("/");
+    const isoDateOfBirth = `${yyyy}-${mm}-${dd}T00:00:00Z`;
 
     setLoading(true);
     if (!isAuthenticated || user?.isDemo) {
       setTimeout(() => {
         const demo: any = {
-          ...currentProfile, id: "demo", fullName, age, ageRange: age, primaryLocation,
+          ...currentProfile, id: "demo", fullName, dateOfBirth: isoDateOfBirth, primaryLocation,
           travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null,
           experienceLevelId, experienceLevel: ["Mới bắt đầu", "Có kinh nghiệm", "Chuyên nghiệp"][experienceLevelId - 1],
           availabilitySchedule, avatarUrl,
@@ -321,7 +341,7 @@ export function EditProfileScreen({ navigation, route }: any) {
 
     try {
       const updated = await workerProfileService.updateProfile({
-        fullName, ageRange: age, primaryLocation,
+        fullName, dateOfBirth: isoDateOfBirth, primaryLocation,
         travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined,
         experienceLevelId, availabilitySchedule, avatarUrl,
       });
@@ -371,7 +391,7 @@ export function EditProfileScreen({ navigation, route }: any) {
 
   const textFields = [
     { label: "Họ và tên", required: true, Icon: User, value: formData.fullName, onChangeText: (t: string) => updateField("fullName", t), placeholder: "Nhập họ và tên" },
-    { label: "Tuổi", required: true, Icon: Calendar, value: formData.age, onChangeText: (t: string) => updateField("age", t.replace(/[^0-9]/g, "")), placeholder: "Nhập số tuổi", keyboardType: "number-pad" as const },
+    { label: "Ngày sinh (DD/MM/YYYY)", required: true, Icon: Calendar, value: formData.dateOfBirth, onChangeText: handleDateChange, placeholder: "Nhập ngày sinh (VD: 20/05/1995)", keyboardType: "number-pad" as const },
     { label: "Bán kính di chuyển (km)", Icon: MapPin, value: formData.travelRadiusKmPreference, onChangeText: (t: string) => updateField("travelRadiusKmPreference", t.replace(/[^0-9]/g, "")), placeholder: "Ví dụ: 10", keyboardType: "number-pad" as const },
   ];
 

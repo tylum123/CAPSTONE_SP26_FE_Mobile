@@ -196,8 +196,8 @@ export function LocationPicker({ visible, onClose, onSelect, initialValues }: Lo
         />
         
         <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="justify-end"
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          style={{ justifyContent: "flex-end", flex: 1 }}
         >
           <View 
             style={{ maxHeight: SCREEN_HEIGHT * 0.75, paddingBottom: 0 }} 

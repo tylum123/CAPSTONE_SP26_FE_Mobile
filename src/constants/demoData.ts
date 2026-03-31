@@ -10,8 +10,7 @@ export const DEMO_WORKER_PROFILE: WorkerProfileDTO = {
   id: "demo-worker-123",
   userId: "demo-user-123",
   fullName: "Nguyễn Văn Demo",
-  age: "28",
-  ageRange: "25-34",
+  dateOfBirth: "1998-01-01T00:00:00Z",
   primaryLocation: "Thốt Nốt, Cần Thơ",
   travelRadiusKmPreference: 15,
   experienceLevelId: 2,
@@ -226,7 +225,7 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     farmId: "farm-1",
     jobCategoryId: "cat-1",
     title: "Hái cà phê hoàn thành",
-    description: "Công việc đã hoàn thành và nhận lương.",
+    description: "Công việc đã hoàn thành và nhận thù lao.",
     address: "Bảo Lộc, Lâm Đồng",
     startDate: "2026-03-20T08:00:00Z",
     endDate: "2026-03-20T17:00:00Z",
@@ -259,7 +258,8 @@ export const DEMO_APPLICATIONS: JobApplicationDTO[] = [
     coverLetter: "Tôi muốn ứng tuyển công việc này.",
     appliedAt: "2026-03-21T15:00:00Z",
     respondedAt: "0001-01-01T00:00:00Z",
-    responseMessage: null
+    responseMessage: null,
+    locationName: null
   },
   {
     id: "app-301",
@@ -270,7 +270,8 @@ export const DEMO_APPLICATIONS: JobApplicationDTO[] = [
     coverLetter: "Tôi có kinh nghiệm tưới vườn cam.",
     appliedAt: "2026-03-22T07:00:00Z",
     respondedAt: "2026-03-22T08:00:00Z",
-    responseMessage: "Hoan nghênh bạn!"
+    responseMessage: "Hoan nghênh bạn!",
+    locationName: null
   },
   {
     id: "app-501",
@@ -281,7 +282,8 @@ export const DEMO_APPLICATIONS: JobApplicationDTO[] = [
     coverLetter: "Nhóm tôi có sẵn máy gặt.",
     appliedAt: "2026-03-23T08:00:00Z",
     respondedAt: "2026-03-23T09:00:00Z",
-    responseMessage: "Chốt nhé!"
+    responseMessage: "Chốt nhé!",
+    locationName: null
   },
   {
     id: "app-completed-1",
@@ -292,7 +294,8 @@ export const DEMO_APPLICATIONS: JobApplicationDTO[] = [
     coverLetter: "Tôi có thể làm tốt việc này.",
     appliedAt: "2026-03-19T08:00:00Z",
     respondedAt: "2026-03-19T09:00:00Z",
-    responseMessage: "Cảm ơn bạn đã làm việc!"
+    responseMessage: "Cảm ơn bạn đã làm việc!",
+    locationName: null
   },
   {
     id: "app-rejected-1",
@@ -302,7 +305,8 @@ export const DEMO_APPLICATIONS: JobApplicationDTO[] = [
     coverLetter: "Tôi muốn thử sức.",
     appliedAt: "2026-03-18T10:00:00Z",
     respondedAt: "2026-03-18T11:00:00Z",
-    responseMessage: "Rất tiếc, đã đủ người."
+    responseMessage: "Rất tiếc, đã đủ người.",
+    locationName: null
   }
 ];
 

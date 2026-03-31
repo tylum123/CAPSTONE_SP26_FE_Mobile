@@ -138,7 +138,7 @@ export function OnboardingProfileScreen({ navigation }: any) {
 
   const [formData, setFormData] = useState({
     fullName: "",
-    age: "",
+    dateOfBirth: "",
     provinceId: null as number | null,
     districtId: null as number | null,
     provinceName: "",
@@ -169,16 +169,28 @@ export function OnboardingProfileScreen({ navigation }: any) {
     finally { setAvatarUploading(false); }
   };
 
+  const handleDateChange = useCallback((text: string) => {
+    let clean = text.replace(/[^0-9]/g, "");
+    if (clean.length > 8) clean = clean.slice(0, 8);
+    let formatted = clean;
+    if (clean.length > 2) formatted = clean.slice(0, 2) + "/" + clean.slice(2);
+    if (clean.length > 4) formatted = formatted.slice(0, 5) + "/" + clean.slice(4);
+    updateField("dateOfBirth", formatted);
+  }, [updateField]);
+
   const handleContinue = async () => {
     const primaryLocation = formatLocation(formData);
-    const { fullName, age, availabilitySchedule, experienceLevelId, travelRadiusKmPreference, avatarUrl } = formData;
-    if (!fullName || !age || !primaryLocation || !availabilitySchedule) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập đầy đủ các trường bắt buộc.");
+    const { fullName, dateOfBirth, availabilitySchedule, experienceLevelId, travelRadiusKmPreference, avatarUrl } = formData;
+    if (!fullName || !dateOfBirth || dateOfBirth.length < 10 || !primaryLocation || !availabilitySchedule) {
+      Alert.alert("Thiếu thông tin", "Vui lòng nhập đầy đủ các trường bắt buộc, ngày sinh định dạng DD/MM/YYYY.");
       return;
     }
+
+    const [dd, mm, yyyy] = dateOfBirth.split("/");
+    const isoDateOfBirth = `${yyyy}-${mm}-${dd}T00:00:00Z`;
     setLoading(true);
     try {
-      await workerProfileService.updateProfile({ fullName, ageRange: age, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, experienceLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
+      await workerProfileService.updateProfile({ fullName, dateOfBirth: isoDateOfBirth, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, experienceLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
       navigation.replace("Worker");
     } catch { Alert.alert("Lỗi", "Không thể tạo hồ sơ. Vui lòng thử lại."); }
     finally { setLoading(false); }
@@ -236,13 +248,13 @@ export function OnboardingProfileScreen({ navigation }: any) {
               </View>
             </View>
 
-            {/* Tuổi */}
+            {/* Ngày sinh */}
             <View className="mb-6">
-              <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">Tuổi <Text className="text-rose-500">*</Text></Text>
+              <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">Ngày sinh (DD/MM/YYYY) <Text className="text-rose-500">*</Text></Text>
               <View className="flex-row items-center bg-slate-50 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3">
                 <Calendar size={18} color={COLORS.slate[400]} />
-                <TextInput className="flex-1 text-[15px] text-slate-900 py-2 font-bold" value={formData.age} onChangeText={t => updateField("age", t.replace(/[^0-9]/g, ""))} placeholder="Nhập số tuổi" placeholderTextColor={COLORS.slate[400]} keyboardType="number-pad" />
-                {formData.age.length > 0 && <Check size={16} color={COLORS.primary[500]} />}
+                <TextInput className="flex-1 text-[15px] text-slate-900 py-2 font-bold" value={formData.dateOfBirth} onChangeText={handleDateChange} placeholder="Nhập ngày sinh (VD: 20/05/1995)" placeholderTextColor={COLORS.slate[400]} keyboardType="number-pad" />
+                {formData.dateOfBirth.length === 10 && <Check size={16} color={COLORS.primary[500]} />}
               </View>
             </View>
 

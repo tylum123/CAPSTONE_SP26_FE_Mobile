@@ -44,12 +44,11 @@ export function JobDetailScreen({ navigation, route }: any) {
       { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location?.address, hint: jobDetail.location?.distance ? `Cách bạn ${jobDetail.location.distance} km` : "" },
       { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
       { Icon: Briefcase, label: "Khối lượng",       value: (jobDetail as any).workload || "N/A" },
-      { Icon: Users,     label: "Số người tuyển",   value: `${jobDetail.requiredWorkers || 0} người (đã có ${jobDetail.appliedWorkers || 0})` },
+      { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.appliedWorkers || 0}/${jobDetail.requiredWorkers || 0} người` },
       { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
       { Icon: Users,     label: "Giới tính",         value: jobDetail.genderPreference || "Không yêu cầu" },
       { Icon: Calendar,  label: "Độ tuổi",           value: jobDetail.ageRequirement || "Không yêu cầu" },
-      { Icon: Banknote,  label: "Hình thức lương",   value: jobDetail.wageTypeId || "N/A" },
-      { Icon: Briefcase, label: "Thanh toán",        value: jobDetail.paymentMethodId || "N/A" },
+      { Icon: Banknote,  label: "Hình thức thù lao", value: jobDetail.wageTypeId || "N/A" },
     ];
   }, [jobDetail]);
 

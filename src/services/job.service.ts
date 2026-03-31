@@ -102,4 +102,10 @@ export const jobService = {
     );
     return response.data.data;
   },
+
+  cancelApplication: async (id: string): Promise<void> => {
+    await api.delete(
+      API_ENDPOINTS.JOB.APPLICATION_DETAIL(id),
+    );
+  },
 };

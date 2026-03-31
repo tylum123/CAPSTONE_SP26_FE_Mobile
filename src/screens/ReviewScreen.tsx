@@ -23,7 +23,7 @@ export function ReviewScreen({ navigation, route }: any) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const jobInfo = { id: jobId, title: "Thu hoạch lúa", farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12" }, completedDate: "18/01/2026" };
-  const TAGS = ["Nhiệt tình", "Đúng giờ", "Rõ ràng", "Tử tế", "Công việc tốt", "Môi trường an toàn", "Trả lương đúng hạn", "Sẽ làm lại"];
+  const TAGS = ["Nhiệt tình", "Đúng giờ", "Rõ ràng", "Tử tế", "Công việc tốt", "Môi trường an toàn", "Trả thù lao đúng hạn", "Sẽ làm lại"];
   const RATING_LABELS = ["", "Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"];
 
   const handleTagToggle = (tag: string) =>

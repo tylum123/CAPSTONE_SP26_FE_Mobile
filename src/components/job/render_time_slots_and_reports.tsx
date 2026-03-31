@@ -48,7 +48,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                   <View className="flex-row justify-between items-center bg-white px-3 py-2 rounded-xl">
                     <View className="flex-row items-center gap-1.5">
                       <Banknote size={14} color="#059669" />
-                      <Text className="text-xs text-slate-600 font-medium">Lương nhận:</Text>
+                      <Text className="text-xs text-slate-600 font-medium">Thù lao nhận:</Text>
                     </View>
                     <Text className="text-sm font-extrabold text-primary-600">
                       {report.workerPaymentAmount ? `${report.workerPaymentAmount.toLocaleString("vi-VN")}₫` : "---"}

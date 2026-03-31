@@ -5,7 +5,7 @@
  * Dependencies: Job service, Navigation parameters. */
 
 import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
@@ -30,6 +30,33 @@ export function WorkerJobsScreen({ navigation, route }: any) {
   const [completedJobs, setCompletedJobs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isCanceling, setIsCanceling] = useState<string | null>(null);
+
+  const handleCancelApplication = (appId: string) => {
+    Alert.alert(
+      "Xác nhận hủy đơn",
+      "Bạn có chắc chắn muốn hủy đơn ứng tuyển này không? Hành động này không thể hoàn tác.",
+      [
+        { text: "Bỏ qua", style: "cancel" },
+        { 
+          text: "Hủy đơn", 
+          style: "destructive",
+          onPress: async () => {
+             setIsCanceling(appId);
+             try {
+                await jobService.cancelApplication(appId);
+                Alert.alert("Thành công", "Đã hủy đơn ứng tuyển.");
+                loadJobs();
+             } catch (error: any) {
+                Alert.alert("Lỗi", error?.response?.data?.message || "Không thể hủy đơn lúc này.");
+             } finally {
+                setIsCanceling(null);
+             }
+          }
+        }
+      ]
+    );
+  };
 
   const loadJobs = useCallback(async () => {
     let sourceApps = [];
@@ -139,23 +166,38 @@ export function WorkerJobsScreen({ navigation, route }: any) {
 
   const renderItem = (job: any) => {
     if (activeTab === "applied") return (
-      <TouchableOpacity className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-        activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}>
-        <View className="flex-1 p-4">
-          <View className="flex-row items-center gap-2 mb-2">
-            <Avatar fallback={job.farmer[0]} size={42} />
-            <View className="flex-1"><Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text><Text className="text-xs text-slate-500">{job.farmer}</Text></View>
-            <Badge variant={job.status === "accepted" ? "success" : "warning"}>{job.status === "accepted" ? "Chấp nhận" : "Chờ xác nhận"}</Badge>
+      <View className="mb-2 bg-white rounded-[20px] flex-col overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}>
+          <View className="p-4">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Avatar fallback={job.farmer[0]} size={42} />
+              <View className="flex-1"><Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text><Text className="text-xs text-slate-500">{job.farmer}</Text></View>
+              <Badge variant={job.status === "accepted" ? "success" : "warning"}>{job.status === "accepted" ? "Chấp nhận" : "Chờ xác nhận"}</Badge>
+            </View>
+            <View className="h-px bg-slate-100 mb-2" />
+            <View className="flex-row flex-wrap gap-2 mb-1">
+              <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
+              <View className="flex-row items-center gap-1"><Calendar size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.startDate} - {job.endDate || job.startDate}</Text></View>
+              <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5 border border-primary-100"><Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.wage.toLocaleString("vi-VN")}đ</Text></View>
+            </View>
+            <Text className="text-[11px] text-slate-400">Đã apply: {job.appliedDate}</Text>
           </View>
-          <View className="h-px bg-slate-100 mb-2" />
-          <View className="flex-row flex-wrap gap-2">
-            <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
-            <View className="flex-row items-center gap-1"><Calendar size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.startDate} - {job.endDate || job.startDate}</Text></View>
-            <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5 border border-primary-100"><Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.wage.toLocaleString("vi-VN")}đ</Text></View>
+        </TouchableOpacity>
+        {job.status === "pending" && (
+          <View className="px-4 pb-3 flex-row justify-end border-t border-slate-50/50 pt-2 relative z-10">
+             <TouchableOpacity 
+                className="bg-rose-50 border border-rose-200 px-4 py-1.5 rounded-xl ml-2 flex-row items-center gap-1"
+                onPress={() => handleCancelApplication(job.id)}
+                disabled={isCanceling === job.id}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+             >
+                <Text className="text-[13px] font-bold text-rose-600">
+                  {isCanceling === job.id ? "Đang hủy..." : "Hủy đơn ứng tuyển"}
+                </Text>
+             </TouchableOpacity>
           </View>
-          <Text className="text-[11px] text-slate-400 mt-1">Đã apply: {job.appliedDate}</Text>
-        </View>
-      </TouchableOpacity>
+        )}
+      </View>
     );
     if (activeTab === "upcoming") return (
       <View className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>

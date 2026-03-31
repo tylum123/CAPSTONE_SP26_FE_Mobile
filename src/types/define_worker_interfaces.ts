@@ -9,8 +9,7 @@ export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  age: string;               // BE field name is 'Age' (not ageRange)
-  ageRange?: string;         // Alias kept for backward compat with some FE components
+  dateOfBirth: string;       // Replaced age/ageRange
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
@@ -28,7 +27,7 @@ export interface WorkerProfileDTO {
 // Matches backend UpdateWorkerProfileRequest.cs
 export interface UpdateWorkerProfileRequest {
   fullName: string;
-  ageRange: string;          // BE request field name is AgeRange
+  dateOfBirth: string;       // Replaced ageRange
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number; // Required, range 1-3
@@ -86,7 +85,7 @@ export interface JobDiscoveryDTO extends JobPostDTO {
   skillsMatchCount: number;
   allSkillsMatched: boolean;
   availablePositions: number;
-  durationType: string;
+  durationDays: number;
   isUpcoming: boolean;
   matchScore: number;
   similarJobsCompleted: number;
@@ -156,6 +155,7 @@ export interface JobApplicationDTO {
   appliedAt: string;
   respondedAt: string;
   responseMessage: string | null;
+  locationName: string | null;
   jobPost?: Partial<JobPostDTO>; // Embedded for UI Card display
   worker?: WorkerProfileDTO;
   workDates?: string[]; // Added for Daily jobs
@@ -222,7 +222,6 @@ export interface WalletDTO {
   userId: string;
   balance: number;
   lockedBalance: number;
-  escrowBalance: number;
   isActive: boolean;
 }
 
@@ -232,9 +231,7 @@ export interface WalletTransactionDTO {
   amount: number;
   type: number;
   description: string;
-  status: string;
   createdAt: string;
-  jobPostTitle?: string;
 }
 
 export interface WithdrawalResponse {

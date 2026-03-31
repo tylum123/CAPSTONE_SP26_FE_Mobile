@@ -19,11 +19,18 @@ export const workerProfileService = {
   },
 
   updateProfile: async (
-    data: UpdateWorkerProfileRequest,
+    data: UpdateWorkerProfileRequest | any,
   ): Promise<WorkerProfileDTO> => {
+    // Map legacy ageRange to dateOfBirth before sending to API if needed
+    const payload = { ...data };
+    if (payload.ageRange && !payload.dateOfBirth) {
+      payload.dateOfBirth = payload.ageRange; // Fallback mapping
+      delete payload.ageRange;
+    }
+
     const response = await api.put<ApiResponse<WorkerProfileDTO>>(
       API_ENDPOINTS.WORKER_PROFILE.BASE,
-      data,
+      payload,
     );
     return response.data.data;
   },

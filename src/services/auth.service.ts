@@ -20,7 +20,6 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phoneNumber: string;
-  address: string;
   roleId: number;
 }
 

@@ -27,7 +27,7 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
   return (
     <View className="flex-row items-center gap-4 px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 8, shadowColor: "#0f172a", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8 }}>
       <View className="flex-1">
-        <Text className="text-xs text-slate-500">Thu nhập dự kiến</Text>
+        <Text className="text-xs text-slate-500">Thù lao dự kiến</Text>
         <Text className="text-[22px] font-extrabold text-primary-700">
           {(jobDetail.wage * (selectedTimeSlots.length || 1)).toLocaleString("vi-VN")} đ
         </Text>

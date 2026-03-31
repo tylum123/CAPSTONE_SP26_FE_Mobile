@@ -96,6 +96,7 @@ export function WorkerSearchScreen({ navigation }: any) {
           allSkillsMatched: true,
           availablePositions: j.workersNeeded - j.workersAccepted,
           durationType: j.jobTypeId === 1 ? "PerJob" : "Daily",
+          durationDays: 1,
           isUpcoming: true,
           matchScore: 85,
           similarJobsCompleted: 5
@@ -138,6 +139,7 @@ export function WorkerSearchScreen({ navigation }: any) {
           allSkillsMatched: false,
           availablePositions: (jp.workersNeeded || 0) - (jp.workersAccepted || 0),
           durationType: jp.jobTypeId === 1 ? "PerJob" : "Daily",
+          durationDays: 0,
           isUpcoming: true,
           matchScore: 0,
           similarJobsCompleted: 0
@@ -311,7 +313,7 @@ export function WorkerSearchScreen({ navigation }: any) {
             <Text className="text-[13px] text-slate-500 font-bold uppercase">Sắp xếp:</Text>
             {[
               { value: "distance", label: "Gần nhất" }, 
-              { value: "wage", label: "Lương cao" }, 
+              { value: "wage", label: "Thù lao cao" }, 
               { value: "matchScore", label: "Phù hợp" }
             ].map((opt) => (
               <TouchableOpacity 

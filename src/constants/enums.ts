@@ -95,7 +95,7 @@ export const DisputeStatusLabels: Record<DisputeStatus, string> = {
 export const WalletTransactionTypeLabels: Record<WalletTransactionType, string> = {
   [WalletTransactionType.Deposit]: 'Nạp tiền',
   [WalletTransactionType.Withdraw]: 'Rút tiền',
-  [WalletTransactionType.JobPayment]: 'Thanh toán lương',
+  [WalletTransactionType.JobPayment]: 'Thanh toán thù lao',
   [WalletTransactionType.Refund]: 'Hoàn tiền',
   [WalletTransactionType.JobLock]: 'Tạm khóa',
 };
