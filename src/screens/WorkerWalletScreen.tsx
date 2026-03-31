@@ -64,7 +64,7 @@ export function WorkerWalletScreen() {
   const fetchData = useCallback(async () => {
     if (user?.isDemo) {
       setBalance(DEMO_WALLET.balance);
-      setEscrow(DEMO_WALLET.escrowBalance);
+      setEscrow(DEMO_WALLET.escrowBalance || 0);
       // @ts-ignore
       setTransactions(DEMO_TRANSACTIONS.map(tx => ({
         ...tx,
@@ -82,10 +82,10 @@ export function WorkerWalletScreen() {
       // If balance is 0 or wallet is missing, we could fallback to demo for testing visibility
       if (wallet.balance === 0 && wallet.escrowBalance === 0) {
         setBalance(DEMO_WALLET.balance);
-        setEscrow(DEMO_WALLET.escrowBalance);
+        setEscrow(DEMO_WALLET.escrowBalance || 0);
       } else {
         setBalance(wallet.balance);
-        setEscrow(wallet.escrowBalance);
+        setEscrow(wallet.escrowBalance || 0);
       }
       
       const txs = await walletService.getTransactions(wallet.id);
@@ -111,7 +111,7 @@ export function WorkerWalletScreen() {
     } catch (error) {
       console.error("Failed to fetch wallet data, using mock data", error);
       setBalance(DEMO_WALLET.balance);
-      setEscrow(DEMO_WALLET.escrowBalance);
+      setEscrow(DEMO_WALLET.escrowBalance || 0);
       // @ts-ignore
       setTransactions(DEMO_TRANSACTIONS.map(tx => ({
         ...tx,

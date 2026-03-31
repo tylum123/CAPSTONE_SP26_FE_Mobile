@@ -5,7 +5,7 @@
  * Dependencies: Auth context, User service. */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "../components/ui/Avatar";
 import { Card, CardContent } from "../components/ui/Card";
@@ -44,6 +44,12 @@ export function WorkerProfileScreen({ navigation }: any) {
       }
     };
     fetchData();
+
+    const sub = DeviceEventEmitter.addListener("REFRESH_DATA", () => {
+      fetchData();
+    });
+
+    return () => sub.remove();
   }, [isAuthenticated, user?.isDemo]);
 
   const displayProfile = useMemo(() => {
@@ -60,15 +66,13 @@ export function WorkerProfileScreen({ navigation }: any) {
     navigation.navigate("EditProfile", { 
       currentProfile: { 
         fullName: displayProfile.fullName || user?.name || "", 
-        age: displayProfile.age || "",
-        ageRange: displayProfile.ageRange || "", 
         primaryLocation: displayProfile.primaryLocation || "", 
         travelRadiusKmPreference: displayProfile.travelRadiusKmPreference, 
         experienceLevelId: displayProfile.experienceLevelId || 1, 
         availabilitySchedule: displayProfile.availabilitySchedule || "", 
-        avatarUrl: displayProfile.avatarUrl || "" 
-      }, 
-      onUpdated: (up: WorkerProfileDTO) => setProfile(up) 
+        avatarUrl: displayProfile.avatarUrl || "",
+        dateOfBirth: (displayProfile as any).date_of_birth || displayProfile.dateOfBirth || (displayProfile as any).ageRange || null
+      }
     });
   };
 
@@ -131,7 +135,23 @@ export function WorkerProfileScreen({ navigation }: any) {
     { label: "Khu vực",          value: fmtVal(displayProfile.primaryLocation), fullWidth: true },
     { label: "Kinh nghiệm",      value: formatExp(), subValue: formatExpSub() },
     { label: "Lịch làm việc",    value: formatSched(displayProfile.availabilitySchedule) },
-    { label: "Tuổi",             value: fmtVal(displayProfile.age || displayProfile.ageRange) },
+    { 
+      label: "Ngày sinh", 
+      value: (() => {
+        const d_obj = displayProfile as any;
+        const val = d_obj.date_of_birth || d_obj.dateOfBirth || d_obj.ageRange;
+        if (!val) return "Chưa cập nhật";
+        // Handle ISO/YYYY-MM-DD
+        if (val.includes("-")) {
+          const datePart = val.split("T")[0];
+          const parts = datePart.split("-");
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        // Handle DD/MM/YYYY
+        if (val.includes("/")) return val;
+        return val || "Chưa cập nhật";
+      })()
+    },
     { label: "Bán kính đi lại",  value: displayProfile.travelRadiusKmPreference != null ? `${displayProfile.travelRadiusKmPreference} km` : "Chưa cập nhật" },
   ];
 

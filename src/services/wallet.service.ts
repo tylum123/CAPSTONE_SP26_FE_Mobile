@@ -31,9 +31,9 @@ export const walletService = {
 
   createWithdrawal: async (data: {
     amount: number;
-    bankName: string;
+    toBin: number;
+    toAccountNumber: string;
     accountHolderName: string;
-    bankAccountNumber: string;
     description?: string;
   }): Promise<WithdrawalResponse> => {
     const response = await api.post<ApiResponse<WithdrawalResponse>>(

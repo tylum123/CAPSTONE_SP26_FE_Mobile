@@ -9,7 +9,8 @@ export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  dateOfBirth: string;       // Replaced age/ageRange
+  dateOfBirth: string;       // CamelCase used in legacy or UI
+  date_of_birth?: string;    // Snake_case returned by BE DTO
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
@@ -222,6 +223,7 @@ export interface WalletDTO {
   userId: string;
   balance: number;
   lockedBalance: number;
+  escrowBalance?: number;
   isActive: boolean;
 }
 
@@ -230,7 +232,9 @@ export interface WalletTransactionDTO {
   walletId: string;
   amount: number;
   type: number;
+  status?: string;
   description: string;
+  jobPostTitle?: string;
   createdAt: string;
 }
 

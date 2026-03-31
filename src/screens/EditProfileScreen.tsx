@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform, DeviceEventEmitter, PanResponder, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { User, MapPin, Calendar, Clock, Camera, ChevronLeft, Check, ChevronRight, CheckCircle2 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar } from "../components/ui/Avatar";
@@ -246,13 +247,18 @@ export function EditProfileScreen({ navigation, route }: any) {
   const { currentProfile, onUpdated } = route.params || {};
   const insets = useSafeAreaInsets();
 
-  const initialDate = currentProfile?.dateOfBirth ? (() => {
-    const d = new Date(currentProfile.dateOfBirth);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  })() : "";
+  const initialDate = (() => {
+    const d_obj = currentProfile as any;
+    const val = d_obj?.date_of_birth || d_obj?.dateOfBirth || d_obj?.ageRange;
+    if (!val) return "";
+    if (val.includes("-")) {
+      const raw = val.split("T")[0];
+      const parts = raw.split("-");
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    if (val.includes("/")) return val;
+    return "";
+  })();
 
   const [formData, setFormData] = useState({
     fullName: currentProfile?.fullName || "",
@@ -274,12 +280,44 @@ export function EditProfileScreen({ navigation, route }: any) {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const selectedDate = useMemo(() => {
+    if (!formData.dateOfBirth) return new Date(2000, 0, 1);
+    const parts = formData.dateOfBirth.split("/");
+    if (parts.length === 3) {
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    }
+    return new Date(2000, 0, 1);
+  }, [formData.dateOfBirth]);
+
+  const onDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (event.type === "dismissed") return;
+    if (date) {
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      updateField("dateOfBirth", `${dd}/${mm}/${yyyy}`);
+    }
+  };
+
   // Sync ALL fields from currentProfile (handles async navigation param updates)
   useEffect(() => {
     if (!currentProfile) return;
     const updates: Partial<typeof formData> = {};
     if (currentProfile.availabilitySchedule) updates.availabilitySchedule = currentProfile.availabilitySchedule;
     if (currentProfile.experienceLevelId) updates.experienceLevelId = currentProfile.experienceLevelId;
+    const d_obj = currentProfile as any;
+    const dobVal = d_obj.date_of_birth || d_obj.dateOfBirth || d_obj.ageRange;
+    if (dobVal) {
+      if (dobVal.includes("-")) {
+        const raw = dobVal.split("T")[0];
+        const parts = raw.split("-");
+        if (parts.length === 3) updates.dateOfBirth = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      } else if (dobVal.includes("/")) {
+        updates.dateOfBirth = dobVal;
+      }
+    }
     if (currentProfile.primaryLocation) {
       const parsed = parseLocation(currentProfile.primaryLocation);
       Object.assign(updates, parsed);
@@ -321,18 +359,18 @@ export function EditProfileScreen({ navigation, route }: any) {
     }
 
     const [dd, mm, yyyy] = dateOfBirth.split("/");
-    const isoDateOfBirth = `${yyyy}-${mm}-${dd}T00:00:00Z`;
+    const dateOnly = `${yyyy}-${mm}-${dd}`;
 
     setLoading(true);
     if (!isAuthenticated || user?.isDemo) {
       setTimeout(() => {
         const demo: any = {
-          ...currentProfile, id: "demo", fullName, dateOfBirth: isoDateOfBirth, primaryLocation,
+          ...currentProfile, id: "demo", fullName, dateOfBirth: dateOnly, primaryLocation,
           travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : null,
           experienceLevelId, experienceLevel: ["Mới bắt đầu", "Có kinh nghiệm", "Chuyên nghiệp"][experienceLevelId - 1],
           availabilitySchedule, avatarUrl,
         };
-        onUpdated?.(demo);
+        DeviceEventEmitter.emit("REFRESH_DATA");
         showFeedback({ title: "Thành công (Demo)", message: "Hồ sơ đã được cập nhật mô phỏng.", variant: "success", onConfirm: () => navigation.goBack() });
         setLoading(false);
       }, 800);
@@ -341,11 +379,10 @@ export function EditProfileScreen({ navigation, route }: any) {
 
     try {
       const updated = await workerProfileService.updateProfile({
-        fullName, dateOfBirth: isoDateOfBirth, primaryLocation,
+        fullName, dateOfBirth: dateOnly, primaryLocation,
         travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined,
         experienceLevelId, availabilitySchedule, avatarUrl,
       });
-      onUpdated?.(updated);
       DeviceEventEmitter.emit("REFRESH_DATA");
       showFeedback({ title: "Thành công", message: "Hồ sơ đã được cập nhật.", variant: "success", onConfirm: () => navigation.goBack() });
     } catch (err: any) {
@@ -391,7 +428,6 @@ export function EditProfileScreen({ navigation, route }: any) {
 
   const textFields = [
     { label: "Họ và tên", required: true, Icon: User, value: formData.fullName, onChangeText: (t: string) => updateField("fullName", t), placeholder: "Nhập họ và tên" },
-    { label: "Ngày sinh (DD/MM/YYYY)", required: true, Icon: Calendar, value: formData.dateOfBirth, onChangeText: handleDateChange, placeholder: "Nhập ngày sinh (VD: 20/05/1995)", keyboardType: "number-pad" as const },
     { label: "Bán kính di chuyển (km)", Icon: MapPin, value: formData.travelRadiusKmPreference, onChangeText: (t: string) => updateField("travelRadiusKmPreference", t.replace(/[^0-9]/g, "")), placeholder: "Ví dụ: 10", keyboardType: "number-pad" as const },
   ];
 
@@ -443,6 +479,31 @@ export function EditProfileScreen({ navigation, route }: any) {
                   </View>
                 </View>
               ))}
+
+              {/* Date of Birth */}
+              <View className="mb-6">
+                <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">Ngày sinh <Text className="text-rose-500">*</Text></Text>
+                <TouchableOpacity
+                  className="flex-row items-center bg-slate-50 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3"
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Calendar size={18} color={COLORS.slate[400]} />
+                  <Text className={["flex-1 text-[15px] font-bold", formData.dateOfBirth ? "text-slate-900" : "text-slate-400"].join(" ")}>
+                    {formData.dateOfBirth || "Chọn ngày sinh"}
+                  </Text>
+                  <ChevronRight size={18} color={COLORS.slate[300]} />
+                </TouchableOpacity>
+              </View>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
 
               {/* Location */}
               <View className="mb-6">
