@@ -42,24 +42,4 @@ export const reportService = {
     return response.data.data || response.data;
   },
 
-  /**
-   * Farmer: Get all daily reports in farm (Job Post)
-   */
-  getFarmReports: async (jobPostId: string): Promise<JobDetailDTO[]> => {
-    const response = await api.get<ApiResponse<JobDetailDTO[]>>(
-      API_ENDPOINTS.JOB_DETAIL.FARM(jobPostId)
-    );
-    // @ts-ignore
-    return response.data.data || Object.values(response.data) || [];
-  },
-  
-  /**
-   * Farmer: Evaluate/Approve report
-   */
-  evaluateReport: async (id: string, data: ApproveJobDetailRequest): Promise<void> => {
-    await api.post<ApiResponse<void>>(
-      API_ENDPOINTS.JOB_DETAIL.APPROVE(id),
-      data
-    );
-  }
 };

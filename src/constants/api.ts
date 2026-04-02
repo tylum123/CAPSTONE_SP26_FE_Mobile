@@ -57,14 +57,15 @@ export const API_ENDPOINTS = {
     FILTER: `${API_PREFIX}/job/post/filter`,
     APPLICATION: `${API_PREFIX}/job/application`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
+    CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
   },
   // Job Detail (Replaces Attendance/Daily Report)
   JOB_DETAIL: {
-    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
-    APPROVE: (id: string) => `${API_PREFIX}/JobDetail/${id}/approve`,
-    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
-    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
-    FARM: (jobPostId: string) => `${API_PREFIX}/JobDetail/job-post/${jobPostId}`,
+    REPORT_DAILY: `${API_PREFIX}/job/detail/report-daily`,
+
+    DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
+
   },
   // Disputes
   DISPUTE: {
