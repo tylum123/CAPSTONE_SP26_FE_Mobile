@@ -9,8 +9,7 @@ export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  dateOfBirth: string;       // CamelCase used in legacy or UI
-  date_of_birth?: string;    // Snake_case returned by BE DTO
+  dateOfBirth: string;
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
@@ -21,19 +20,21 @@ export interface WorkerProfileDTO {
   avatarUrl: string;
   createdAt: string;
   updatedAt: string;
-  email?: string;            // Returned by BE along with profile
-  phoneNumber?: string;      // Returned by BE along with profile
+  email?: string;
+  phoneNumber?: string;
+  skills: SkillResponse[];
 }
 
 // Matches backend UpdateWorkerProfileRequest.cs
 export interface UpdateWorkerProfileRequest {
   fullName: string;
-  dateOfBirth: string;       // Replaced ageRange
+  dateOfBirth: string;
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number; // Required, range 1-3
   availabilitySchedule: string;
   avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
+  skillIds: string[];
 }
 
 export interface JobCategoryDTO {

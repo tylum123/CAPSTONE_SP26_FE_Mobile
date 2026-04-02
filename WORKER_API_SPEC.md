@@ -1,14 +1,18 @@
 # Worker API Spec (Updated)
 
-Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase.
+Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase Backend (C#/.NET).
 
-Cập nhật lần cuối: **2026-03-31**
+Cập nhật lần cuối: **2026-04-02**
 
-## 1) Thông trình chung
+---
 
-- Base URL: `/api/v1`
-- Auth: Bearer JWT (`Authorization: Bearer <token>`)
-- Response wrapper chuẩn:
+## 1) Thông tin chung
+
+- **Base URL**: `/api/v1`
+- **Auth**: Bearer JWT (`Authorization: Bearer <token>`) cho các API yêu cầu định danh.
+- **Public APIs**: Các API liệt kê tại mục 3 không yêu cầu Token.
+- **Định dạng JSON**: Sử dụng **camelCase** cho tất cả các trường.
+- **Response chuẩn**:
 
 ```json
 {
@@ -17,20 +21,20 @@ Cập nhật lần cuối: **2026-03-31**
   "data": {}
 }
 ```
-*(Lưu ý: Backend dùng `statusCode` thay vì `status_code`)*
 
 ---
 
-## 2) Schema chính
+## 2) Schema chính (Data Transfer Objects)
 
 ### 2.1 WorkerProfileDTO
+Thông tin hồ sơ đầy đủ của Worker.
 
 ```json
 {
   "id": "guid",
   "userId": "guid",
   "fullName": "string",
-  "dateOfBirth": "1995-05-20T00:00:00Z",
+  "dateOfBirth": "1995-05-20",
   "primaryLocation": "string",
   "travelRadiusKmPreference": 10.5,
   "experienceLevelId": 2,
@@ -42,106 +46,31 @@ Cập nhật lần cuối: **2026-03-31**
   "email": "worker@example.com",
   "phoneNumber": "0123456789",
   "createdAt": "2026-03-03T08:00:00Z",
-  "updatedAt": "2026-03-03T08:00:00Z"
+  "updatedAt": "2026-03-03T08:00:00Z",
+  "skills": [
+    { "id": "guid", "name": "Bón phân", "description": "..." }
+  ]
 }
 ```
 
 ### 2.2 UpdateWorkerProfileRequest
+Sử dụng khi cập nhật hoặc tạo mới profile.
 
 ```json
 {
   "fullName": "Nguyen Van A",
-  "dateOfBirth": "1995-05-20T00:00:00Z",
+  "dateOfBirth": "1995-05-20",
   "primaryLocation": "Can Tho",
   "travelRadiusKmPreference": 15.5,
   "experienceLevelId": 2,
   "availabilitySchedule": "Mon-Fri 08:00-17:00",
-  "avatarUrl": "https://..."
+  "avatarUrl": "https://...",
+  "skillIds": ["guid-1", "guid-2"]
 }
 ```
 
-Validation chính:
-- `fullName`: required, max 256
-- `dateOfBirth`: required, ISO Date string
-- `primaryLocation`: required
-- `travelRadiusKmPreference`: optional (double)
-- `experienceLevelId`: required, range 1..3
-- `availabilitySchedule`: required
-- `avatarUrl`: required
-
-### 2.3 JobDetailDTO (Daily Report)
-
-```json
-{
-  "id": "guid",
-  "jobApplicationId": "guid",
-  "jobPostId": "guid",
-  "workerId": "guid",
-  "statusId": 1, 
-  "workDate": "2026-03-03T00:00:00Z",
-  "workerDescription": "Hôm nay tôi đã làm được 50kg...",
-  "farmerFeedback": "Làm tốt",
-  "farmerApprovedPercent": 100,
-  "jobPrice": 500000,
-  "workerPaymentAmount": 500000,
-  "refundAmount": 0,
-  "completedAt": "2026-03-03T18:00:00Z",
-  "createdAt": "2026-03-03T17:00:00Z",
-  "updatedAt": "2026-03-03T18:00:00Z"
-}
-```
-
-### 2.4 CreateDailyReportRequest
-
-```json
-{
-  "jobApplicationId": "guid",
-  "workerDescription": "Hôm nay tôi đã làm được 50kg..."
-}
-```
-
-### 2.5 ApproveJobDetailRequest (Farmer dùng)
-
-```json
-{
-  "farmerApprovedPercent": 90,
-  "farmerFeedback": "Ghi chú từ farmer..."
-}
-```
-
-### 2.6 DisputeReportDTO (Appeal)
-
-```json
-{
-  "id": "guid",
-  "farmerId": "guid | null",
-  "workerId": "guid | null",
-  "jobPostId": "guid",
-  "disputeTypeId": 1,
-  "reason": "string",
-  "description": "string | null",
-  "evidenceUrl": "string | null",
-  "statusId": 1,
-  "adminNote": "string | null",
-  "resolvedById": "guid | null",
-  "createdAt": "2026-03-17T08:00:00Z",
-  "resolvedAt": "2026-03-18T08:00:00Z | null"
-}
-```
-
-### 2.7 CreateDisputeReportRequest
-
-```json
-{
-  "jobPostId": "guid",
-  "disputeTypeId": 1,
-  "reason": "Lý do khiếu nại",
-  "description": "Mô tả chi tiết",
-  "evidenceUrl": "https://..."
-}
-```
-
-### 2.8 JobPostDTO
+### 2.3 JobPostDTO
+Chi tiết bài đăng tuyển dụng.
 
 ```json
 {
@@ -160,7 +89,7 @@ Validation chính:
   "endTime": "HH:mm:ss",
   "workersNeeded": 10,
   "workersAccepted": 2,
-  "jobTypeId": 1,
+  "jobTypeId": 2,
   "wageAmount": 500000,
   "requirements": ["string"],
   "privileges": ["string"],
@@ -173,585 +102,193 @@ Validation chính:
 }
 ```
 
-### 2.8.a JobDiscoveryDTO (Dùng cho Tìm kiếm/Nearby)
+### 2.4 JobDiscoveryDTO
+Dùng cho màn hình tìm kiếm, danh sách việc làm gần đây (có thêm khoảng cách).
 
 ```json
 {
   "id": "guid",
-  "farmerProfileId": "guid",
-  "contactName": "string",
-  "jobSkillRequirements": [
-    { "id": "guid", "name": "string" }
-  ],
-  "farmId": "guid",
-  "jobCategoryId": "guid",
   "title": "string",
-  "description": "string",
   "address": "string",
-  "startDate": "yyyy-MM-dd",
-  "endDate": "yyyy-MM-dd",
-  "selectedDays": ["yyyy-MM-dd"],
-  "startTime": "HH:mm:ss",
-  "endTime": "HH:mm:ss",
-  "workersNeeded": 10,
-  "workersAccepted": 2,
-  "jobTypeId": 1,
-  "jobTypeName": "Daily",
   "wageAmount": 500000,
-  "requirements": ["string"],
-  "privileges": ["string"],
-  "publishedAt": "ISO Date",
-  "isUrgent": true,
-  "statusId": 2,
+  "jobTypeName": "Daily",
   "distanceKm": 5.2,
   "farmerAverageRating": 4.8,
-  "locationName": "string",
-  "skillsMatchCount": 2,
-  "allSkillsMatched": true,
   "availablePositions": 8,
-  "durationDays": 5,
-  "isUpcoming": true,
+  "isUrgent": true,
   "matchScore": 85,
-  "similarJobsCompleted": 5
+  "skillsMatchCount": 2,
+  "allSkillsMatched": true
+  // ... (Kế thừa các trường từ JobPostDTO)
 }
 ```
 
-### 2.9 JobApplicationDTO & CreateJobApplicationRequest
+### 2.5 JobApplicationDTO
+Thông tin đơn ứng tuyển (đã nhúng kèm JobPost).
 
-**JobApplicationDTO:**
 ```json
 {
   "id": "guid",
   "jobPostId": "guid",
-  "jobPost": { ... }, // Object JobPost được nhúng kèm 
-  "worker": { ... },  // Object WorkerProfileDTO
+  "jobPost": { ...JobPostDTO... },
+  "worker": { ...WorkerProfileDTO... },
   "statusId": 1,
-  "coverLetter": "string | null",
+  "coverLetter": "string",
   "appliedAt": "2026-03-10T10:00:00Z",
-  "respondedAt": "2026-03-12T10:00:00Z",
-  "responseMessage": "string | null",
-  "locationName": "string | null",
-  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
+  "workDates": ["2026-03-24T10:00:00Z"],
+  "responseMessage": "string"
 }
 ```
 
-**CreateJobApplicationRequest:**
-```json
-{
-  "jobPostId": "guid",
-  "statusId": 1,
-  "coverLetter": "Tôi có kinh nghiệm...",
-  "appliedAt": "2026-03-10T10:00:00Z",
-  "respondedAt": "2026-03-10T10:00:00Z",
-  "responseMessage": null,
-  "workDates": ["2026-03-24T00:00:00Z", "2026-03-25T00:00:00Z"]
-}
-```
-
-### 2.10 NotificationDTO
+### 2.6 JobDetailDTO (Daily Report)
+Dữ liệu báo cáo công việc hằng ngày của Worker.
 
 ```json
 {
   "id": "guid",
-  "userId": "guid",
-  "relatedEntityId": "guid | null",
-  "type": 1,
-  "typeName": "Info",
-  "title": "New Job Available",
-  "message": "A new job matching your profile was posted.",
-  "isRead": false,
-  "sentAt": "2026-03-15T08:00:00Z",
-  "readAt": null
-}
-```
-
-### 2.11 JobSearchFilterRequest
-
-```json
-{
-  "workerLatitude": 10.5,
-  "workerLongitude": 106.5,
-  "maxDistanceKm": 20,
-  "minWageAmount": 100000,
-  "maxWageAmount": 1000000,
-  "jobTypeId": 2,
-  "jobCategoryId": "guid",
-  "searchKeyword": "hái cà phê",
-  "requiredSkills": ["skill1", "skill2"],
-  "dateFilter": "today | tomorrow | weekend | upcoming",
-  "startDateFrom": "ISO Date",
-  "startDateTo": "ISO Date",
-  "durationType": "Daily | PerJob | LongTerm",
-  "paymentMethod": "string",
-  "onlyUrgent": true,
-  "minWorkerRating": 4.0,
-  "pageNumber": 1,
-  "pageSize": 10,
-  "sortBy": "distance | wage | date"
-}
-```
-
-### 2.12 PaginatedResponse
-
-```json
-{
-  "jobs": [ { ...JobPostDTO... } ],
-  "totalCount": 100,
-  "pageNumber": 1,
-  "pageSize": 10,
-  "totalPages": 10,
-  "hasPreviousPage": false,
-  "hasNextPage": true,
-  "message": "string"
-}
-```
-
-### 2.13 Auth Responses & Requests
-
-**LoginResponse:**
-```json
-{
-  "token": "jwt-token",
-  "expiresAt": "2026-03-04T01:00:00Z",
-  "email": "worker@example.com"
-}
-```
-
-**ForgotPasswordRequest:**
-```json
-{
-  "email": "worker@example.com"
-}
-```
-
-**ResetPasswordRequest:**
-```json
-{
-  "email": "worker@example.com",
-  "otp": "123456",
-  "newPassword": "newPassword123"
-}
-```
-
-### 2.14 WalletDTO
-
-```json
-{
-  "id": "guid",
-  "userId": "guid",
-  "balance": 1500000.0,
-  "lockedBalance": 500000.0,
-  "isActive": true
-}
-```
-
-### 2.15 WithdrawalResponse
-
-```json
-{
-  "id": "guid",
-  "payoutId": "string",
-  "amount": 200000.0,
-  "status": "string",
-  "approvalState": "string",
-  "bankName": "string",
-  "accountHolderName": "string",
-  "bankAccountNumber": "string",
-  "referenceCode": "string",
-  "description": "string",
-  "createdAt": "ISO Date",
-  "processedAt": "ISO Date"
-}
-```
-
-### 2.16 WithdrawalAccountBalanceResponse
-
-```json
-{
-  "balance": 1500000,
-  "availableBalance": 1000000,
-  "currency": "VND"
-}
-```
-
-### 2.17 SkillResponse
-
-```json
-{
-  "id": "guid",
-  "name": "string",
-  "description": "string",
-  "categoryId": 1,
-  "isActive": true
-}
-```
-
-### 2.18 RatingDTO
-
-```json
-{
-  "id": "guid",
-  "raterId": "guid",
-  "rateeId": "guid",
-  "jobPostId": "guid",
-  "ratingScore": 5,
-  "reviewText": "string",
-  "typeId": 1,
-  "createdAt": "ISO Date"
-}
-```
-
-### 2.19 WeatherDTO
-
-```json
-{
-  "city": "string",
-  "country": "string",
-  "latitude": 10.5,
-  "longitude": 106.5,
-  "temperature": 32.5,
-  "feelsLike": 35.0,
-  "tempMin": 30.0,
-  "tempMax": 34.0,
-  "humidity": 80,
-  "windSpeed": 5.5,
-  "description": "string",
-  "icon": "01d",
-  "iconUrl": "https://openweathermap.org/img/wn/01d@2x.png",
-  "sunrise": "ISO Date",
-  "sunset": "ISO Date",
-  "fetchedAt": "ISO Date"
-}
-```
-
-### 2.20 WalletTransactionDTO
-
-```json
-{
-  "id": "guid",
-  "walletId": "guid",
-  "amount": 500000.0,
-  "type": 3,
-  "description": "string",
-  "createdAt": "ISO Date"
+  "jobApplicationId": "guid",
+  "statusId": 1, 
+  "workDate": "2026-03-03T00:00:00Z",
+  "workerDescription": "Hôm nay tôi đã làm được...",
+  "farmerFeedback": "Làm tốt",
+  "farmerApprovedPercent": 100,
+  "jobPrice": 500000,
+  "workerPaymentAmount": 500000
 }
 ```
 
 ---
 
-## 3) Worker Profile APIs
+## 3) APIs Công Khai (Public - Không cần Token)
+
+Các API này phục vụ việc tìm kiếm việc làm và thông tin chung mà người dùng không cần đăng nhập vẫn có thể xem được.
+
+### 3.1 Nhóm Công Việc & Danh Mục
+- `GET /job/category`: Lấy toàn bộ danh mục công việc.
+- `GET /job/category/{id}`: Xem chi tiết danh mục.
+- `GET /job/post`: Lấy danh sách toàn bộ bài đăng (có thể phân trang nếu backend hỗ trợ).
+- `GET /job/post/{id}`: Xem chi tiết một bài đăng cụ thể.
+
+### 3.2 Nhóm Tìm Kiếm & Khám Phá (Discovery)
+- `GET /job/post/nearby`: Tìm việc gần đây (Params: `latitude`, `longitude`, `maxDistanceKm`).
+- `POST /job/post/search`: Tìm kiếm nâng cao với bộ lọc `JobSearchFilterRequest`.
+- `GET /job/post/filter`: Lọc nhanh theo `title`, `category`, `address`.
+- `GET /job/post/by-date`: Lọc theo ngày (`dateFilter`: today, weekend...).
+- `GET /job/post/by-skill`: Lọc theo danh sách kỹ năng `skills` (phân cách dấu phẩy).
+- `GET /job/post/by-wage`: Lọc theo khoảng lương (`minWage`, `maxWage`).
+- `GET /job/post/urgent`: Lấy các công việc khẩn cấp gần vị trí.
+
+### 3.3 Nhóm Thời Tiết (Public)
+- `GET /weather/coordinates`: Lấy thời tiết qua tọa độ (`lat`, `lon`).
+- `GET /weather/city`: Lấy thời tiết qua tên thành phố (`city`).
+
+### 3.4 Nhóm Xác Thực (Auth)
+- `POST /login`: Đăng nhập hệ thống.
+    - *Lưu ý*: Nếu trả về `403 Forbidden`, nghĩa là Email chưa được xác thực.
+- `POST /register`: Đăng ký tài khoản mới. Hệ thống sẽ gửi mã OTP vào Email.
+- `POST /verify-email`: Xác thực tài khoản bằng OTP.
+    - **Body**: `{ "email": "string", "otp": "string" }`
+- `POST /resend-verification`: Gửi lại mã OTP xác thực.
+    - **Body**: `{ "email": "string" }`
+- `POST /google-login`: Đăng nhập bằng Google.
+- `POST /forget`: Gửi mã OTP quên mật khẩu.
+- `POST /reset`: Đặt lại mật khẩu mới bằng OTP.
+
+---
+
+## 4) Worker Profile APIs (Yêu cầu Token & Role: Worker)
 
 ### 3.1 GET `/worker`
-- **Mục đích**: Lấy profile worker của user hiện tại qua claim của token.
-- **Auth/Role**: `Authorize(Roles = "Worker")`
-- **Response**: `200 OK` (WorkerProfileDTO), `404 Not Found`
+- **Mục đích**: Lấy profile của chính mình qua token.
+- **Role**: `Worker` ( Claims dựa trên Token )
 
 ### 3.2 PUT `/worker`
-- **Mục đích**: Tạo profile lần đầu hoặc cập nhật profile hiện có.
-- **Auth/Role**: `Authorize(Roles = "Worker")`
+- **Mục đích**: Cập nhật thông tin hồ sơ (Bao gồm cập nhật danh sách `skillIds`).
 - **Body**: `UpdateWorkerProfileRequest`
-- **Response**: `200 OK` (WorkerProfileDTO), `400 Bad Request`
 
 ### 3.3 POST `/worker/upload-avatar`
-- **Mục đích**: Upload avatar cho worker.
-- **Auth**: `Authorize(Roles = "Worker")`
-- **Body**: `multipart/form-data` chứa `IFormFile image`
-- **Response**: `200 OK` (trả về URL của avatar dưới dạng string)
+- **Mục đích**: Tải lên ảnh đại diện.
+- **Body**: `multipart/form-data` (`image`)
+- **Response**: Trả về URL của ảnh.
 
 ---
 
-## 4) Job Daily Report APIs (Worker thao tác)
+## 5) Job Interaction APIs (Ứng tuyển - Yêu cầu Token)
 
-Luồng mới: Worker không cần Check-in/Check-out. Worker tự tạo Báo Cáo Công Việc thông qua `JobDetail`.
+*(Các API tìm kiếm công khai đã được liệt kê ở mục 3.2)*
 
-### 4.1 POST `/JobDetail/report-daily`
-- **Mục đích**: Worker tạo report hằng ngày.
+### 5.1 POST `/job/application`
+- **Mục đích**: Nộp đơn ứng tuyển.
+- **Body**: `CreateJobApplicationRequest` (Cần gửi `workDates`).
+
+### 5.2 GET `/job/application/worker`
+- **Mục đích**: Xem toàn bộ lịch sử ứng tuyển của cá nhân.
+
+### 5.3 DELETE `/job/application/cancel/{id}`
+- **Mục đích**: Worker chủ động hủy đơn ứng tuyển đã nộp.
+
+---
+
+## 6) Job Daily Report APIs (Báo cáo công việc)
+
+### 5.1 POST `/job/detail/report-daily`
+- **Mục đích**: Worker gửi báo cáo kết quả công việc hằng ngày thay cho điểm danh.
 - **Role**: `Worker`
-- **Body**: `CreateDailyReportRequest`
-- **Response**: `200 OK` (JobDetailDTO)
 
-### 4.2 GET `/JobDetail/{id}`
-- **Mục đích**: Lấy chi tiết một bản ghi report.
-- **Role**: `Worker,Farmer`
-- **Response**: `200 OK` (JobDetailDTO)
-
-### 4.3 GET `/JobDetail/worker/{workerId}`
-- **Mục đích**: Lấy lịch sử report của worker.
-- **Role**: `Worker`
-- **Response**: `200 OK` (List<JobDetailDTO>)
-
-### 4.4 POST `/disputes`
-- **Mục đích**: Worker/Farmer khiếu nại (Appeal) nếu không chấp nhận mức phần trăm (%) đánh giá hoặc có vấn đề khác.
-- **Role**: `Worker, Farmer`
-- **Body**: `CreateDisputeReportRequest`
-- **Response**: `201 Created` (DisputeReportDTO)
-
-### 4.5 GET `/disputes/mine`
-- **Mục đích**: Worker xem danh sách khiếu nại của chính mình.
-- **Role**: `Worker`
-- **Response**: `200 OK` (List<DisputeReportDTO>)
+### 5.2 GET `/job/detail/{id}`
+- **Mục đích**: Xem chi tiết đánh giá từ Farmer sau khi Farmer đã duyệt báo cáo.
 
 ---
 
-## 5) Report APIs liên quan Worker (Farmer thao tác)
+## 7) Wallet & Withdrawal APIs (Ví & Rút tiền)
 
-### 5.1 POST `/JobDetail/{id}/approve`
-- **Mục đích**: Farmer chấm phần trăm (%) công và duyệt report của worker.
-- **Role**: `Farmer`
-- **Body**: `ApproveJobDetailRequest`
-- **Response**: `200 OK` (JobDetailDTO)
+### 6.1 GET `/wallet/me`
+- **Mục đích**: Xem thông tin ví và số dư hiện có.
 
-### 5.2 GET `/JobDetail/job-post/{jobPostId}`
-- **Mục đích**: Farmer xem toàn bộ daily reports (JobDetail) của một Job Post.
-- **Role**: `Farmer`
-- **Response**: `200 OK` (List<JobDetailDTO>)
+### 6.2 GET `/wallet-transaction/wallet/{walletId}`
+- **Mục đích**: Lấy lịch sử biến động số dư.
 
----
+### 6.3 POST `/withdraw`
+- **Mục đích**: Tạo lệnh rút tiền về ngân hàng.
 
-## 6) Job APIs (Worker thao tác & Tương tác)
-
-### 6.1 GET `/job/post`
-- **Mục đích**: Lấy tất cả job posts có sẵn (để worker tìm việc).
-- **Response**: `200 OK` (List<JobPostDTO>)
-
-### 6.2 GET `/job/post/{id}`
-- **Mục đích**: Xem chi tiết 1 job post.
-- **Response**: `200 OK` (JobPostDTO)
-
-### 6.3 GET `/job/post/nearby`
-- **Mục đích**: Lấy các việc làm gần vị trí hiện tại của user.
-- **Params**: `latitude`, `longitude`, `maxDistanceKm` (default 20).
-- **Response**: `200 OK` (List<JobDiscoveryDTO>)
-
-### 6.4 POST `/job/post/search`
-- **Mục đích**: Tìm kiếm việc nâng cao với filter.
-- **Body**: `JobSearchFilterRequest`
-- **Response**: `200 OK` (PaginatedResponse<JobDiscoveryDTO>)
-
-### 6.5 GET `/job/post/filter`
-- **Mục đích**: Filter việc theo các tiêu chí record đơn giản.
-- **Params**: `title`, `category`, `address`, `skill`.
-- **Response**: `200 OK` (List<JobPostDTO>)
-
-### 6.6 POST `/job/application`
-- **Mục đích**: Worker nộp đơn ứng tuyển vào một Job Post.
-- **Body**: `CreateJobApplicationRequest`
-- **Response**: `200 OK` (JobApplicationDTO)
-
-### 6.7 GET `/job/application`
-- **Mục đích**: Lấy danh sách applications.
-- **Response**: `200 OK` (List<JobApplicationDTO>)
-
-### 6.8 GET `/job/application/{id}`
-- **Mục đích**: Xem chi tiết application của mình.
-- **Response**: `200 OK` (JobApplicationDTO)
-
-### 6.9 DELETE `/job/application/{id}`
-- **Mục đích**: Hủy (thu hồi) đơn ứng tuyển đã nộp.
-- **Cơ chế**: API này sẽ xóa vật lý record Application khỏi hệ thống (không dùng cờ status kiểu Cancelled). Worker hoàn toàn có thể tự hủy đơn đã nộp bằng cách gọi API này.
-- **UI Note**: Frontend nên ràng buộc điều kiện nội bộ (ví dụ: chỉ hiện nút "Hủy đơn" khi trạng thái đơn là *Chờ Duyệt - Pending*) vì backend hiện tại sẽ xóa đơn bất chấp trạng thái nào nếu gọi API.
-- **Response**: `200 OK` (Xóa thành công), `404 Not Found`
+### 6.4 GET `/withdraw/account-balance`
+- **Mục đích**: Lấy thông tin số dư khả dụng từ PayOS/Hệ thống ngân hàng tích hợp.
 
 ---
 
-## 7) Notification APIs (Worker & Farmer)
+## 8) Notification APIs
 
-Tất cả APIs này đều yêu cầu user đăng nhập (`[Authorize]`).
+### 7.1 GET `/notification/unread`
+- **Mục đích**: Lấy danh sách thông báo chưa đọc phục vụ hiển thị Badge Icon.
 
-### 7.1 GET `/notification`
-- **Mục đích**: Lấy toàn bộ notifications của user hiện tại.
-- **Response**: `200 OK` (List<NotificationDTO>)
-
-### 7.2 GET `/notification/unread`
-- **Mục đích**: Lấy các notifications chưa đọc.
-- **Response**: `200 OK` (List<NotificationDTO>)
-
-### 7.3 PATCH `/notification/read`
-- **Mục đích**: Đánh dấu 1 notification là đã đọc.
-- **Body**: `{ "notificationId": "guid" }`
-- **Response**: `204 No Content`
-
-### 7.4 PATCH `/notification/read-all`
-- **Mục đích**: Đánh dấu tất cả notifications của user là đã đọc.
-- **Response**: `204 No Content`
-
-### 7.5 DELETE `/notification/{id}`
-- **Mục đích**: Xoá 1 notification.
-- **Response**: `204 No Content`
-
-### 7.6 POST `/notification/register-token`
-- **Mục đích**: Đăng ký Device Token cho Push Notification.
-- **Body**: `{ "token": "string", "deviceName": "string" }`
-- **Response**: `200 OK`
-
-### 7.7 POST `/notification/unregister-token`
-- **Mục đích**: Huỷ đăng ký Device Token.
-- **Body**: `{ "token": "string" }`
-- **Response**: `200 OK`
+### 7.2 POST `/notification/register-token`
+- **Mục đích**: Liên kết Device Token (Expo/FCM) để nhận Push Notification.
+- **Body**: `{"token": "string", "deviceName": "string"}`
 
 ---
 
-## 8) Auth APIs Worker sử dụng
+## 9) Bảng Tra Cứu Enums (Dành cho Frontend)
 
-### 8.1 POST `/login`
-- Body: `{"email": "...", "password": "..."}`
-- Response: `200 OK` (LoginResponse)
+### 8.1 Trạng Thái Đơn Ứng Tuyển (`ApplicationStatus`)
+- `1`: Chờ duyệt (Pending)
+- `2`: Đã được chấp nhận (Accepted)
+- `3`: Bị từ chối (Rejected)
+- `4`: Đã hủy (Cancelled)
 
-### 8.2 POST `/register`
-- Body: `RegisterRequest` (Kèm `roleId = 3` cho Worker).
-- Response: `201 Created`
+### 8.2 Loại Công Việc (`JobType`)
+- `1`: Khoán Trọn Gói (PerJob)
+- `2`: Theo Công Nhật (Daily)
 
-### 8.3 POST `/google-login`
-- Body: `{"googleToken": "...", "roleId": 3}`
-- Response: `200 OK` (LoginResponse)
-
-### 8.4 POST `/forget`
-- **Mục đích**: Yêu cầu mã OTP (hoặc link) để reset mật khẩu.
-- Body: `ForgotPasswordRequest`
-- Response: `200 OK`
-
-### 8.5 POST `/reset`
-- **Mục đích**: Đổi mật khẩu với mã OTP.
-- Body: `ResetPasswordRequest`
-- Response: `200 OK`
-
-### 8.6 POST `/logout` (Yêu cầu `Authorize`)
-- Mục đích: Đăng xuất.
-- Response: `200 OK`
+### 8.3 Trạng Thái Việc Làm (`JobPostStatus`)
+- `2`: Đang Mở Tuyển (Published)
+- `4`: Đang Tiến Hành (InProgress)
+- `5`: Đã Hoàn Thành (Completed)
 
 ---
 
-## 9) Ghi chú nghiệp vụ quan trọng
+## 10) Ghi chú quan trọng
 
-- Các path API đều tuân thủ `ApiEndpointConstants.cs` (Ví dụ `/api/v1/worker` thay vì `/api/v1/worker-profile`).
-- WorkerProfile APIs (GET/PUT) loại bỏ `userId` từ Path Parameter, bảo vệ bằng cách phân giải JWT Token (Claims) để xác thực người dùng.
-- Luồng báo cáo công việc đã được chuyển từ `WorkerAttendance` sang `JobDetail`.
-- **[Deprecated]** `WorkerAttendance` (Check-in/Check-out) hiện tại không còn được dùng trong Worker Mobile Workflow, dẫu các API `/api/v1/attendance/...` vẫn tồn tại ở backend để hỗ trợ DB cũ. Khuyến cáo app gọi qua hệ thống `/api/v1/JobDetail/report-daily` để ghi nhận ngày công.
-- Hệ thống Khiếu nại (Dispute/Appeal) đã được tách thành module riêng.
-- Các DTO danh sách (Application) đã được nhúng kèm Object liên quan để tối ưu UI.
-- API Application Job có validate Role để đảm bảo đúng phân quyền ứng tuyển.
-- Hệ thống Notification được tích hợp cho cả 2 luồng.
-
----
-
-## 10) Trạng thái Cải thiện UI & Backend Sync
-
-### 10.1 Xử Lý UI Chức Năng Việc Nông Nghiệp (Theo Ngày) & Khoán
-- **[✅ ĐÃ HOÀN THÀNH]** Đã chuyển sang luồng `JobDetail`. Worker gửi `report-daily`, Farmer `approve` kèm `%` và `feedback`.
-
-### 10.2 Tránh Sập App Vì Lỗi Thiếu Dữ Liệu Tích Hợp
-Hiện tại, một loạt API trả về dạng Danh Sách (List) chỉ nhả ra các cục ID trơn (Ví dụ: `JobApplicationId`, `JobPostId`) mà không hề nhúng thêm dữ liệu chi tiết của ngọn ngành.
-
-- **Đề xuất từ Frontend:** Yêu cầu Backend hãy **nhúng (embed) thẳng Object `JobPostDTO`** vào bên trong các DTO dạng List dưới đây (nói cách khác là Join bảng để bưng data ra luôn).
-- **Mục đích xử lý:** Giúp Frontend có sẵn `Title` (Tên việc), `Location` (Vị trí), `WageAmount` (Lương), `FarmName` (Tên Nông Trại)... để vẽ liền giao diện thẻ (Card) danh sách. Tránh việc Frontend phải gọi thủ công hàng chục API `GetJobDetail` rời rạc khác nhau gây đứng máy Client (lỗi N+1 Query).
-
-1. **`WorkerProfileDTO`**: Đã bổ sung `Email` và `PhoneNumber`. -> **[✅ ĐÃ HOÀN THÀNH]**
-
-2. **`JobApplicationDTO` (Lịch Sử Ứng Tuyển)**: 
-   - **Tình trạng:** Đã được nhúng kèm object `JobPost` và `LocationName`.
-   - **Hậu quả UI:** Màn hình "Việc chờ duyệt" của Worker đã có đủ Tựa việc và Lương để hiển thị giao diện danh sách mà không cần lo lỗi N+1 Query.
-   - **Yêu cầu BE:** BẮT BUỘC bổ sung/nhúng Object `JobPost` (hoặc các trường Metadata) vào DTO này. -> **[✅ ĐÃ CẬP NHẬT]**
-
-3. **`JobDetailDTO` (thay thế Attendance)**: Đã được tích hợp vào codebase. -> **[✅ ĐÃ HOÀN THÀNH]**
-
-### 10.3 Thiếu Cơ Chế Chọn Ngày Khi Ứng Tuyển
-- **[✅ ĐÃ HOÀN THÀNH]** `JobApplicationDTO` và `CreateJobApplicationRequest` đã hỗ trợ mảng `workDates`.
-
----
-
-## 11) Yêu Cầu Backend cho Push Notification Real-time
-
-**[✅ ĐÃ HOÀN THÀNH - SẴN SÀNG TÍCH HỢP]**
-
-Để tính năng thông báo có thể hoạt động ngay tức thời trên app (kể cả khi tắt app), Frontend đã cài đặt thư viện `expo-notifications` lấy **Device Push Token**. Backend cần chuẩn bị:
-1. Mỗi khi User đăng nhập thành công vào app, app sẽ gọi API `POST /api/v1/notification/register-token` kèm body `{"token": "ExponentPushToken[xxx]"}`. Backend cần lưu lại chuỗi token này vào DB gắn liền với `userId`. -> **[✅ ĐÃ CÓ API `RegisterDeviceToken`]**
-2. Khi có sự kiện (VD: duyệt điểm danh, tin nhắn mới, job được accept...), Backend dựa vào danh sách `Device Token` của User đó trên DB để **gọi POST request qua API của Expo** (`https://exp.host/--/api/v2/push/send`) gửi kèm payload `{ "to": "ExponentPushToken[xxx]", "title": "Tiêu đề", "body": "Nội dung", "data": {...} }`.
-3. Expo Server sẽ tự động bắn sang APNs (Apple) và FCM (Android) để hiển thị thông báo popup về máy người dùng realtime.
-
----
-
-## 12) Bảng Bổ Sung: Từ Điển Enum (Dành Cho Frontend Mapping)
-Dựa theo cấu trúc Database hiện hành của Backend (`AgroTemp.Domain.Entities`), dưới đây là bảng Enum để Frontend tạo file định nghĩa hằng số (constants) và map UI cho chính xác:
-
-### 12.1 JobType (Loại Công Việc)
-*Xuất hiện ở `JobPost.JobTypeId`*
-- `1` = Khoán Trọn Gói (PerJob)
-- `2` = Theo Công nhật (Daily)
-
-### 12.2 JobPostStatus (Trạng Thái Việc Làm)
-*Xuất hiện ở `JobPost.StatusId`*
-- `1` = Nháp (Draft)
-- `2` = Đang Mở Tuyển (Published)
-- `3` = Đã Đóng Đơn (Closed)
-- `4` = Đang Tiến Hành (InProgress)
-- `5` = Đã Hoàn Thành (Completed)
-- `6` = Bị Hủy (Cancelled)
-
-### 12.3 JobDetailStatus (Trạng Thái Báo Cáo Công Việc)
-*Xuất hiện ở `JobDetail.StatusId`*
-- `1` = Đang tiến hành (InProgress)
-- `2` = Đã báo cáo (Reported)
-- `3` = Đã hoàn thành (Completed)
-
-### 12.4 ApplicationStatus (Trạng Thái Đơn Ứng Tuyển)
-*Xuất hiện ở `JobApplication.StatusId`*
-- `1` = Chờ Duyệt (Pending)
-- `2` = Đã Được Nhận (Accepted)
-- `3` = Bị Từ Chối (Rejected)
-- `4` = Worker Tự Hủy Đơn (Cancelled)
-
-### 12.5 ExperienceLevel (Cấp Độ Kinh Nghiệm Worker)
-*Xuất hiện ở `WorkerProfile.ExperienceLevel`*
-- `1` = Mới Định Hướng (Beginner)
-- `2` = Đã Có Kinh Nghiệm (Intermediate)
-- `3` = Thợ Lành Nghề (Experienced)
-
-### 12.6 DisputeStatus
-- `1` = Pending
-- `2` = UnderReview
-- `3` = Resolved
-- `4` = Rejected
-
-### 12.7 WalletTransactionType
-- `1` = Nạp tiền (Deposit)
-- `2` = Rút tiền (Withdraw)
-- `3` = Thanh toán lương (JobPayment)
-- `4` = Hoàn tiền (Refund)
-- `5` = Tạm khóa (JobLock)
-
----
-
-## 13) Wallet & Withdraw APIs
-
-### 13.1 GET `/wallet/me`
-- **Mục đích**: Lấy thông tin ví của user hiện tại.
-- **Response**: `200 OK` (WalletDTO)
-
-### 13.2 GET `/wallet-transaction/wallet/{walletId}`
-- **Mục đích**: Lấy lịch sử giao dịch của ví.
-- **Response**: `200 OK` (List<WalletTransactionDTO>)
-
-### 13.3 POST `/withdraw`
-- **Mục đích**: Tạo yêu cầu rút tiền.
-- **Body**: `CreateWithdrawalRequest`
-- **Response**: `201 Created` (WithdrawalResponse)
-
-### 13.4 GET `/withdraw/account-balance`
-- **Mục đích**: Kiểm tra số dư khả dụng để rút.
-- **Response**: `200 OK` (WithdrawalAccountBalanceResponse)
-
----
-
-## 14) Skills APIs
-
-### 14.1 GET `/skills`
-- **Mục đích**: Lấy danh sách toàn bộ kỹ năng có sẵn trong hệ thống.
-- **Response**: `200 OK` (List<SkillResponse>)
-
----
-
-## 15) Weather APIs
-
-### 15.1 GET `/weather/me`
-- **Mục đích**: Lấy thông tin thời tiết tại vị trí của worker (dựa trên địa chỉ profile).
-- **Response**: `200 OK` (WeatherDTO)
+1. **camelCase**: Backend đã được cấu hình mặc định trả về JSON dạng camelCase. Team Mobile cần khai báo interface TypeScript tương ứng.
+2. **Hủy đơn**: Sử dụng Endpoint `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy record đúng quy trình.
+3. **Daily Report**: Thay thế hoàn toàn cho luồng `Attendance` (Check-in/out). Worker cần gửi báo cáo này để Farmer duyệt lương hằng ngày.
+4. **Skills**: Kỹ năng đã được tích hợp thẳng vào Profile Worker (GET `skills` và PUT `skillIds`), giúp hệ thống Match-Score tìm việc chính xác hơn.
