@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `${API_PREFIX}/forget`,
     RESET_PASSWORD: `${API_PREFIX}/reset`,
     VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
+    RESEND_VERIFICATION: `${API_PREFIX}/resend-verification`,
   },
   // Worker profile
   WORKER_PROFILE: {
@@ -110,6 +111,7 @@ export const API_ENDPOINTS = {
   // Weather
   WEATHER: {
     ME: `${API_PREFIX}/weather/me`,
+    COORDINATES: `${API_PREFIX}/weather/coordinates`,
   },
   // Chat
   CHAT: {

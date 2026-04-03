@@ -15,7 +15,9 @@
 
 ### Màn hình chính (Home Dashboard)
 - **Thống kê:** Thiết kế lại bảng thống kê thu nhập và công việc theo dạng lưới hiện đại.
-- **Tiện ích thời tiết:** Thay thế khu vực hiển thị số dư bằng Widget thời tiết (Weather API).
+- **Tiện ích thời tiết (03/04/2026):** Nâng cấp lấy dữ liệu thời tiết theo tọa độ GPS thực tế qua `expo-location`. 
+- **Cơ chế Fallback:** Tự động quay về vị trí mặc định trong hồ sơ nếu bị từ chối quyền truy cập vị trí, đảm bảo UI không bị lỗi.
+- **Tối ưu kiến trúc:** Tách biệt logic và giao diện thành `WeatherWidget.tsx` và Custom Hook `useLocalWeather`, giảm độ phức tạp cho màn hình chính.
 
 ### Tìm kiếm & Lọc nâng cao (Advanced Search & Filter) [P1]
 - **Logic tìm kiếm (02/04/2026):** Triển khai Custom Hook `useJobSearch` hỗ trợ tìm kiếm nâng cao, phân trang tự động và Infinite scrolling.
@@ -31,6 +33,11 @@
 - **Sửa lỗi định tuyến (P0):** Đồng bộ hóa Casing cho nhóm API `job/detail` (camelCase) để khắc phục lỗi 404 khi báo cáo công việc.
 - **Refactor Trang Cá nhân:** Giảm **45% số dòng code** (từ 287 xuống 157 dòng) cho `WorkerProfileScreen`, cải thiện tốc độ nạp và tính dễ bảo trì.
 - **Dọn dẹp mã nguồn (P3):** Loại bỏ hoàn toàn các hàm API dành cho Farmer trong ứng dụng Worker để tối ưu dung lượng.
+### Xác thực & Bảo mật (Authentication & Security) [P1]
+- **Luồng Quên mật khẩu (03/04/2026):** Triển khai quy trình 3 bước hoàn chỉnh (`Yêu cầu` -> `Xác thực OTP` -> `Thành công`) ngay trong `ForgotPasswordScreen.tsx`.
+- **Tính năng Gửi lại mã (Resend OTP):** Thêm logic đếm ngược 60 giây và tích hợp API `resend-verification`.
+- **Đồng bộ API:** Cập nhật `authService` và `API_ENDPOINTS` để khớp với backend spec cho các tính năng xác thực tài khoản.
+- **Tối ưu trải nghiệm:** Thêm hiển thị mật khẩu mới và kiểm tra định dạng OTP/Password trực tiếp tại bước xác thực.
 
 ---
 
