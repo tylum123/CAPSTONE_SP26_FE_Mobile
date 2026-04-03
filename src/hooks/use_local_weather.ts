@@ -26,8 +26,16 @@ export const useLocalWeather = () => {
       if (status !== "granted") {
         console.log("Permission to access location was denied, falling back to profile weather");
         setLocationStatus("denied");
-        const data = await weatherService.getWeather();
-        setWeatherData(data);
+        try {
+          const data = await weatherService.getWeather();
+          setWeatherData(data);
+          setLocationStatus("success");
+        } catch (profileErr) {
+          console.log("Profile weather failed, trying city-level fallback");
+          const cityData = await weatherService.getWeatherByCity("Hồ Chí Minh");
+          setWeatherData(cityData);
+          setLocationStatus("success");
+        }
         return;
       }
 
@@ -46,12 +54,20 @@ export const useLocalWeather = () => {
     } catch (err) {
       console.error("Error fetching local weather:", err);
       setLocationStatus("error_fallback");
-      // Fallback
+      // Fallback chain
       try {
         const data = await weatherService.getWeather();
         setWeatherData(data);
+        setLocationStatus("success");
       } catch (fallbackErr) {
-        setError("Không thể tải thông tin thời tiết");
+        console.log("Profile fallback failed, trying city-level fallback");
+        try {
+          const cityData = await weatherService.getWeatherByCity("Hồ Chí Minh");
+          setWeatherData(cityData);
+          setLocationStatus("success");
+        } catch (cityErr) {
+          setError("Không thể tải thông tin thời tiết");
+        }
       }
     } finally {
       setIsLoading(false);

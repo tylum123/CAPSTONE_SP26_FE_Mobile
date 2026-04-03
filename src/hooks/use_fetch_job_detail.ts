@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { DeviceEventEmitter } from "react-native";
-import { jobService, workerProfileService, reportService } from "../services/export_services";
+import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 
@@ -71,7 +71,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       let reports: any[] = [];
       try {
         if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
-          const allWorkerReports = await reportService.getWorkerReports(sourceProfile.id);
+          const allWorkerReports = await dailyReportService.getWorkerReports(sourceProfile.id);
           reports = allWorkerReports.filter(r => String(r.jobPostId) === String(jobId));
         } else if (user?.isDemo || !isAuthenticated) {
           // Mock some reports for demo

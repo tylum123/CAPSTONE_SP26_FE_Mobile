@@ -15,7 +15,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { WeatherWidget } from "../components/home/WeatherWidget";
 import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
 import { Job } from "../types/export_type_definitions";
-import { jobService, workerProfileService, nominatimService, reportService, walletService } from "../services/export_services";
+import { jobService, workerProfileService, nominatimService, dailyReportService, walletService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
 import { useLocalWeather } from "../hooks/use_local_weather";
 import { JobMap } from "../components/ui/JobMap";
@@ -123,7 +123,7 @@ export function WorkerHomeScreen({ navigation }: any) {
         todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
       } else {
         const fetchReportsPromise = sourceProfile?.id 
-          ? reportService.getWorkerReports(sourceProfile.id)
+          ? dailyReportService.getWorkerReports(sourceProfile.id)
           : Promise.resolve([]);
 
         const [nearby, reports] = await Promise.all([
@@ -253,22 +253,20 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="absolute w-[200px] h-[200px] rounded-full top-[-70px] right-[-50px]" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
                 <View className="absolute w-[130px] h-[130px] rounded-full bottom-2 left-[-30px]" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
 
-                <View className="flex-row justify-between items-start mb-3">
-                  <View>
+                {/* Header row: greeting (flex-1) | bell + avatar */}
+                <View className="flex-row items-center justify-between mb-3">
+                  {/* Left: Greeting */}
+                  <View className="flex-1 mr-3">
                     <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào 👋</Text>
-                    <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5">{user?.name || "BẠN MỚI"}</Text>
+                    <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5" numberOfLines={1}>{user?.name || "BẠN MỚI"}</Text>
                   </View>
-                  <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
-                    <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>
-                    <View className="w-px h-3" style={{ backgroundColor: "rgba(255,255,255,0.3)" }} />
-                    <View className="flex-row items-center gap-1"><Briefcase size={13} color="#6ee7b7" /><Text className="text-white text-xs font-semibold">{totalJobsCompleted ?? 0} việc</Text></View>
-                  </View>
-                  <View className="flex-row items-center gap-2.5">
-                    <TouchableOpacity className="w-[42px] h-[42px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
-                      <Bell size={20} color="#ffffff" />
-                      <View className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full bg-rice-400 border-[1.5px] border-primary-600" />
+                  {/* Right: bell + avatar only */}
+                  <View className="flex-row items-center gap-2">
+                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
+                      <Bell size={18} color="#ffffff" />
+                      <View className="absolute top-[8px] right-[8px] w-[6px] h-[6px] rounded-full bg-rice-400 border border-primary-600" />
                     </TouchableOpacity>
-                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={44} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
+                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={38} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
                   </View>
                 </View>
 
@@ -276,7 +274,8 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <WeatherWidget 
                     weatherData={weatherData} 
                     isLoading={isWeatherLoading} 
-                    locationStatus={locationStatus} 
+                    locationStatus={locationStatus}
+                    onRetry={refetchWeather}
                 />
 
                 <TouchableOpacity className="flex-row items-center gap-2 bg-white rounded-[20px] pl-4 pr-1.5 h-[50px]" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 4 }} onPress={() => navigation.navigate("Search")} activeOpacity={0.9}>
@@ -359,7 +358,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                         <View className="flex-row items-center gap-2">
                           <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
                             <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 4)}</Text>
+                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
                           </View>
                           <View className="flex-1">
                             <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
@@ -416,8 +415,8 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
                   <View className="flex-row items-center gap-1.5">
                     <MapPin size={14} color="#64748b" />
-                    <Text className="text-xs text-slate-600 font-medium">
-                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : "Gần bạn"}
+                    <Text className="text-xs text-slate-600 font-medium" numberOfLines={1} style={{ flexShrink: 1 }}>
+                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.location || "Việt Nam")}
                     </Text>
                   </View>
                   <View className="w-px h-3 bg-slate-200" />

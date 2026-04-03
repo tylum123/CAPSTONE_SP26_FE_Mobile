@@ -13,10 +13,13 @@ import {
   TouchableOpacity, 
   RefreshControl, 
   ActivityIndicator, 
-  DeviceEventEmitter 
+  DeviceEventEmitter,
+  ScrollView,
+  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, SlidersHorizontal, Map as MapIcon, List, X } from "lucide-react-native";
+import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Calendar, Briefcase } from "lucide-react-native";
+import { useDebounce } from "../hooks/use_debounce";
 import { EmptyState } from "../components/ui/export_ui_components";
 import { useAuth } from "../context/AuthContext";
 import { nominatimService, workerProfileService } from "../services/export_services";
@@ -32,8 +35,46 @@ export function WorkerSearchScreen({ navigation }: any) {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
   const { 
-    filters, results, isLoading, updateFilter, search, loadMore, reset 
+    filters, results, isLoading, updateFilter, search, loadMore, reset, specializedSearch, appliedJobPostIds, refreshAppliedStatus 
   } = useJobSearch();
+
+  const filteredResults = React.useMemo(() => {
+    let data = results;
+    if (filters.excludeApplied) {
+      data = data.filter(job => !appliedJobPostIds.has(String(job.id)));
+    }
+    // Strictly filter out urgent jobs if "Không cần gấp" is selected
+    if (filters.onlyUrgent === false) {
+      data = data.filter(job => !job.isUrgent);
+    }
+    return data;
+  }, [results, filters.excludeApplied, filters.onlyUrgent, appliedJobPostIds]);
+
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string>("all");
+
+  const debouncedKeyword = useDebounce(filters.searchKeyword || "", 600);
+
+  useEffect(() => {
+    // Automatically trigger search when keyword changes (Live Search)
+    if (debouncedKeyword !== undefined) {
+      search({ ...filters, pageNumber: 1 });
+    }
+  }, [debouncedKeyword]);
+
+  const handleQuickFilter = (type: string) => {
+    setActiveQuickFilter(type);
+    let newUrgentFilter: boolean | undefined = undefined;
+    
+    if (type === "urgent") {
+      newUrgentFilter = true;
+    } else if (type === "not_urgent") {
+      newUrgentFilter = false;
+    }
+    
+    const updatedFilters = { ...filters, onlyUrgent: newUrgentFilter, pageNumber: 1 };
+    updateFilter({ onlyUrgent: newUrgentFilter });
+    search(updatedFilters);
+  };
 
   /**
    * Initializes screen by fetching user profile location or setting default coordinates.
@@ -49,24 +90,35 @@ export function WorkerSearchScreen({ navigation }: any) {
         if (loc) {
           lat = loc.latitude;
           lon = loc.longitude;
-          setUserLocation(loc);
         }
-      } else {
-        setUserLocation({ latitude: lat, longitude: lon });
       }
 
-      // Perform initial search with location context
-      search({
-        ...filters,
-        workerLatitude: lat,
+      const location = { latitude: lat, longitude: lon };
+      setUserLocation(location);
+      
+      const initialRadius = profile?.travelRadiusKmPreference || 50;
+      
+      updateFilter({ 
+        workerLatitude: lat, 
         workerLongitude: lon,
-        maxDistanceKm: profile?.travelRadiusKmPreference || 50
+        maxDistanceKm: initialRadius 
       });
+
+      // Perform initial search with location context
+      await Promise.all([
+        refreshAppliedStatus(),
+        search({
+          ...filters,
+          workerLatitude: lat,
+          workerLongitude: lon,
+          maxDistanceKm: initialRadius
+        })
+      ]);
     } catch (err) {
       console.error("Search init error", err);
       search(); // Fallback search if location fails
     }
-  }, [user?.isDemo, search]);
+  }, [user?.isDemo, search, refreshAppliedStatus, updateFilter, filters]);
 
   useEffect(() => {
     init();
@@ -118,13 +170,38 @@ export function WorkerSearchScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
+      {/* Quick Filters Row */}
+      <View className="bg-white py-3 border-b border-slate-100">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
+          {[
+            { id: "all", label: "Tất cả", icon: List },
+            { id: "urgent", label: "Cần gấp", icon: Zap },
+            { id: "not_urgent", label: "Không cần gấp", icon: Briefcase },
+          ].map((chip) => {
+            const isActive = activeQuickFilter === chip.id;
+            return (
+              <TouchableOpacity
+                key={chip.id}
+                onPress={() => handleQuickFilter(chip.id)}
+                className={["flex-row items-center gap-1.5 px-4 py-2.5 rounded-2xl border-[1.5px]", isActive ? "bg-primary-500 border-primary-500" : "bg-slate-50 border-slate-200"].join(" ")}
+              >
+                <chip.icon size={15} color={isActive ? "#ffffff" : "#64748b"} />
+                <Text className={["text-sm font-bold", isActive ? "text-white" : "text-slate-600"].join(" ")}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* Main Content Area */}
       {isMapView ? (
         <View className="flex-1">
           <JobMap 
             userLocation={userLocation} 
             radiusKm={filters.maxDistanceKm || 50} 
-            jobs={results as any} 
+            jobs={filteredResults as any} 
             onCalloutPress={(job) => navigation.navigate("JobDetail", { jobId: job.id })}
             style={{ borderRadius: 0, height: "100%" }}
           />
@@ -133,9 +210,9 @@ export function WorkerSearchScreen({ navigation }: any) {
         <FlatList
           className="flex-1"
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-          data={results}
+          data={filteredResults}
           keyExtractor={(item) => item.id.toString()}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => search()} colors={["#059669"]} />}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={async () => { await refreshAppliedStatus(); search(); }} colors={["#059669"]} />}
           onEndReached={() => loadMore()}
           onEndReachedThreshold={0.4}
           renderItem={({ item }) => (
@@ -144,9 +221,10 @@ export function WorkerSearchScreen({ navigation }: any) {
           ListEmptyComponent={!isLoading ? (
             <EmptyState 
               title="Không tìm thấy việc phù hợp" 
+              message="Thử thay đổi bộ lọc hoặc tìm kiếm theo từ khóa khác thay vì xóa hết."
               icon={Search} 
-              onAction={() => { reset(); search(); }} 
-              actionLabel="Xóa bộ lọc"
+              onAction={() => setIsFilterVisible(true)} 
+              actionLabel="Điều chỉnh bộ lọc"
             />
           ) : null}
           ListFooterComponent={isLoading && results.length > 0 ? (

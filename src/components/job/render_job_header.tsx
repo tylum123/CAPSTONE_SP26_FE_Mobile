@@ -8,16 +8,30 @@ import React from "react";
 import { View, Text } from "react-native";
 import { Calendar, Banknote } from "lucide-react-native";
 import { Badge } from "../ui/Badge";
+import { isPastEndDateWithGrace } from "../../utils/provide_formatting_helpers";
 
 export function RenderJobHeader({ jobDetail }: { jobDetail: any }) {
   if (!jobDetail) return null;
+
+  const isExpired = isPastEndDateWithGrace(jobDetail.endDate || jobDetail.startDate);
+  // Status checked: 1=Draft, 2=Published, 3=Closed, 4=InProgress, 5=Completed, 6=Cancelled
+  const isInProgressButExpired = isExpired && jobDetail.statusId === 4;
+
   return (
     <View className="bg-white rounded-[20px] p-6 mb-4 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
-      {jobDetail.jobType ? (
-        <View className="self-start mb-2">
-          <Badge variant={jobDetail.urgent ? "danger" : "success"}>{jobDetail.urgent ? "🔥 Cần gấp" : jobDetail.jobType}</Badge>
+      <View className="flex-row justify-between items-start mb-2">
+        <View className="flex-row gap-2">
+          {jobDetail.jobType ? (
+            <Badge variant={jobDetail.urgent ? "danger" : "success"}>{jobDetail.urgent ? "🔥 Cần gấp" : jobDetail.jobType}</Badge>
+          ) : null}
+          {isInProgressButExpired && (
+            <Badge variant="warning">⚠️ Quá hạn báo cáo</Badge>
+          )}
+          {jobDetail.statusId === 5 && (
+            <Badge variant="info">✓ Đã hoàn thành</Badge>
+          )}
         </View>
-      ) : null}
+      </View>
       <Text className="text-[22px] font-extrabold text-slate-900 mb-1" style={{ letterSpacing: -0.4 }}>{jobDetail.title}</Text>
       <Text className="text-[13px] text-slate-500 mb-4">{jobDetail.location?.address}</Text>
       <View className="flex-row items-center gap-3 mb-6 bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">

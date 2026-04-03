@@ -55,13 +55,13 @@ export const authService = {
     return response.data.data;
   },
 
-  // Register
-  register: async (data: RegisterRequest): Promise<LoginResponse> => {
-    const response = await api.post<ApiResponse<LoginResponse>>(
+  // Register - Backend logic update: No longer returns token on registration
+  // Account is created in pending state, OTP is sent to user email.
+  register: async (data: RegisterRequest): Promise<void> => {
+    await api.post<ApiResponse<any>>(
       API_ENDPOINTS.AUTH.REGISTER,
       data,
     );
-    return response.data.data;
   },
 
   // Google login
@@ -91,5 +91,10 @@ export const authService = {
   // Resend verification code
   resendVerification: async (email: string): Promise<void> => {
     await api.post(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, { email });
+  },
+
+  // Verify Email with OTP
+  verifyEmail: async (email: string, otp: string): Promise<void> => {
+    await api.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, { email, otp });
   },
 };

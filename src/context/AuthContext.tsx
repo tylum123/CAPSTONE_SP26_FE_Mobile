@@ -228,33 +228,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       roleId: number;
     }) => {
-      const response = await authService.register(payload);
-      await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
-      authTokenService.setTokenToMemory(response.token);
-
-      try {
-        const profile = await workerProfileService.getProfile();
-        const profileWithEmail = {
-          ...profile,
-          email: response.email || payload.email,
-        };
-        await AsyncStorage.setItem(
-          STORAGE_KEYS.USER_DATA,
-          JSON.stringify(profileWithEmail),
-        );
-        applyUserProfile(profileWithEmail);
-      } catch {
-        const fEmail = response.email || payload.email;
-        applyUserProfile({
-          id: "me",
-          fullName: resolveName(undefined, fEmail),
-          email: fEmail,
-          roleID: String(payload.roleId),
-          isNewUser: true,
-        });
-      }
+      // Backend now sends OTP after registration, no token is returned.
+      await authService.register(payload);
     },
-    [applyUserProfile],
+    [],
   );
 
   const logout = useCallback(async () => {

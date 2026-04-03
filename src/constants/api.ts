@@ -56,16 +56,21 @@ export const API_ENDPOINTS = {
     NEARBY: `${API_PREFIX}/job/post/nearby`,
     SEARCH: `${API_PREFIX}/job/post/search`,
     FILTER: `${API_PREFIX}/job/post/filter`,
+    BY_DATE: `${API_PREFIX}/job/post/by-date`,
+    BY_SKILL: `${API_PREFIX}/job/post/by-skill`,
+    BY_WAGE: `${API_PREFIX}/job/post/by-wage`,
+    URGENT: `${API_PREFIX}/job/post/urgent`,
     APPLICATION: `${API_PREFIX}/job/application`,
+    APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
     CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
   },
-  // Job Detail (Replaces Attendance/Daily Report)
+  // Job Detail (Daily Report replacement for Attendance)
   JOB_DETAIL: {
-    REPORT_DAILY: `${API_PREFIX}/job/detail/report-daily`,
+    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
 
-    DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
-    WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
+    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
 
   },
   // Disputes
@@ -112,6 +117,7 @@ export const API_ENDPOINTS = {
   WEATHER: {
     ME: `${API_PREFIX}/weather/me`,
     COORDINATES: `${API_PREFIX}/weather/coordinates`,
+    CITY: `${API_PREFIX}/weather/city`,
   },
   // Chat
   CHAT: {

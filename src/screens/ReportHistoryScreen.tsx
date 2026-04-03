@@ -11,7 +11,7 @@ import { ChevronLeft, ClipboardCheck, Calendar, Info } from "lucide-react-native
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { JobDetailDTO } from "../types/export_type_definitions";
-import { reportService } from "../services/report.service";
+import { dailyReportService } from "../services/daily_report.service";
 import { useAuth } from "../context/AuthContext";
 
 export function ReportHistoryScreen({ navigation }: any) {
@@ -55,7 +55,7 @@ export function ReportHistoryScreen({ navigation }: any) {
         setReports(demoReports);
         return;
       }
-      const data = await reportService.getWorkerReports(user.id);
+      const data = await dailyReportService.getWorkerReports(user.id);
       setReports(data.length > 0 ? data : demoReports);
     } catch {
       setReports(demoReports);

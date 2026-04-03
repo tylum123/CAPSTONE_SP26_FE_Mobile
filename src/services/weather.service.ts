@@ -24,8 +24,20 @@ export const weatherService = {
       API_ENDPOINTS.WEATHER.COORDINATES,
       {
         params: {
-          latitude: lat,
-          longitude: lon,
+          lat, // Note: BE uses 'lat' and 'lon' as query params for this endpoint
+          lon,
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  getWeatherByCity: async (city: string): Promise<WeatherDTO> => {
+    const response = await api.get<ApiResponse<WeatherDTO>>(
+      API_ENDPOINTS.WEATHER.CITY,
+      {
+        params: {
+          city,
         },
       }
     );
