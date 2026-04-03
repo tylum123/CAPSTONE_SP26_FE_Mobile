@@ -15,4 +15,20 @@ export const weatherService = {
     );
     return response.data.data;
   },
+
+  getWeatherByCoords: async (
+    lat: number,
+    lon: number
+  ): Promise<WeatherDTO> => {
+    const response = await api.get<ApiResponse<WeatherDTO>>(
+      API_ENDPOINTS.WEATHER.COORDINATES,
+      {
+        params: {
+          latitude: lat,
+          longitude: lon,
+        },
+      }
+    );
+    return response.data.data;
+  },
 };

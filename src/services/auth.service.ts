@@ -87,4 +87,9 @@ export const authService = {
   resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
     await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
   },
+  
+  // Resend verification code
+  resendVerification: async (email: string): Promise<void> => {
+    await api.post(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, { email });
+  },
 };
