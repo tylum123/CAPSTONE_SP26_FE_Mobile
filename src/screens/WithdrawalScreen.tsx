@@ -21,6 +21,12 @@ function removeAccents(str: string) {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 }
 
+function formatCurrency(val: string) {
+  if (!val) return "";
+  const numericValue = val.replace(/[^0-9]/g, "");
+  return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export function WithdrawalScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -158,6 +164,7 @@ export function WithdrawalScreen() {
         toBin: parseInt(selectedBank.bin, 10),
         toAccountNumber: accountNumber,
         accountHolderName: accountHolder,
+        description: `Rut tien AgroTemp ${Date.now().toString().slice(-4)}`
       });
       Alert.alert("Thành công", "Yêu cầu rút tiền đã được gửi và đang chờ xử lý.", [
         { text: "OK", onPress: () => navigation.goBack() }
@@ -171,7 +178,7 @@ export function WithdrawalScreen() {
 
   const setMaxAmount = () => {
     if (wallet?.balance) {
-      setAmount(wallet.balance.toString());
+      setAmount(formatCurrency(wallet.balance.toString()));
     }
   };
 
@@ -293,11 +300,11 @@ export function WithdrawalScreen() {
           <View className="mt-8">
             <Text className="text-[13px] text-slate-500 font-extrabold uppercase tracking-widest mb-3 ml-1">Nhập số tiền</Text>
              <View className="flex-row items-center bg-white border border-slate-200 rounded-[20px] px-5 py-4 w-full shadow-sm">
-                <DollarSign size={24} color="#059669" />
+                <Wallet size={24} color="#059669" />
                 <TextInput
                   placeholder="0"
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(val) => setAmount(formatCurrency(val))}
                   keyboardType="numeric"
                   className="flex-1 text-3xl font-extrabold ml-2 text-slate-900"
                   onFocus={() => {
