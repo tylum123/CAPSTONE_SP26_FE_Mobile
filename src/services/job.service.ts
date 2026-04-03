@@ -81,6 +81,42 @@ export const jobService = {
     return response.data.data;
   },
 
+  getJobsByDate: async (dateFilter: string): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.BY_DATE,
+      { params: { dateFilter } },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  getJobsBySkill: async (skills: string): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.BY_SKILL,
+      { params: { skills } },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  getJobsByWageRange: async (minWage: number, maxWage?: number): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.BY_WAGE,
+      { params: { minWage, maxWage } },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
+  getUrgentJobs: async (params: {
+    latitude: number;
+    longitude: number;
+    maxDistanceKm?: number;
+  }): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.URGENT,
+      { params },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
   applyJob: async (data: CreateJobApplicationRequest): Promise<JobApplicationDTO> => {
     const response = await api.post<ApiResponse<JobApplicationDTO>>(
       API_ENDPOINTS.JOB.APPLICATION,
@@ -91,7 +127,7 @@ export const jobService = {
 
   getApplications: async (): Promise<JobApplicationDTO[]> => {
     const response = await api.get<ApiResponse<JobApplicationDTO[]>>(
-      API_ENDPOINTS.JOB.APPLICATION,
+      API_ENDPOINTS.JOB.APPLICATION_WORKER,
     );
     return Array.isArray(response.data.data) ? response.data.data : [];
   },

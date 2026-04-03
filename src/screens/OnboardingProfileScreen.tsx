@@ -17,6 +17,7 @@ import { COLORS, TYPOGRAPHY } from "../constants/theme";
 import { formatLocation } from "../utils/locationUtils";
 import { WelcomeModal } from "../components/ui/WelcomeModal";
 import { useAuth } from "../context/AuthContext";
+import { getErrorMessage } from "../utils/error_handling";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const EXPERIENCE_LEVELS = [
@@ -149,6 +150,8 @@ export function OnboardingProfileScreen({ navigation }: any) {
     experienceLevelId: 1,
     availabilitySchedule: "",
     avatarUrl: "",
+    genderId: 1, // Default to 1
+    skillIds: [] as string[],
   });
 
   const updateField = useCallback((field: string, value: any) => {
@@ -190,9 +193,22 @@ export function OnboardingProfileScreen({ navigation }: any) {
     const isoDateOfBirth = `${yyyy}-${mm}-${dd}T00:00:00Z`;
     setLoading(true);
     try {
-      await workerProfileService.updateProfile({ fullName, dateOfBirth: isoDateOfBirth, primaryLocation, travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, experienceLevelId, availabilitySchedule, avatarUrl: avatarUrl || "" });
+      await workerProfileService.updateProfile({ 
+        fullName, 
+        dateOfBirth: isoDateOfBirth, 
+        primaryLocation, 
+        travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, 
+        experienceLevelId, 
+        availabilitySchedule, 
+        avatarUrl: avatarUrl || "",
+        genderId: formData.genderId,
+        skillIds: [] // Initial empty skills on onboarding
+      });
       navigation.replace("Worker");
-    } catch { Alert.alert("Lỗi", "Không thể tạo hồ sơ. Vui lòng thử lại."); }
+    } catch (err: any) { 
+      const errorMessage = getErrorMessage(err, "Không thể tạo hồ sơ. Vui lòng thử lại.");
+      Alert.alert("Lỗi khởi tạo", errorMessage); 
+    }
     finally { setLoading(false); }
   };
 

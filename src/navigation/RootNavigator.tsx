@@ -9,6 +9,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { WorkerTabNavigator } from "./WorkerTabNavigator";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
+import { VerifyEmailScreen } from "../screens/VerifyEmailScreen";
 import { ForgotPasswordScreen } from "../screens/ForgotPasswordScreen";
 import { SplashScreen } from "../screens/SplashScreen";
 import { OnboardingProfileScreen } from "../screens/OnboardingProfileScreen";
@@ -103,6 +104,7 @@ export function RootNavigator() {
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}

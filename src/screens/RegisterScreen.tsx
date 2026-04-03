@@ -4,23 +4,16 @@
  * Outputs: Registration API call, navigation to Onboarding.
  * Dependencies: Auth service, Navigation routing. */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert, ImageBackground, Image,
+  KeyboardAvoidingView, Platform, ScrollView, Image,
 } from "react-native";
-import { Phone, Lock, Eye, EyeOff, Mail, MapPin } from "lucide-react-native";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
-import Constants from "expo-constants";
+import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { CONFIG } from "../config/export_configurations";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
-
-WebBrowser.maybeCompleteAuthSession();
-const EXPO_GO_REDIRECT_URI = "https://auth.expo.io/@tylum123/CAPSTONE_SP26_FE_Mobile";
+import { getErrorMessage } from "../utils/error_handling";
 
 export function RegisterScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber]       = useState("");
@@ -32,41 +25,11 @@ export function RegisterScreen({ navigation }: any) {
   const [loading, setLoading]               = useState(false);
   const [focusedField, setFocusedField]     = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
-  const { register, loginWithGoogle } = useAuth();
-  const isExpoGo = Constants.appOwnership === "expo" || Constants.executionEnvironment === "storeClient";
+  const { register } = useAuth();
 
   const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
     setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
   const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
-
-  const [googleRequest, googleResponse, promptGoogleAuth] = Google.useIdTokenAuthRequest({
-    webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID || undefined,
-    androidClientId: CONFIG.GOOGLE_ANDROID_CLIENT_ID || undefined,
-    redirectUri: isExpoGo ? EXPO_GO_REDIRECT_URI : makeRedirectUri({ scheme: "agrotemp" }),
-    selectAccount: true,
-    scopes: ["openid", "profile", "email"],
-  });
-
-  useEffect(() => {
-    const doGoogleLogin = async () => {
-      if (!googleResponse) return;
-      if (googleResponse.type === "error") { showFeedback({ title: "Google Signup lỗi", message: String((googleResponse.params as any)?.error_description ?? "OAuth failed"), variant: "error" }); return; }
-      if (googleResponse.type !== "success") return;
-      const idToken = googleResponse.params?.id_token;
-      if (!idToken) { showFeedback({ title: "Lỗi Google", message: "Không lấy được Google ID token.", variant: "error" }); return; }
-      setLoading(true);
-      try { await loginWithGoogle(idToken, 3); }
-      catch (error: any) { 
-        if (error?.message === "UNAUTHORIZED_ROLE") {
-          showFeedback({ title: "Không thể đăng nhập", message: "Email này đã được đăng ký cho hệ thống khác. Vui lòng sử dụng tài khoản dành riêng cho Người lao động (Worker).", variant: "error" });
-        } else {
-          showFeedback({ title: "Lỗi Đăng ký", message: "Đăng ký bằng Google thất bại.", variant: "error" }); 
-        }
-      }
-      finally { setLoading(false); }
-    };
-    doGoogleLogin().catch(() => undefined);
-  }, [googleResponse, loginWithGoogle]);
 
   const handleRegister = async () => {
     if (!phoneNumber || !email || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
@@ -76,9 +39,18 @@ export function RegisterScreen({ navigation }: any) {
     if (password.length < 6) { showFeedback({ title: "Mật khẩu yếu", message: "Mật khẩu phải có ít nhất 6 ký tự", variant: "error" }); return; }
     setLoading(true);
     try {
-      await register({ email: email.trim(), phoneNumber: phoneNumber.trim(), password, roleId: 3 });
-      showFeedback({ title: "Thành công", message: "Đăng ký tài khoản thành công!", variant: "success", onConfirm: () => navigation.navigate("Login") });
-    } catch { showFeedback({ title: "Thất bại", message: "Đăng ký thất bại. Vui lòng thử lại.", variant: "error" }); }
+      const trimmedEmail = email.trim();
+      await register({ email: trimmedEmail, phoneNumber: phoneNumber.trim(), password, roleId: 3 });
+      showFeedback({ 
+        title: "Thành công", 
+        message: "Mã OTP đã được gửi về email của bạn. Vui lòng kiểm tra và xác thực.", 
+        variant: "success", 
+        onConfirm: () => navigation.navigate("VerifyEmail", { email: trimmedEmail }) 
+      });
+    } catch (error) { 
+      const errorMessage = getErrorMessage(error, "Đăng ký thất bại. Vui lòng thử lại.");
+      showFeedback({ title: "Thất bại", message: errorMessage, variant: "error" }); 
+    }
     finally { setLoading(false); }
   };
 
@@ -102,7 +74,7 @@ export function RegisterScreen({ navigation }: any) {
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 32, paddingBottom: 32 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingVertical: 32, justifyContent: "center" }}
           keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}
         >
           <View className="items-center mb-8 mt-6">
@@ -143,20 +115,6 @@ export function RegisterScreen({ navigation }: any) {
             })}
 
             <Button onPress={handleRegister} loading={loading} fullWidth size="lg">Tạo tài khoản</Button>
-
-            <View className="flex-row items-center gap-2 my-4">
-              <View className="flex-1 h-px bg-slate-200" />
-              <Text className="text-xs text-slate-400 font-medium">hoặc</Text>
-              <View className="flex-1 h-px bg-slate-200" />
-            </View>
-
-            <TouchableOpacity
-              className="flex-row items-center justify-center h-[50px] rounded-2xl border-[1.5px] border-slate-300 bg-white gap-2"
-              onPress={() => promptGoogleAuth()} activeOpacity={0.88}
-            >
-              <Image source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" }} style={{ width: 20, height: 20 }} />
-              <Text className="text-[15px] font-semibold text-slate-700">Đăng ký với Google</Text>
-            </TouchableOpacity>
           </View>
 
           <View className="flex-row justify-center items-center">

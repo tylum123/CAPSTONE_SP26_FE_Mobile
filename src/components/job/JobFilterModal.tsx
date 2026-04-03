@@ -1,8 +1,8 @@
 /* AI CONTEXT:
- * Action: A filter modal for refining job search results.
+ * Action: A filter modal for refining job search results with Senior Mobile UX standards.
  * Inputs: visible (boolean), onClose (function), currentFilters (JobSearchFilterRequest), onApply (function).
- * Outputs: Updated JobSearchFilterRequest via onApply, UI side effects (local filter state).
- * Dependencies: React Native Modal, Lucide icons, Button & Badge components. */
+ * Outputs: Updated JobSearchFilterRequest via onApply.
+ * Dependencies: React Native Modal, Lucide icons, Button, jobService. */
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -13,67 +13,79 @@ import {
   TextInput, 
   ScrollView, 
   Switch, 
-  SafeAreaView, 
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Dimensions
 } from "react-native";
-import { X, Banknote, Briefcase, Zap, RotateCcw } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Calendar, Check } from "lucide-react-native";
 import { Button } from "../ui/Button";
-import { JobSearchFilterRequest } from "../../types/export_type_definitions";
+import { JobSearchFilterRequest, JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
+import { ExtendedJobFilter } from "../../hooks/use_job_search";
+import { jobService } from "../../services/job.service";
+import { skillService } from "../../services/skill.service";
 
 interface JobFilterModalProps {
   visible: boolean;
   onClose: () => void;
-  currentFilters: JobSearchFilterRequest;
-  onApply: (filters: JobSearchFilterRequest) => void;
+  currentFilters: ExtendedJobFilter;
+  onApply: (filters: ExtendedJobFilter) => void;
 }
 
-const MOCK_SKILLS = [
-  { id: "1", name: "Thu hoạch" },
-  { id: "2", name: "Bón phân" },
-  { id: "3", name: "Phun thuốc" },
-  { id: "4", name: "Tỉa cành" },
-  { id: "5", name: "Gieo hạt" },
+const DISTANCE_OPTIONS = [
+  { label: "5km", value: 5 },
+  { label: "10km", value: 10 },
+  { label: "20km", value: 20 },
+  { label: "50km", value: 50 },
+  { label: "Tất cả", value: undefined },
 ];
 
-export function JobFilterModal({ visible, onClose, currentFilters, onApply }: JobFilterModalProps) {
-  const [localFilters, setLocalFilters] = useState<JobSearchFilterRequest>(currentFilters);
+const DATE_FILTERS = [
+  { label: "Hôm nay", value: "today" },
+  { label: "Ngày mai", value: "tomorrow" },
+  { label: "Cuối tuần", value: "weekend" },
+];
 
-  // Sync with current filters when modal opens or when currentFilters changes
+const JOB_TYPE_OPTIONS = [
+  { label: "Tất cả", value: undefined },
+  { label: "Ngày", value: 2 },
+  { label: "Khoán", value: 1 },
+];
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+
+export function JobFilterModal({ visible, onClose, currentFilters, onApply }: JobFilterModalProps) {
+  const insets = useSafeAreaInsets();
+  const [localFilters, setLocalFilters] = useState<ExtendedJobFilter>(currentFilters);
+  const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<SkillResponse[]>([]);
+
   useEffect(() => {
     if (visible) {
-      setLocalFilters(currentFilters);
+      setLocalFilters({ ...currentFilters });
+      loadData();
     }
   }, [visible, currentFilters]);
 
-  /**
-   * Updates a local filter field without affecting parent state until applied.
-   */
-  const handleUpdate = (updates: Partial<JobSearchFilterRequest>) => {
-    setLocalFilters(prev => ({ ...prev, ...updates }));
-  };
-
-  /**
-   * Toggles skill selection in the local state.
-   */
-  const toggleSkill = (skillName: string) => {
-    const currentSkills = localFilters.requiredSkills || [];
-    if (currentSkills.includes(skillName)) {
-      handleUpdate({ requiredSkills: currentSkills.filter(s => s !== skillName) });
-    } else {
-      handleUpdate({ requiredSkills: [...currentSkills, skillName] });
+  const loadData = async () => {
+    try {
+      const [cats, skills] = await Promise.all([
+        jobService.getCategories(),
+        skillService.getSkills()
+      ]);
+      setCategories(cats);
+      setAvailableSkills(skills);
+    } catch (error) {
+      console.error("Failed to load filter data:", error);
     }
   };
 
-  /**
-   * Resets local filters to default values.
-   */
+  const handleUpdate = (updates: Partial<ExtendedJobFilter>) => {
+    setLocalFilters(prev => ({ ...prev, ...updates }));
+  };
+
   const handleReset = () => {
-    setLocalFilters({
-      pageNumber: 1,
-      pageSize: 10,
-      sortBy: "distance",
-    });
+    setLocalFilters({ pageNumber: 1, pageSize: 10, sortBy: "distance" });
   };
 
   return (
@@ -83,90 +95,94 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
       transparent={true}
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-end">
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1 justify-end"
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <SafeAreaView className="bg-white rounded-t-[36px] max-h-[85%] shadow-2xl">
-            {/* Header Section */}
+          <View style={{
+            height: SCREEN_HEIGHT * 0.88,
+            backgroundColor: "#ffffff",
+            borderTopLeftRadius: 36,
+            borderTopRightRadius: 36,
+            overflow: "hidden",
+          }}>
             <View className="flex-row items-center justify-between px-6 py-5 border-b border-slate-100">
               <View>
-                <Text className="text-xl font-extrabold text-slate-800">Bộ lọc nâng cao</Text>
-                <Text className="text-[11px] text-slate-500 font-medium tracking-tight">Điều chỉnh để tìm việc phù hợp nhất</Text>
+                <Text className="text-xl font-extrabold text-slate-900">Bộ lọc nâng cao</Text>
+                <Text className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Tùy chỉnh tìm kiếm</Text>
               </View>
-              <TouchableOpacity onPress={onClose} className="p-2.5 bg-slate-100 rounded-full">
-                <X size={18} color="#64748b" />
+              <TouchableOpacity
+                onPress={onClose}
+                className="w-10 h-10 bg-slate-100 rounded-full items-center justify-center"
+              >
+                <X size={20} color="#1e293b" strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              className="px-6" 
+            <ScrollView
+              style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 24 }}
+              contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
             >
-              {/* Wage Range Section */}
               <View className="py-6 border-b border-slate-100">
-                <View className="flex-row items-center gap-2 mb-4">
-                  <View className="p-1.5 bg-emerald-50 rounded-lg">
-                    <Banknote size={17} color="#059669" />
+                <View className="flex-row items-center gap-2.5 mb-5">
+                  <View className="w-9 h-9 bg-emerald-50 rounded-xl items-center justify-center">
+                    <MapPin size={18} color="#059669" />
                   </View>
-                  <Text className="text-[15px] font-bold text-slate-800">Thù lao mong muốn (VNĐ)</Text>
+                  <Text className="text-[16px] font-extrabold text-slate-800">Khoảng cách tối đa</Text>
                 </View>
-                
-                <View className="flex-row items-center gap-4">
-                  <View className="flex-1">
-                    <Text className="text-[10px] text-slate-400 font-bold mb-1.5 uppercase ml-1 tracking-wider">Tối thiểu</Text>
-                    <TextInput
-                      className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-slate-800"
-                      placeholder="0"
-                      keyboardType="numeric"
-                      placeholderTextColor="#cbd5e1"
-                      value={localFilters.minWageAmount?.toString() || ""}
-                      onChangeText={(v) => handleUpdate({ minWageAmount: v ? parseInt(v.replace(/[^0-9]/g, '')) : undefined })}
-                    />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View className="flex-row gap-2.5">
+                    {DISTANCE_OPTIONS.map((opt) => {
+                      const sel = localFilters.maxDistanceKm === opt.value;
+                      return (
+                        <TouchableOpacity
+                          key={opt.label}
+                          onPress={() => handleUpdate({ maxDistanceKm: opt.value })}
+                          style={{
+                            paddingHorizontal: 20,
+                            paddingVertical: 11,
+                            borderRadius: 20,
+                            borderWidth: 2,
+                            borderColor: sel ? "#059669" : "#e2e8f0",
+                            backgroundColor: sel ? "#059669" : "#ffffff",
+                          }}
+                        >
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: sel ? "#ffffff" : "#64748b" }}>
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-[10px] text-slate-400 font-bold mb-1.5 uppercase ml-1 tracking-wider">Tối đa</Text>
-                    <TextInput
-                      className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] font-semibold text-slate-800"
-                      placeholder="Không giới hạn"
-                      keyboardType="numeric"
-                      placeholderTextColor="#cbd5e1"
-                      value={localFilters.maxWageAmount?.toString() || ""}
-                      onChangeText={(v) => handleUpdate({ maxWageAmount: v ? parseInt(v.replace(/[^0-9]/g, '')) : undefined })}
-                    />
-                  </View>
-                </View>
+                </ScrollView>
               </View>
 
-              {/* Required Skills Section */}
               <View className="py-6 border-b border-slate-100">
-                <View className="flex-row items-center gap-2 mb-4">
-                  <View className="p-1.5 bg-blue-50 rounded-lg">
-                    <Briefcase size={17} color="#2563eb" />
+                <View className="flex-row items-center gap-2.5 mb-5">
+                  <View className="w-9 h-9 bg-indigo-50 rounded-xl items-center justify-center">
+                    <Briefcase size={18} color="#4f46e5" />
                   </View>
-                  <Text className="text-[15px] font-bold text-slate-800">Kỹ năng yêu cầu</Text>
+                  <Text className="text-[16px] font-extrabold text-slate-800">Hình thức làm việc</Text>
                 </View>
-                
                 <View className="flex-row flex-wrap gap-2.5">
-                  {MOCK_SKILLS.map((skill) => {
-                    const isSelected = localFilters.requiredSkills?.includes(skill.name);
+                  {JOB_TYPE_OPTIONS.map((opt) => {
+                    const sel = localFilters.jobTypeId === opt.value;
                     return (
                       <TouchableOpacity
-                        key={skill.id}
-                        onPress={() => toggleSkill(skill.name)}
-                        activeOpacity={0.7}
-                        className={[
-                          "px-4 py-2.5 rounded-2xl border", 
-                          isSelected ? "bg-primary-600 border-primary-600" : "bg-slate-50 border-slate-200"
-                        ].join(" ")}
+                        key={opt.label}
+                        onPress={() => handleUpdate({ jobTypeId: opt.value })}
+                        style={{
+                          paddingHorizontal: 20,
+                          paddingVertical: 10,
+                          borderRadius: 20,
+                          borderWidth: 2,
+                          borderColor: sel ? "#4f46e5" : "#e2e8f0",
+                          backgroundColor: sel ? "#4f46e5" : "#ffffff",
+                        }}
                       >
-                        <Text className={[
-                          "text-[13px] font-bold", 
-                          isSelected ? "text-white" : "text-slate-600"
-                        ].join(" ")}>
-                          {skill.name}
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#64748b" }}>
+                          {opt.label}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -174,15 +190,153 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                 </View>
               </View>
 
-              {/* Only Urgent Section */}
-              <View className="py-6 flex-row items-center justify-between border-b border-slate-100">
-                <View className="flex-row items-center gap-2">
-                  <View className="p-1.5 bg-rose-50 rounded-lg">
-                    <Zap size={17} color="#f43f5e" />
+              <View className="py-6 border-b border-slate-100">
+                <View className="flex-row items-center gap-2.5 mb-5">
+                  <View className="w-9 h-9 bg-blue-50 rounded-xl items-center justify-center">
+                    <Calendar size={18} color="#2563eb" />
+                  </View>
+                  <Text className="text-[16px] font-extrabold text-slate-800">Thời gian làm việc</Text>
+                </View>
+                <View className="flex-row flex-wrap gap-2.5">
+                  {DATE_FILTERS.map((opt) => {
+                    const sel = localFilters.dateFilter === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        onPress={() => handleUpdate({ dateFilter: sel ? undefined : opt.value })}
+                        style={{
+                          paddingHorizontal: 18,
+                          paddingVertical: 10,
+                          borderRadius: 20,
+                          borderWidth: 2,
+                          borderColor: sel ? "#2563eb" : "#e2e8f0",
+                          backgroundColor: sel ? "#2563eb" : "#ffffff",
+                        }}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: sel ? "#ffffff" : "#64748b" }}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View className="py-6 border-b border-slate-100">
+                <View className="flex-row items-center gap-2.5 mb-5">
+                  <View className="w-9 h-9 bg-emerald-50 rounded-xl items-center justify-center">
+                    <Banknote size={18} color="#059669" />
+                  </View>
+                  <Text className="text-[16px] font-extrabold text-slate-800">Thù lao mong muốn (VNĐ)</Text>
+                </View>
+                <View className="flex-row gap-3">
+                  <View className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tối thiểu</Text>
+                    <TextInput
+                      style={{ fontSize: 15, fontWeight: "700", color: "#1e293b", padding: 0 }}
+                      placeholder="0"
+                      keyboardType="numeric"
+                      placeholderTextColor="#cbd5e1"
+                      value={localFilters.minWageAmount?.toString() || ""}
+                      onChangeText={(v) => handleUpdate({ minWageAmount: v ? parseInt(v.replace(/[^0-9]/g, "")) : undefined })}
+                    />
+                  </View>
+                  <View className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tối đa</Text>
+                    <TextInput
+                      style={{ fontSize: 15, fontWeight: "700", color: "#1e293b", padding: 0 }}
+                      placeholder="Không giới hạn"
+                      keyboardType="numeric"
+                      placeholderTextColor="#cbd5e1"
+                      value={localFilters.maxWageAmount?.toString() || ""}
+                      onChangeText={(v) => handleUpdate({ maxWageAmount: v ? parseInt(v.replace(/[^0-9]/g, "")) : undefined })}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {categories.length > 0 && (
+                <View className="py-6 border-b border-slate-100">
+                  <View className="flex-row items-center gap-2.5 mb-5">
+                    <View className="w-9 h-9 bg-purple-50 rounded-xl items-center justify-center">
+                      <Briefcase size={18} color="#9333ea" />
+                    </View>
+                    <Text className="text-[16px] font-extrabold text-slate-800">Hạng mục công việc</Text>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2.5">
+                    {categories.map((cat) => {
+                      const sel = localFilters.jobCategoryId === cat.id;
+                      return (
+                        <TouchableOpacity
+                          key={cat.id}
+                          onPress={() => handleUpdate({ jobCategoryId: sel ? undefined : cat.id })}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 9,
+                            borderRadius: 16,
+                            borderWidth: 1.5,
+                            borderColor: sel ? "#9333ea" : "#e2e8f0",
+                            backgroundColor: sel ? "#9333ea" : "#ffffff",
+                          }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#475569" }}>
+                            {cat.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {availableSkills.length > 0 && (
+                <View className="py-6 border-b border-slate-100">
+                  <View className="flex-row items-center gap-2.5 mb-5">
+                    <View className="w-9 h-9 bg-orange-50 rounded-xl items-center justify-center">
+                      <Check size={18} color="#f97316" />
+                    </View>
+                    <Text className="text-[16px] font-extrabold text-slate-800">Kỹ năng yêu cầu</Text>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2.5">
+                    {availableSkills.map((skill: SkillResponse) => {
+                      const sel = localFilters.requiredSkills?.includes(skill.name);
+                      return (
+                        <TouchableOpacity
+                          key={skill.id}
+                          onPress={() => {
+                            const current = localFilters.requiredSkills || [];
+                            const updated = sel 
+                              ? current.filter(s => s !== skill.name)
+                              : [...current, skill.name];
+                            handleUpdate({ requiredSkills: updated });
+                          }}
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 9,
+                            borderRadius: 16,
+                            borderWidth: 1.5,
+                            borderColor: sel ? "#f97316" : "#e2e8f0",
+                            backgroundColor: sel ? "#f97316" : "#ffffff",
+                          }}
+                        >
+                          <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#475569" }}>
+                            {skill.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              <View className="py-6 border-b border-slate-100 flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2.5">
+                  <View className="w-9 h-9 bg-rose-50 rounded-xl items-center justify-center">
+                    <Zap size={18} color="#f43f5e" />
                   </View>
                   <View>
-                    <Text className="text-[15px] font-bold text-slate-800">Chỉ hiện việc cần gấp</Text>
-                    <Text className="text-[11px] text-slate-500 font-medium">Ưu tiên kết quả có gắn nhãn gấp</Text>
+                    <Text className="text-[16px] font-extrabold text-slate-800">Việc cần gấp</Text>
+                    <Text className="text-[12px] text-slate-400 font-medium">Ưu tiên công việc khẩn cấp</Text>
                   </View>
                 </View>
                 <Switch
@@ -192,28 +346,79 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                   thumbColor={Platform.OS === "ios" ? undefined : "#ffffff"}
                 />
               </View>
+
+              <View className="py-6 flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2.5">
+                  <View className="w-9 h-9 bg-indigo-50 rounded-xl items-center justify-center">
+                    <Check size={18} color="#6366f1" />
+                  </View>
+                  <View>
+                    <Text className="text-[16px] font-extrabold text-slate-800">Ẩn việc đã ứng tuyển</Text>
+                    <Text className="text-[12px] text-slate-400 font-medium">Chỉ xem những việc mới cho bạn</Text>
+                  </View>
+                </View>
+                <Switch
+                  value={localFilters.excludeApplied || false}
+                  onValueChange={(val) => handleUpdate({ excludeApplied: val })}
+                  trackColor={{ false: "#f1f5f9", true: "#059669" }}
+                  thumbColor={Platform.OS === "ios" ? undefined : "#ffffff"}
+                />
+              </View>
             </ScrollView>
 
-            {/* Footer Action Buttons */}
-            <View className="px-6 pt-4 pb-8 flex-row gap-3 bg-white">
-              <Button 
-                variant="outline" 
-                className="flex-1 rounded-2xl border-[1.5px]"
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 12,
+                paddingHorizontal: 24,
+                paddingTop: 16,
+                paddingBottom: Math.max(insets.bottom, 20),
+                backgroundColor: "#ffffff",
+                borderTopWidth: 1,
+                borderTopColor: "#f1f5f9",
+              }}
+            >
+              <TouchableOpacity
                 onPress={handleReset}
+                style={{
+                  flex: 1,
+                  height: 54,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 18,
+                  borderWidth: 2,
+                  borderColor: "#e2e8f0",
+                }}
               >
-                <View className="flex-row items-center gap-1.5">
-                  <RotateCcw size={16} color="#059669" />
-                  <Text className="text-primary-600 font-bold">Đặt lại</Text>
+                <View className="flex-row items-center gap-2">
+                  <RotateCcw size={17} color="#64748b" />
+                  <Text style={{ color: "#64748b", fontWeight: "700", fontSize: 15 }}>Xóa bộ lọc</Text>
                 </View>
-              </Button>
-              <Button 
-                className="flex-[2] rounded-2xl"
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={() => onApply(localFilters)}
+                style={{
+                  flex: 2,
+                  height: 54,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 18,
+                  backgroundColor: "#059669",
+                  shadowColor: "#059669",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
               >
-                <Text className="text-white font-extrabold text-[15px]">Áp dụng lọc</Text>
-              </Button>
+                <View className="flex-row items-center gap-2">
+                  <Check size={19} color="#ffffff" strokeWidth={2.5} />
+                  <Text style={{ color: "#ffffff", fontWeight: "800", fontSize: 16 }}>Áp dụng</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-          </SafeAreaView>
+          </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>

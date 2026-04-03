@@ -9,7 +9,7 @@ export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  dateOfBirth: string;
+  date_of_birth: string;
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
@@ -23,6 +23,8 @@ export interface WorkerProfileDTO {
   email?: string;
   phoneNumber?: string;
   skills: SkillResponse[];
+  genderId: number;
+  gender: string;
 }
 
 // Matches backend UpdateWorkerProfileRequest.cs
@@ -35,6 +37,7 @@ export interface UpdateWorkerProfileRequest {
   availabilitySchedule: string;
   avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
   skillIds: string[];
+  genderId: number;          // Required, range 1-2
 }
 
 export interface JobCategoryDTO {
@@ -129,23 +132,28 @@ export interface DisputeReportDTO {
   farmerId: string | null;
   workerId: string | null;
   jobPostId: string;
-  disputeTypeId: number;
+  disputeTypeId: number;   // 1=JobQuality, 2=Payment, 3=Other
   reason: string;
   description: string | null;
   evidenceUrl: string | null;
-  statusId: number;
+  statusId: number;        // 1=Pending, 2=UnderReview, 3=Resolved, 4=Rejected
   adminNote: string | null;
   resolvedById: string | null;
+  reporterUserId: string | null;
+  accusedUserId: string | null;
+  penaltyTargetId: number; // 0=None, 1=Reporter, 2=Accused
   createdAt: string;
   resolvedAt: string | null;
 }
 
 export interface CreateDisputeReportRequest {
   jobPostId: string;
-  disputeTypeId: number;
-  reason: string;
+  disputeTypeId: number;   // 1=JobQuality, 2=Payment, 3=Other
+  reason: string;          // bắt buộc, tối đa 512 ký tự
   description?: string;
   evidenceUrl?: string;
+  farmerId?: string;       // optional — BE tự resolve từ token nếu không gửi
+  workerId?: string;       // optional — BE tự resolve từ token nếu không gửi
 }
 
 export interface JobApplicationDTO {

@@ -6,9 +6,9 @@
  */
 import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse, JobDetailDTO, CreateDailyReportRequest, ApproveJobDetailRequest } from "../types/export_type_definitions";
+import { ApiResponse, JobDetailDTO, CreateDailyReportRequest } from "../types/export_type_definitions";
 
-export const reportService = {
+export const dailyReportService = {
   /**
    * Worker/Farmer: Get specific report details
    */
@@ -16,8 +16,7 @@ export const reportService = {
     const response = await api.get<ApiResponse<JobDetailDTO>>(
       API_ENDPOINTS.JOB_DETAIL.DETAIL(id)
     );
-    // @ts-ignore
-    return response.data.data || response.data;
+    return response.data.data;
   },
 
   /**
@@ -26,8 +25,7 @@ export const reportService = {
   getWorkerReports: async (workerProfileId: string): Promise<JobDetailDTO[]> => {
     const url = API_ENDPOINTS.JOB_DETAIL.WORKER(workerProfileId);
     const response = await api.get<ApiResponse<JobDetailDTO[]>>(url);
-    // @ts-ignore
-    return response.data.data || Object.values(response.data) || [];
+    return response.data.data || [];
   },
 
   /**
@@ -38,8 +36,6 @@ export const reportService = {
       API_ENDPOINTS.JOB_DETAIL.REPORT_DAILY,
       data
     );
-    // @ts-ignore
-    return response.data.data || response.data;
+    return response.data.data;
   },
-
 };

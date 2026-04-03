@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Camera, Upload, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
-import { reportService } from "../services/report.service";
+import { dailyReportService } from "../services/daily_report.service";
 import { mediaService } from "../services/media.service";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
@@ -128,7 +128,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
           setIsUploading(false);
         }
 
-        await reportService.submitDailyReport({
+        await dailyReportService.submitDailyReport({
           jobApplicationId,
           workerDescription: description,
           evidenceUrl // Now sending the joined URLs
@@ -201,8 +201,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
               <Text className="text-[10px] text-slate-500 font-bold">Thêm ảnh</Text>
             </TouchableOpacity>
           )}
-
-          {/* Placeholders to keep everything aligned and horizontal even with 1 image */}
+          
           {images.length === 1 && <View className="flex-1 aspect-square" />}
           {images.length === 0 && (
             <>
@@ -243,7 +242,6 @@ export function SubmitReportScreen({ navigation, route }: any) {
         </View>
       </ScrollView>
 
-      {/* SUCCESS MODAL OVERLAY */}
       <Modal visible={showSuccess} transparent animationType="none">
         <View className="flex-1 bg-black/60 items-center justify-center px-8">
           <Animated.View 

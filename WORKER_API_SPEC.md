@@ -1,40 +1,95 @@
-# Worker API Spec (Updated)
+# Worker API Spec — CAPSTONE SP26
 
-Tài liệu mô tả các API liên quan trực tiếp tới luồng **Worker** theo implementation hiện tại trong codebase Backend (C#/.NET).
+Tài liệu mô tả **chính xác** các API và DTO liên quan tới luồng **Worker**, đối soát trực tiếp từ source code Backend (`AgroTemp.API/Controllers`, `AgroTemp.Domain/DTO`, `AgroTemp.Domain/Entities`).
 
-Cập nhật lần cuối: **2026-04-02**
+**Cập nhật lần cuối:** 2026-04-03 (đối soát thực tế BE)
 
 ---
 
 ## 1) Thông tin chung
 
 - **Base URL**: `/api/v1`
-- **Auth**: Bearer JWT (`Authorization: Bearer <token>`) cho các API yêu cầu định danh.
-- **Public APIs**: Các API liệt kê tại mục 3 không yêu cầu Token.
-- **Định dạng JSON**: Sử dụng **camelCase** cho tất cả các trường.
+- **Auth**: Bearer JWT (`Authorization: Bearer <token>`) cho mọi API có ghi Role.
+- **Định dạng JSON**: **camelCase** cho tất cả trường. Ngoại lệ duy nhất: `date_of_birth` (snake_case) trong `WorkerProfileDTO`.
 - **Response chuẩn**:
 
 ```json
 {
   "message": "string",
-  "statusCode": 200,
+  "status_code": 200,
   "data": {}
 }
 ```
 
 ---
 
-## 2) Schema chính (Data Transfer Objects)
+## 2) Sơ đồ quan hệ dữ liệu
 
-### 2.1 WorkerProfileDTO
-Thông tin hồ sơ đầy đủ của Worker.
+```
+Farmer đăng ──► JobPost (1)
+                    │
+                    │ Worker ứng tuyển
+                    ▼
+              JobApplication (N)         ← mỗi Worker/JobPost có 1 đơn
+              status: Pending → Accepted → Rejected / Cancelled
+                    │
+                    │ Khi Accepted, Worker báo cáo mỗi ngày
+                    ▼
+              JobDetail (N)              ← 1 record = 1 ngày làm việc
+              (tên thực tế trong code: "Daily Report")
+              status: InProgress → Reported → Completed
+                    │
+                    │ Nếu Worker không đồng ý kết quả
+                    ▼
+              DisputeReport              ← bảng riêng biệt
+              status: Pending → UnderReview → Resolved / Rejected
+```
+
+---
+
+## 3) Bảng Enum toàn hệ thống (nguồn: Entities C#)
+
+| Enum | statusId | Tên | Dùng trong |
+|---|---|---|---|
+| `JobPostStatus` | 1 | Draft | `JobPostDTO.statusId` |
+|                 | 2 | Published |                   |
+|                 | 3 | Closed |                      |
+|                 | 4 | InProgress |                  |
+|                 | 5 | Completed |                   |
+|                 | 6 | Cancelled |                   |
+| `ApplicationStatus` | 1 | Pending | `JobApplicationDTO.statusId` |
+|                     | 2 | Accepted |                             |
+|                     | 3 | Rejected |                             |
+|                     | 4 | Cancelled |                            |
+| `JobStatus` | 1 | InProgress | `JobDetailResponseDTO.statusId`  |
+|             | 2 | Reported |                                    |
+|             | 3 | Completed |                                   |
+| `DisputeStatus` | 1 | Pending | `DisputeReportDTO.statusId` |
+|                 | 2 | UnderReview |                         |
+|                 | 3 | Resolved |                            |
+|                 | 4 | Rejected |                            |
+| `DisputeType` | 1 | JobQuality | `DisputeReportDTO.disputeTypeId` |
+|               | 2 | Payment |                                     |
+|               | 3 | Other |                                       |
+| `JobType` | 1 | PerJob | `JobPostDTO.jobTypeId` |
+|           | 2 | Daily |                         |
+
+---
+
+## 4) DTOs chính (nguồn: AgroTemp.Domain/DTO)
+
+### 4.1 WorkerProfileDTO
+**Response** của `GET /worker`.
+
+> [!WARNING]
+> `date_of_birth` dùng snake_case trong response, nhưng `dateOfBirth` camelCase khi gửi request PUT.
 
 ```json
 {
   "id": "guid",
   "userId": "guid",
   "fullName": "string",
-  "dateOfBirth": "1995-05-20",
+  "date_of_birth": "1995-05-20",
   "primaryLocation": "string",
   "travelRadiusKmPreference": 10.5,
   "experienceLevelId": 2,
@@ -53,8 +108,8 @@ Thông tin hồ sơ đầy đủ của Worker.
 }
 ```
 
-### 2.2 UpdateWorkerProfileRequest
-Sử dụng khi cập nhật hoặc tạo mới profile.
+### 4.2 UpdateWorkerProfileRequest
+**Body** của `PUT /worker`.
 
 ```json
 {
@@ -69,8 +124,10 @@ Sử dụng khi cập nhật hoặc tạo mới profile.
 }
 ```
 
-### 2.3 JobPostDTO
-Chi tiết bài đăng tuyển dụng.
+---
+
+### 4.3 JobPostDTO
+**Response** của `GET /job/post/{id}`.
 
 ```json
 {
@@ -93,202 +150,269 @@ Chi tiết bài đăng tuyển dụng.
   "wageAmount": 500000,
   "requirements": ["string"],
   "privileges": ["string"],
-  "jobSkillRequirements": [
-    { "id": "guid", "name": "Bón phân" }
-  ],
-  "publishedAt": "ISO Date",
+  "jobSkillRequirements": [{ "id": "guid", "name": "Bón phân" }],
+  "publishedAt": "2026-03-01T08:00:00Z",
+  "createdAt": "2026-03-01T08:00:00Z",
+  "updatedAt": "2026-03-01T08:00:00Z",
   "isUrgent": true,
   "statusId": 2
 }
 ```
 
-### 2.4 JobDiscoveryDTO
-Dùng cho màn hình tìm kiếm, danh sách việc làm gần đây (có thêm khoảng cách).
+### 4.4 JobDiscoveryDTO
+**Response** của `POST /job/post/search` và `GET /job/post/nearby`. Kế thừa tất cả trường `JobPostDTO` và có thêm:
 
 ```json
 {
-  "id": "guid",
-  "title": "string",
-  "address": "string",
-  "wageAmount": 500000,
+  "...tất cả trường JobPostDTO...",
   "jobTypeName": "Daily",
   "distanceKm": 5.2,
   "farmerAverageRating": 4.8,
-  "availablePositions": 8,
-  "isUrgent": true,
-  "matchScore": 85,
+  "locationName": "Đắk Lắk",
   "skillsMatchCount": 2,
-  "allSkillsMatched": true
-  // ... (Kế thừa các trường từ JobPostDTO)
+  "allSkillsMatched": true,
+  "availablePositions": 8,
+  "matchScore": 85,
+  "durationDays": 30,
+  "isUpcoming": false,
+  "similarJobsCompleted": 3
 }
 ```
 
-### 2.5 JobApplicationDTO
-Thông tin đơn ứng tuyển (đã nhúng kèm JobPost).
+---
+
+### 4.5 JobApplicationDTO
+**Response** của `POST /job/application` và `GET /job/application/worker`.
+
+> ✅ `jobPost` đã được nhúng sẵn trong response này.
 
 ```json
 {
   "id": "guid",
   "jobPostId": "guid",
-  "jobPost": { ...JobPostDTO... },
-  "worker": { ...WorkerProfileDTO... },
+  "jobPost": { "...JobPostDTO đầy đủ..." },
+  "worker": { "...WorkerProfileDTO..." },
   "statusId": 1,
-  "coverLetter": "string",
+  "coverLetter": "string?",
   "appliedAt": "2026-03-10T10:00:00Z",
+  "respondedAt": "2026-03-11T10:00:00Z?",
+  "responseMessage": "string?",
   "workDates": ["2026-03-24T10:00:00Z"],
-  "responseMessage": "string"
+  "locationName": "string?"
 }
 ```
 
-### 2.6 JobDetailDTO (Daily Report)
-Dữ liệu báo cáo công việc hằng ngày của Worker.
+**`CreateJobApplicationRequest`** (Body gửi lên khi ứng tuyển):
+
+```json
+{
+  "jobPostId": "guid",
+  "statusId": 1,
+  "coverLetter": "string?",
+  "workDates": ["2026-03-24T10:00:00Z"]
+}
+```
+
+---
+
+### 4.6 JobDetailResponseDTO (Daily Report)
+**Response** của các API `/JobDetail/...`.
+
+> [!WARNING]
+> `evidenceUrl` và `jobPost` **CHƯA tồn tại** trong BE. FE sẽ KHÔNG tự fetch riêng — chờ BE bổ sung (`[PENDING]`).
+
+**Response hiện tại từ BE** (`JobDetailResponseDTO.cs` — đã xác nhận từ source):
 
 ```json
 {
   "id": "guid",
   "jobApplicationId": "guid",
-  "statusId": 1, 
+  "jobPostId": "guid",
+  "workerId": "guid",
+  "statusId": 2,
   "workDate": "2026-03-03T00:00:00Z",
   "workerDescription": "Hôm nay tôi đã làm được...",
   "farmerFeedback": "Làm tốt",
   "farmerApprovedPercent": 100,
   "jobPrice": 500000,
-  "workerPaymentAmount": 500000
+  "workerPaymentAmount": 500000,
+  "refundAmount": 0,
+  "completedAt": "2026-03-03T17:00:00Z",
+  "createdAt": "2026-03-03T07:00:00Z",
+  "updatedAt": "2026-03-03T17:00:00Z"
+}
+```
+
+**Response mong muốn sau khi BE bổ sung (`[PENDING]`):**
+
+```json
+{
+  "...tất cả trường hiện tại...",
+  "evidenceUrl": "https://cdn.example.com/img1.jpg,https://cdn.example.com/img2.jpg",
+  "jobPost": {
+    "title": "Hái cà phê Đắk Lắk",
+    "contactName": "Nguyễn Văn A",
+    "address": "Buôn Ma Thuột, Đắk Lắk",
+    "startDate": "2026-03-01",
+    "endDate": "2026-03-31"
+  }
+}
+```
+
+**`CreateDailyReportRequest`** (Body gửi lên khi báo cáo):
+
+> [!CAUTION]
+> `evidenceUrl` đang bị comment out ở BE (`// ImageUrls`). Trường này FE gửi sẽ bị **bỏ qua hoàn toàn** — ảnh minh chứng không được lưu. Cần BE mở comment và thêm vào DTO.
+
+```json
+{
+  "jobApplicationId": "guid",
+  "workerDescription": "string"
 }
 ```
 
 ---
 
-## 3) APIs Công Khai (Public - Không cần Token)
+### 4.7 DisputeReportDTO
+**Response** của `POST /disputes` và `GET /disputes/mine`.
 
-Các API này phục vụ việc tìm kiếm việc làm và thông tin chung mà người dùng không cần đăng nhập vẫn có thể xem được.
+```json
+{
+  "id": "guid",
+  "farmerId": "guid?",
+  "workerId": "guid?",
+  "jobPostId": "guid",
+  "disputeTypeId": 1,
+  "reason": "string",
+  "description": "string?",
+  "evidenceUrl": "string?",
+  "statusId": 1,
+  "adminNote": "string?",
+  "resolvedById": "guid?",
+  "reporterUserId": "guid?",
+  "accusedUserId": "guid?",
+  "penaltyTargetId": 0,
+  "createdAt": "2026-03-10T10:00:00Z",
+  "resolvedAt": "datetime?"
+}
+```
 
-### 3.1 Nhóm Công Việc & Danh Mục
-- `GET /job/category`: Lấy toàn bộ danh mục công việc.
-- `GET /job/category/{id}`: Xem chi tiết danh mục.
-- `GET /job/post`: Lấy danh sách toàn bộ bài đăng (có thể phân trang nếu backend hỗ trợ).
-- `GET /job/post/{id}`: Xem chi tiết một bài đăng cụ thể.
+**`CreateDisputeReportRequest`** (Body gửi khi tạo khiếu nại):
 
-### 3.2 Nhóm Tìm Kiếm & Khám Phá (Discovery)
-- `GET /job/post/nearby`: Tìm việc gần đây (Params: `latitude`, `longitude`, `maxDistanceKm`).
-- `POST /job/post/search`: Tìm kiếm nâng cao với bộ lọc `JobSearchFilterRequest`.
-- `GET /job/post/filter`: Lọc nhanh theo `title`, `category`, `address`.
-- `GET /job/post/by-date`: Lọc theo ngày (`dateFilter`: today, weekend...).
-- `GET /job/post/by-skill`: Lọc theo danh sách kỹ năng `skills` (phân cách dấu phẩy).
-- `GET /job/post/by-wage`: Lọc theo khoảng lương (`minWage`, `maxWage`).
-- `GET /job/post/urgent`: Lấy các công việc khẩn cấp gần vị trí.
-
-### 3.3 Nhóm Thời Tiết (Public)
-- `GET /weather/coordinates`: Lấy thời tiết qua tọa độ (`lat`, `lon`).
-- `GET /weather/city`: Lấy thời tiết qua tên thành phố (`city`).
-
-### 3.4 Nhóm Xác Thực (Auth)
-- `POST /login`: Đăng nhập hệ thống.
-    - *Lưu ý*: Nếu trả về `403 Forbidden`, nghĩa là Email chưa được xác thực.
-- `POST /register`: Đăng ký tài khoản mới. Hệ thống sẽ gửi mã OTP vào Email.
-- `POST /verify-email`: Xác thực tài khoản bằng OTP.
-    - **Body**: `{ "email": "string", "otp": "string" }`
-- `POST /resend-verification`: Gửi lại mã OTP xác thực.
-    - **Body**: `{ "email": "string" }`
-- `POST /google-login`: Đăng nhập bằng Google.
-- `POST /forget`: Gửi mã OTP quên mật khẩu.
-- `POST /reset`: Đặt lại mật khẩu mới bằng OTP.
-
----
-
-## 4) Worker Profile APIs (Yêu cầu Token & Role: Worker)
-
-### 3.1 GET `/worker`
-- **Mục đích**: Lấy profile của chính mình qua token.
-- **Role**: `Worker` ( Claims dựa trên Token )
-
-### 3.2 PUT `/worker`
-- **Mục đích**: Cập nhật thông tin hồ sơ (Bao gồm cập nhật danh sách `skillIds`).
-- **Body**: `UpdateWorkerProfileRequest`
-
-### 3.3 POST `/worker/upload-avatar`
-- **Mục đích**: Tải lên ảnh đại diện.
-- **Body**: `multipart/form-data` (`image`)
-- **Response**: Trả về URL của ảnh.
+```json
+{
+  "jobPostId": "guid",
+  "disputeTypeId": 1,
+  "reason": "string (bắt buộc, tối đa 512 ký tự)",
+  "description": "string?",
+  "evidenceUrl": "string?",
+  "farmerId": "guid?",
+  "workerId": "guid?"
+}
+```
 
 ---
 
-## 5) Job Interaction APIs (Ứng tuyển - Yêu cầu Token)
+## 5) APIs Công Khai (Public — Không cần Token)
 
-*(Các API tìm kiếm công khai đã được liệt kê ở mục 3.2)*
+### 5.1 Xác thực (Auth)
 
-### 5.1 POST `/job/application`
-- **Mục đích**: Nộp đơn ứng tuyển.
-- **Body**: `CreateJobApplicationRequest` (Cần gửi `workDates`).
+| Method | Endpoint | Body / Params | Ghi chú |
+|---|---|---|---|
+| POST | `/login` | `{ email, password }` | 403 = Email chưa verify |
+| POST | `/register` | `{ email, password, phoneNumber, roleId }` | Gửi OTP về email |
+| POST | `/verify-email` | `{ email, otp }` | Xác thực OTP |
+| POST | `/resend-verification` | `{ email }` | Gửi lại OTP |
+| POST | `/forget` | `{ email }` | Gửi OTP reset password |
+| POST | `/reset` | `{ email, otp, newPassword }` | Đổi mật khẩu |
+| POST | `/google-login` | `{ googleToken, roleId? }` | Đăng nhập Google |
 
-### 5.2 GET `/job/application/worker`
-- **Mục đích**: Xem toàn bộ lịch sử ứng tuyển của cá nhân.
+### 5.2 Việc làm & Khám phá
 
-### 5.3 DELETE `/job/application/cancel/{id}`
-- **Mục đích**: Worker chủ động hủy đơn ứng tuyển đã nộp.
-
----
-
-## 6) Job Daily Report APIs (Báo cáo công việc)
-
-### 5.1 POST `/job/detail/report-daily`
-- **Mục đích**: Worker gửi báo cáo kết quả công việc hằng ngày thay cho điểm danh.
-- **Role**: `Worker`
-
-### 5.2 GET `/job/detail/{id}`
-- **Mục đích**: Xem chi tiết đánh giá từ Farmer sau khi Farmer đã duyệt báo cáo.
-
----
-
-## 7) Wallet & Withdrawal APIs (Ví & Rút tiền)
-
-### 6.1 GET `/wallet/me`
-- **Mục đích**: Xem thông tin ví và số dư hiện có.
-
-### 6.2 GET `/wallet-transaction/wallet/{walletId}`
-- **Mục đích**: Lấy lịch sử biến động số dư.
-
-### 6.3 POST `/withdraw`
-- **Mục đích**: Tạo lệnh rút tiền về ngân hàng.
-
-### 6.4 GET `/withdraw/account-balance`
-- **Mục đích**: Lấy thông tin số dư khả dụng từ PayOS/Hệ thống ngân hàng tích hợp.
+| Method | Endpoint | Params | Response |
+|---|---|---|---|
+| GET | `/job/category` | — | Danh mục[] |
+| GET | `/job/post/{id}` | — | `JobPostDTO` |
+| POST | `/job/post/search` | Body: `JobSearchFilterRequest` | `JobDiscoveryDTO[]` (paginated) |
+| GET | `/job/post/nearby` | `latitude`, `longitude`, `maxDistanceKm` | `JobDiscoveryDTO[]` |
+| GET | `/job/post/filter` | `title`, `category`, `address` | `JobDiscoveryDTO[]` |
+| GET | `/job/post/by-date` | `dateFilter` | `JobDiscoveryDTO[]` |
+| GET | `/job/post/by-skill` | `skills` (phân cách `,`) | `JobDiscoveryDTO[]` |
+| GET | `/job/post/by-wage` | `minWage`, `maxWage` | `JobDiscoveryDTO[]` |
+| GET | `/job/post/urgent` | Params vị trí | `JobDiscoveryDTO[]` |
+| GET | `/weather/coordinates` | `lat`, `lon` | Thời tiết |
+| GET | `/weather/city` | `city` | Thời tiết |
 
 ---
 
-## 8) Notification APIs
+## 6) APIs Worker (Yêu cầu Token & Role: Worker)
 
-### 7.1 GET `/notification/unread`
-- **Mục đích**: Lấy danh sách thông báo chưa đọc phục vụ hiển thị Badge Icon.
+### 6.1 Hồ sơ Worker
 
-### 7.2 POST `/notification/register-token`
-- **Mục đích**: Liên kết Device Token (Expo/FCM) để nhận Push Notification.
-- **Body**: `{"token": "string", "deviceName": "string"}`
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| GET | `/worker` | — | `WorkerProfileDTO` |
+| PUT | `/worker` | `UpdateWorkerProfileRequest` | `WorkerProfileDTO` |
+| POST | `/worker/upload-avatar` | `multipart/form-data (image)` | URL ảnh |
+
+### 6.2 Ứng tuyển
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| POST | `/job/application` | `CreateJobApplicationRequest` | `JobApplicationDTO` |
+| GET | `/job/application/worker` | — | `JobApplicationDTO[]` |
+| DELETE | `/job/application/cancel/{id}` | — | — |
+
+> [!NOTE]
+> Dùng `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy đúng quy trình.
+
+### 6.3 Báo cáo công việc hằng ngày (JobDetail)
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| POST | `/JobDetail/report-daily` | `CreateDailyReportRequest` | `JobDetailResponseDTO` |
+| GET | `/JobDetail/{id}` | — | `JobDetailResponseDTO` |
+| GET | `/JobDetail/worker/{workerId}` | — | `JobDetailResponseDTO[]` |
+
+> [!CAUTION]
+> Path `/JobDetail` phải viết **PascalCase** — BE dùng `[Route("api/v1/[controller]")]` nên controller tên `JobDetailController` → path tự động là `/JobDetail`.
+
+### 6.4 Khiếu nại
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| POST | `/disputes` | `CreateDisputeReportRequest` | `DisputeReportDTO` |
+| GET | `/disputes/mine` | — | `DisputeReportDTO[]` |
+
+### 6.5 Ví & Rút tiền
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| GET | `/wallet/me` | — | Thông tin ví & số dư |
+| GET | `/wallet-transaction/wallet/{walletId}` | — | Lịch sử giao dịch[] |
+| POST | `/withdraw` | Request rút tiền | Kết quả |
+| GET | `/withdraw/account-balance` | — | Số dư khả dụng PayOS |
+
+### 6.6 Thông báo
+
+| Method | Endpoint | Body | Response |
+|---|---|---|---|
+| GET | `/notification/unread` | — | Thông báo chưa đọc[] |
+| POST | `/notification/register-token` | `{ token, deviceName }` | — |
+| POST | `/logout` | — | — |
 
 ---
 
-## 9) Bảng Tra Cứu Enums (Dành cho Frontend)
+## 7) PENDING — Yêu cầu BE bổ sung
 
-### 8.1 Trạng Thái Đơn Ứng Tuyển (`ApplicationStatus`)
-- `1`: Chờ duyệt (Pending)
-- `2`: Đã được chấp nhận (Accepted)
-- `3`: Bị từ chối (Rejected)
-- `4`: Đã hủy (Cancelled)
+> [!CAUTION]
+> Các mục dưới đây FE đang cần nhưng BE chưa implement. FE sẽ **không tự workaround** — chờ BE cập nhật.
 
-### 8.2 Loại Công Việc (`JobType`)
-- `1`: Khoán Trọn Gói (PerJob)
-- `2`: Theo Công Nhật (Daily)
-
-### 8.3 Trạng Thái Việc Làm (`JobPostStatus`)
-- `2`: Đang Mở Tuyển (Published)
-- `4`: Đang Tiến Hành (InProgress)
-- `5`: Đã Hoàn Thành (Completed)
-
----
-
-## 10) Ghi chú quan trọng
-
-1. **camelCase**: Backend đã được cấu hình mặc định trả về JSON dạng camelCase. Team Mobile cần khai báo interface TypeScript tương ứng.
-2. **Hủy đơn**: Sử dụng Endpoint `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy record đúng quy trình.
-3. **Daily Report**: Thay thế hoàn toàn cho luồng `Attendance` (Check-in/out). Worker cần gửi báo cáo này để Farmer duyệt lương hằng ngày.
-4. **Skills**: Kỹ năng đã được tích hợp thẳng vào Profile Worker (GET `skills` và PUT `skillIds`), giúp hệ thống Match-Score tìm việc chính xác hơn.
+| # | Vấn đề | File BE cần sửa | Mức độ |
+|---|---|---|---|
+| 1 | `evidenceUrl` trong `CreateDailyReportRequest` bị comment out → ảnh minh chứng không lưu được | `CreateDailyReportRequest.cs` | 🔴 P0 |
+| 2 | `JobDetailResponseDTO` không có `evidenceUrl` trong response | `JobDetailResponseDTO.cs` | 🔴 P0 |
+| 3 | `JobDetailResponseDTO` không nhúng `jobPost` → FE không hiển thị tên/địa chỉ job | `JobDetailService.GetById()` — cần thêm `include: jd => jd.Include(x => x.JobPost)` và thêm field vào DTO | 🟡 P1 |
+| 4 | `POST /job/post/search` không tính toán `distanceKm` ngay cả khi truyền tọa độ | `JobService.Search()` | 🔴 P0 |
+| 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
+| 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |

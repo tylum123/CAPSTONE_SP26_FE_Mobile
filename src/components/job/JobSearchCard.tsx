@@ -49,8 +49,8 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
         <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
           <View className="flex-row items-center gap-1.5">
             <MapPin size={14} color="#64748b" />
-            <Text className="text-xs text-slate-600 font-medium">
-              {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : "Gần bạn"}
+            <Text className="text-xs text-slate-600 font-medium" numberOfLines={1}>
+              {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />
