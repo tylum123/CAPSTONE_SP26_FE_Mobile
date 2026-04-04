@@ -51,14 +51,18 @@ export function WorkerSearchScreen({ navigation }: any) {
   }, [results, filters.excludeApplied, filters.onlyUrgent, appliedJobPostIds]);
 
   const [activeQuickFilter, setActiveQuickFilter] = useState<string>("all");
+  const hasInitialized = React.useRef(false);
 
   const debouncedKeyword = useDebounce(filters.searchKeyword || "", 600);
 
   useEffect(() => {
-    // Automatically trigger search when keyword changes (Live Search)
-    if (debouncedKeyword !== undefined) {
-      search({ ...filters, pageNumber: 1 });
+    // Skip the first trigger (mount) — init() handles the initial search
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      return;
     }
+    // Only trigger live search when user actually types
+    search({ ...filters, pageNumber: 1 });
   }, [debouncedKeyword]);
 
   const handleQuickFilter = (type: string) => {
@@ -96,29 +100,30 @@ export function WorkerSearchScreen({ navigation }: any) {
       const location = { latitude: lat, longitude: lon };
       setUserLocation(location);
       
-      const initialRadius = profile?.travelRadiusKmPreference || 50;
-      
+      // Store location for map view but DON'T filter by distance initially
+      // Reason: BE SearchJobs filters by Farm lat/lon which may be null for some jobs,
+      // causing them to be excluded entirely. Only filter when user explicitly sets distance.
       updateFilter({ 
         workerLatitude: lat, 
         workerLongitude: lon,
-        maxDistanceKm: initialRadius 
       });
 
-      // Perform initial search with location context
-      await Promise.all([
-        refreshAppliedStatus(),
-        search({
-          ...filters,
-          workerLatitude: lat,
-          workerLongitude: lon,
-          maxDistanceKm: initialRadius
-        })
-      ]);
+      await refreshAppliedStatus();
+
+      // Initial search WITHOUT distance constraint to show all published jobs
+      await search({
+        pageNumber: 1,
+        pageSize: 10,
+        sortBy: "date",
+        workerLatitude: lat,
+        workerLongitude: lon,
+      });
     } catch (err) {
       console.error("Search init error", err);
-      search(); // Fallback search if location fails
+      // Fallback: search without any filters
+      search({ pageNumber: 1, pageSize: 10, sortBy: "date" });
     }
-  }, [user?.isDemo, search, refreshAppliedStatus, updateFilter, filters]);
+  }, [user?.isDemo]);
 
   useEffect(() => {
     init();

@@ -14,7 +14,10 @@
     - **Thông tin chi tiết:** Hiển thị Địa chỉ đầy đủ (không cắt dòng), bổ sung trường Giới tính (Nam/Nữ).
     - **Contact Info Card:** Thiết kế lại mục Số điện thoại và Email thành dạng 2 cột mỏng gọn, dễ truy cập với hệ thống icon nằm ngang.
     - **Hệ thống Icon:** Tích hợp bộ icon trang trí đồng bộ cho tất cả các trường dữ liệu và tiêu đề mục (Kỹ năng, Tiện ích...).
-    - **Giới tính (Edit Profile):** Thêm bộ chọn giới tính (Nam/Nữ) chính quy thay thế cho nhập liệu text.
+    - **Xử lý Giới tính & Kỹ năng (04/04/2026):** Thêm bộ chọn giới tính (Nam/Nữ) và tích hợp Modal chọn kỹ năng vào luồng thiết lập ban đầu.
+- **Đồng bộ Onboarding (04/04/2026):** [P0] Đưa các Component dùng chung (`ExperienceSelector`, `DayPicker`, `SkillSelectionModal`) vào trang Thiết lập hồ sơ, đồng bộ trải nghiệm 100% với trang Chỉnh sửa.
+- **Bổ sung Bán kính đi lại (04/04/2026):** Thêm trường nhập "Bán kính đi lại (km)" vào cả 2 trang quản lý hồ sơ để khớp với yêu cầu từ Backend.
+
 - **Tối ưu kiến trúc:** Module hóa `SkillSelectionModal.tsx`, đồng bộ lề (padding) toàn trang và xử lý lỗi cú pháp JSX triệt để.
 
 ### Ví & Rút tiền (Wallet & Withdrawal) 
@@ -46,6 +49,18 @@
 - **Sửa lỗi định tuyến (P0):** Đồng bộ hóa Casing cho nhóm API `job/detail` (camelCase) để khắc phục lỗi 404 khi báo cáo công việc.
 - **Refactor Trang Cá nhân:** Giảm **45% số dòng code** cho `WorkerProfileScreen`, cải thiện tốc độ nạp và tính dễ bảo trì.
 - **Dọn dẹp mã nguồn (P3):** Loại bỏ hoàn toàn các hàm API dành cho Farmer trong ứng dụng Worker để tối ưu dung lượng.
+
+### Thông báo & Push Notification (Notifications & Push) ✅ Hoàn thành
+- **Đồng bộ hệ thống thông báo (04/04/2026):** Khắc phục lỗi không hiển thị thông báo do không đồng bộ dữ liệu với Backend:
+    - **Xử lý phân trang:** Cập nhật Service để bóc tách dữ liệu từ `PaginatedResponse<NotificationDTO>`.
+    - **Mapping thuộc tính:** Điều chỉnh FE để khớp với Schema mới của BE (`type`, `message`, `sentAt`, `relatedEntityId`).
+- **Tích hợp Expo Push Notification (04/04/2026):**
+    - Chuyển đổi từ FCM Token sang **Expo Push Token** để tương thích với hạ tầng gửi tin của Backend.
+    - Triển khai **Foreground Alert**: Tự động hiển thị popup `Alert` ngay trong app khi có thông báo tới lúc đang mở app, đảm bảo trải nghiệm người dùng tức thì.
+    - Tối ưu hóa đăng ký Token: Tự động đăng ký lại Token mới mỗi khi Login hoặc khởi động app với cơ chế log chuyên sâu để debug.
+- **Tối ưu hóa Logging (04/04/2026):** Khắc phục lỗi in log 401 Unauthorized dư thừa khi người dùng bấm Đăng xuất (Logout).
+    - Triển khai trạng thái **logoutGlobalState** để đồng bộ hóa giữa AuthContext và Axios Client.
+    - Tự động ẩn các cảnh báo 401 nếu yêu cầu không có Token hoặc đang trong quá trình chuyển đổi đăng xuất, giúp màn hình terminal sạch sẽ và chuyên nghiệp hơn.
 
 ### Xác thực & Bảo mật (Authentication & Security) [P1] ✅ Hoàn thành
 - **Luồng Quên mật khẩu (03/04/2026):** Triển khai quy trình 3 bước hoàn chỉnh (`Yêu cầu` -> `Xác thực OTP` -> `Thành công`) ngay trong `ForgotPasswordScreen.tsx`.

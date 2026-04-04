@@ -235,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    authTokenService.setIsLoggingOut(true);
     try {
       if (!user?.isDemo) {
         await authService.logout();
@@ -254,6 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await GoogleSignin.signOut();
     } catch { 
       // silent
+    } finally {
+      authTokenService.setIsLoggingOut(false);
     }
   }, [user?.isDemo]);
 

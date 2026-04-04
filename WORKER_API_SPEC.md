@@ -111,16 +111,21 @@ Farmer đăng ──► JobPost (1)
 ### 4.2 UpdateWorkerProfileRequest
 **Body** của `PUT /worker`.
 
+> [!CAUTION]
+> BE Worker entity yêu cầu `address` (NOT NULL) nhưng DTO hiện tại **không có trường này** → gây `DbUpdateException` khi tạo profile lần đầu. FE đã gửi `address` (= `primaryLocation`) như workaround. Cần BE bổ sung trường `Address` vào `UpdateWorkerProfileRequest.cs` (`[PENDING #7]`).
+
 ```json
 {
   "fullName": "Nguyen Van A",
   "dateOfBirth": "1995-05-20",
   "primaryLocation": "Can Tho",
+  "address": "Đường 3/2, Xuân Khánh, Ninh Kiều, Cần Thơ",
   "travelRadiusKmPreference": 15.5,
   "experienceLevelId": 2,
   "availabilitySchedule": "Mon-Fri 08:00-17:00",
   "avatarUrl": "https://...",
-  "skillIds": ["guid-1", "guid-2"]
+  "skillIds": ["guid-1", "guid-2"],
+  "genderId": 1
 }
 ```
 
@@ -313,6 +318,30 @@ Farmer đăng ──► JobPost (1)
 
 ---
 
+### 4.8 NotificationDTO
+**Response** của `GET /notification` và `GET /notification/unread`.
+
+> [!NOTE]
+> Phân loại `type`: 1: JobAcceptance, 2: Reminder, 3: PaymentConfirmation, 4: NearbyJobOpening.
+
+```json
+{
+  "id": "guid",
+  "userId": "guid",
+  "relatedEntityId": "guid?",
+  "type": 1,
+  "title": "string",
+  "message": "string",
+  "isRead": false,
+  "sentAt": "2026-04-04T10:00:00Z",
+  "readAt": "datetime?"
+}
+```
+
+---
+
+---
+
 ## 5) APIs Công Khai (Public — Không cần Token)
 
 ### 5.1 Xác thực (Auth)
@@ -395,11 +424,14 @@ Farmer đăng ──► JobPost (1)
 
 ### 6.6 Thông báo
 
-| Method | Endpoint | Body | Response |
-|---|---|---|---|
-| GET | `/notification/unread` | — | Thông báo chưa đọc[] |
-| POST | `/notification/register-token` | `{ token, deviceName }` | — |
-| POST | `/logout` | — | — |
+| Method | Endpoint | Body | Response | Ghi chú |
+|---|---|---|---|---|
+| GET | `/notification` | — | `PaginatedResponse<NotificationDTO>` | Lấy tất cả thông báo |
+| GET | `/notification/unread` | — | `NotificationDTO[]` | Lấy thông báo chưa đọc |
+| POST | `/notification/register-token` | `{ Token, DeviceName }` | — | Đăng ký Expo Push Token |
+| PATCH | `/notification/read` | `{ notificationId: "guid" }` | — | Đánh dấu đã đọc |
+| POST | `/notification/read-all` | — | — | Đánh dấu đọc tất cả |
+| POST | `/logout` | — | — | Đăng xuất (xóa token) |
 
 ---
 
@@ -416,3 +448,4 @@ Farmer đăng ──► JobPost (1)
 | 4 | `POST /job/post/search` không tính toán `distanceKm` ngay cả khi truyền tọa độ | `JobService.Search()` | 🔴 P0 |
 | 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
 | 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |
+| 7 | `UpdateWorkerProfileRequest` thiếu trường `Address` → Worker entity có `[Required] Address` (NOT NULL) nhưng khi tạo mới worker, BE không set `Address` → `DbUpdateException: An error occurred while saving the entity changes` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` dòng 364-380 (thêm `Address = request.Address ?? request.PrimaryLocation`) | 🔴 P0 |

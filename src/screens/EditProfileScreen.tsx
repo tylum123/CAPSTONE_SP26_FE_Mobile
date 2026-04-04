@@ -122,6 +122,7 @@ export function EditProfileScreen({ navigation, route }: any) {
     try {
       await workerProfileService.updateProfile({
         fullName, dateOfBirth: `${yyyy}-${mm}-${dd}`, primaryLocation,
+        address: primaryLocation, // PENDING #7: BE Worker entity requires address (NOT NULL)
         travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined,
         experienceLevelId, availabilitySchedule, avatarUrl, skillIds,
         genderId: formData.genderId
@@ -184,6 +185,17 @@ export function EditProfileScreen({ navigation, route }: any) {
               <Calendar size={18} color={COLORS.slate[400]} /><Text className={["flex-1 text-[15px] font-bold", formData.dateOfBirth ? "text-slate-900" : "text-slate-400"].join(" ")}>{formData.dateOfBirth || "Chọn ngày sinh"}</Text><ChevronRight size={18} color={COLORS.slate[300]} />
             </TouchableOpacity>
             {showDatePicker && <DateTimePicker value={new Date()} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={(_: any, d?: Date) => { setShowDatePicker(false); if (d) updateField("dateOfBirth", `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`); }} maximumDate={new Date()} />}
+            <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">Bán kính di chuyển (km)</Text>
+            <View className="flex-row items-center bg-slate-50 px-4 rounded-2xl border border-slate-100 min-h-[52px] gap-3 mb-6">
+              <MapPin size={18} color={COLORS.slate[400]} />
+              <TextInput 
+                className="flex-1 text-[15px] font-bold" 
+                value={formData.travelRadiusKmPreference} 
+                onChangeText={t => updateField("travelRadiusKmPreference", t.replace(/[^0-9]/g, ""))} 
+                placeholder="Ví dụ: 10" 
+                keyboardType="number-pad" 
+              />
+            </View>
             <Text className="text-[14px] font-bold text-slate-800 mb-2 ml-1">Giới tính</Text>
             <View className="flex-row gap-3 mb-6">
               {[

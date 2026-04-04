@@ -97,8 +97,10 @@ api.interceptors.response.use(
 
       const errorMessage = responseData?.message || "";
       const isProfileNotFound = errorMessage.toLowerCase().includes("profile not found");
+      const hasAuthHeader = !!originalRequest.headers.Authorization;
+      const isLoggingOutManual = authTokenService.getIsLoggingOut();
 
-      if (!isAuthRequest && !isProfileNotFound && !isLoggingOut) {
+      if (!isAuthRequest && !isProfileNotFound && !isLoggingOut && !isLoggingOutManual && hasAuthHeader) {
         console.log("Axios: 401 Unauthorized detected. BodyStatus:", bodyStatus, "URL:", requestUrl);
         
         const isOnboardingRequest = requestUrl.includes("/worker") || requestUrl.includes("/user/profile");
