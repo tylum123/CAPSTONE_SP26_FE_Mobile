@@ -51,7 +51,13 @@ export const notificationService = {
 
   // Register push notification token
   registerPushToken: async (token: string, deviceName: string = "Mobile Device"): Promise<void> => {
-    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { token, deviceName });
+    // Gửi cả 2 định dạng PascalCase và camelCase để đảm bảo tính tương thích tuyệt đối với Backend
+    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { 
+      Token: token, 
+      DeviceName: deviceName,
+      token: token,
+      deviceName: deviceName
+    });
   },
 
   // Unregister push notification token

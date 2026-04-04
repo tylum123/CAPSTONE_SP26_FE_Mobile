@@ -29,24 +29,26 @@ export async function registerForPushNotificationsAsync() {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
+      console.log('--- ERROR: Notification permissions not granted! ---');
       return;
     }
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
     if (!projectId) {
-      console.log('Project ID not found');
+      console.log('--- WARNING: EAS Project ID not found in app.json. ---');
     }
     try {
-      // Vì bạn đã có google-services.json, chúng ta lấy Device Token trực tiếp
-      // Token này dùng được trực tiếp với Firebase Admin SDK của team Backend C#
-      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-      console.log('Expo Push token:', token);
+      // Sử dụng getExpoPushTokenAsync để lấy Token tương thích với Backend hiện tại (Expo API)
+      const tokenResult = await Notifications.getExpoPushTokenAsync({ 
+        projectId: projectId || undefined 
+      });
+      token = tokenResult.data;
+      console.log('--- EXPO PUSH TOKEN: ---', token);
     } catch (e: unknown) {
-      console.log('Error getting expo push token', e);
+      console.error('--- ERROR GETTING EXPO PUSH TOKEN: ---', e);
     }
   } else {
-    console.log('Must use physical device for Push Notifications');
+    console.log('--- ERROR: Must use physical device for Push Notifications ---');
   }
 
   return token;
