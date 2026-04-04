@@ -23,7 +23,7 @@ const WORKER_PROFILE_ID_CLAIM_KEYS = [
   "workerProfileId",
   "WorkerProfileId",
   "worker_profile_id",
-] as const;
+ ] as const;
 
 const parseJwtPayload = (token: string): JwtClaims | null => {
   try {
@@ -90,6 +90,7 @@ const extractStringClaim = (
 
 let memoryToken: string | null = null;
 let isMemoryTokenSet: boolean = false;
+let isLoggingOutGlobal: boolean = false;
 
 export const authTokenService = {
   setTokenToMemory: (token: string | null) => {
@@ -133,4 +134,10 @@ export const authTokenService = {
     const currentTime = Math.floor(Date.now() / 1000);
     return payload.exp < currentTime;
   },
+
+  setIsLoggingOut: (value: boolean) => {
+    isLoggingOutGlobal = value;
+  },
+
+  getIsLoggingOut: () => isLoggingOutGlobal,
 };
