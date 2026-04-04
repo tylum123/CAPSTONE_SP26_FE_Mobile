@@ -12,11 +12,17 @@ import { ApiResponse, NotificationDTO } from "../types/export_type_definitions";
 export const notificationService = {
   // Get all notifications
   getNotifications: async (): Promise<NotificationDTO[]> => {
-    const response = await api.get<ApiResponse<NotificationDTO[]>>(
+    const response = await api.get<ApiResponse<any>>(
       API_ENDPOINTS.NOTIFICATIONS.LIST,
     );
+    // Backend returns PaginatedResponse<NotificationDTO>
+    // Structure: { data: { data: NotificationDTO[], pagination: { ... } }, ... }
+    if (response.data.data && Array.isArray(response.data.data.data)) {
+      return response.data.data.data;
+    }
+    // Fallback for non-paginated or unexpected structure
     // @ts-ignore
-    return response.data.data || response.data;
+    return response.data.data || [];
   },
 
   // Get unread notifications

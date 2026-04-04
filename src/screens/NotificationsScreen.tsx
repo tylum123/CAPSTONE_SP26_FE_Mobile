@@ -74,13 +74,13 @@ export function NotificationsScreen({ navigation }: any) {
       setNotifications(data.length > 0 ? data.map((n: any) => ({
         ...n,
         id: n.id,
-        type: mapType(n.notificationType),
+        type: mapType(n.type),
         title: n.title,
-        message: n.content || n.message,
-        timestamp: n.createdAt ? new Date(n.createdAt).toLocaleDateString("vi-VN") : "Gần đây",
+        message: n.message,
+        timestamp: n.sentAt ? new Date(n.sentAt).toLocaleDateString("vi-VN") : "Gần đây",
         read: n.isRead,
-        actionable: !!n.linkId,
-        jobId: n.linkId,
+        actionable: !!n.relatedEntityId,
+        jobId: n.relatedEntityId,
       })) as any : []);
     } catch {
       setNotifications([]);

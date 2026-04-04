@@ -40,10 +40,10 @@ export async function registerForPushNotificationsAsync() {
     try {
       // Vì bạn đã có google-services.json, chúng ta lấy Device Token trực tiếp
       // Token này dùng được trực tiếp với Firebase Admin SDK của team Backend C#
-      token = (await Notifications.getDevicePushTokenAsync()).data;
-      console.log('FCM Device Push token:', token);
+      token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      console.log('Expo Push token:', token);
     } catch (e: unknown) {
-      console.log('Error getting device push token', e);
+      console.log('Error getting expo push token', e);
     }
   } else {
     console.log('Must use physical device for Push Notifications');
