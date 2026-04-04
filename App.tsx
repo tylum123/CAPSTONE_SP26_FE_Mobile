@@ -29,7 +29,12 @@ export default function App() {
   React.useEffect(() => {
     registerForPushNotificationsAsync();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      // Hiển thị Alert ngay lập tức khi app đang mở
+      const { title, body } = notification.request.content;
+      const { Alert } = require("react-native");
+      Alert.alert(title || "Thông báo mới", body || "");
+      
       DeviceEventEmitter.emit("REFRESH_DATA");
     });
 

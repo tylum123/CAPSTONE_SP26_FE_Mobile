@@ -329,11 +329,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user && !user.isDemo) {
-      registerForPushNotificationsAsync().then((token) => {
+      registerForPushNotificationsAsync().then(async (token) => {
         if (token) {
           const deviceName = `${Platform.OS === 'ios' ? 'iOS' : 'Android'} Device`;
-          notificationService.registerPushToken(token, deviceName)
-            .catch(err => console.log("Failed to register push token with backend", err));
+          try {
+            await notificationService.registerPushToken(token, deviceName);
+            console.log("--- SUCCESS: Push token registered with backend ---");
+          } catch (err) {
+            console.error("--- ERROR: Failed to register push token with backend ---", err);
+          }
         }
       });
     }
