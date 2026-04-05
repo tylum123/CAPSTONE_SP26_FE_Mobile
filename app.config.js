@@ -40,6 +40,7 @@ module.exports = {
     plugins: [
       "@react-native-google-signin/google-signin",
       "expo-dev-client",
+      "expo-notifications"
     ],
     extra: {
       API_BASE_URL: apiBaseUrl,
