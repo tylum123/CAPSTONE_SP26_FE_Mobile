@@ -110,13 +110,10 @@ export function WorkerSearchScreen({ navigation }: any) {
 
       await refreshAppliedStatus();
 
-      // Initial search WITHOUT distance constraint to show all published jobs
+      // ULTIMATE FALLBACK: Search with NO filters except page size to ensure BE returns everything
       await search({
         pageNumber: 1,
-        pageSize: 10,
-        sortBy: "date",
-        workerLatitude: lat,
-        workerLongitude: lon,
+        pageSize: 20,
       });
     } catch (err) {
       console.error("Search init error", err);

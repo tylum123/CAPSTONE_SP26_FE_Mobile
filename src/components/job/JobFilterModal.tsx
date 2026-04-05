@@ -37,13 +37,13 @@ const DISTANCE_OPTIONS = [
   { label: "10km", value: 10 },
   { label: "20km", value: 20 },
   { label: "50km", value: 50 },
-  { label: "Tất cả", value: undefined },
+  { label: "Tất cả", value: 500 },
 ];
 
 const DATE_FILTERS = [
   { label: "Hôm nay", value: "today" },
   { label: "Ngày mai", value: "tomorrow" },
-  { label: "Cuối tuần", value: "weekend" },
+  { label: "Sắp tới", value: "upcoming" },
 ];
 
 const JOB_TYPE_OPTIONS = [
@@ -85,7 +85,7 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
   };
 
   const handleReset = () => {
-    setLocalFilters({ pageNumber: 1, pageSize: 10, sortBy: "distance" });
+    setLocalFilters({ pageNumber: 1, pageSize: 10, sortBy: "distance", maxDistanceKm: 500 });
   };
 
   return (

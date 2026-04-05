@@ -19,8 +19,7 @@ export interface ExtendedJobFilter extends JobSearchFilterRequest {
 
 const INITIAL_FILTERS: ExtendedJobFilter = {
   pageNumber: 1,
-  pageSize: 10,
-  sortBy: "distance",
+  pageSize: 20,
   excludeApplied: false,
 };
 
@@ -69,23 +68,61 @@ export function useJobSearch() {
   /**
    * Executes the search request using current or custom filters.
    */
-  const search = useCallback(async (customFilters?: JobSearchFilterRequest) => {
+  const search = useCallback(async (customFilters?: Partial<ExtendedJobFilter>) => {
     setIsLoading(true);
     setError(null);
     try {
-      const searchData = customFilters || filters;
-      const response: PaginatedJobDiscoveryResponse = await jobService.searchJobs(searchData);
+      // Merge with existing filters but reset page to 1 for new searches
+      const mergedFilters = { 
+        ...filters, 
+        ...customFilters, 
+        pageNumber: customFilters?.pageNumber || 1 
+      };
+
+      // CRITICAL: Ensure maxDistanceKm is at least 2000 if NO specific distance is provided
+      // This overrides the BE restrictive default of 20km.
+      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && !mergedFilters.maxDistanceKm) {
+        mergedFilters.maxDistanceKm = 2000;
+      }
+
+      const response: any = await jobService.searchJobs(mergedFilters);
       
-      setResults(response.jobs || []);
-      setTotalCount(response.totalCount || 0);
+      // ULTIMATE DEFENSIVE DECODING: 
+      // Handle PascalCase, camelCase, direct Array, or any object property that is an array
+      let jobs: JobDiscoveryDTO[] = [];
+      let total: number = 0;
+
+      if (Array.isArray(response)) {
+        jobs = response;
+      } else if (response && typeof response === 'object') {
+        // 1. Try common property names
+        jobs = response.jobs || response.Jobs || response.items || response.Items || response.data || response.Data || [];
+        total = response.totalCount || response.TotalCount || response.total || 0;
+
+        // 2. Fallback: If jobs is still empty, find the first property that is an array
+        if (jobs.length === 0) {
+          const firstArray = Object.values(response).find(val => Array.isArray(val)) as JobDiscoveryDTO[];
+          if (firstArray) jobs = firstArray;
+        }
+
+        // 3. Fallback total
+        if (total === 0) total = jobs.length;
+      }
+      
+      setResults(jobs);
+      setTotalCount(total);
+
+      // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
+      refreshAppliedStatus();
     } catch (err: any) {
       console.error("Advanced search error:", err);
-      setError(err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.");
+      const errorMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.";
+      setError(errorMsg);
       setResults([]);
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, refreshAppliedStatus]);
 
   /**
    * Loads the next page of results and appends them to the current list.
@@ -98,9 +135,21 @@ export function useJobSearch() {
       const nextPage = (filters.pageNumber || 1) + 1;
       const nextFilters = { ...filters, pageNumber: nextPage };
       
-      const response: PaginatedJobDiscoveryResponse = await jobService.searchJobs(nextFilters);
+      const response: any = await jobService.searchJobs(nextFilters);
       
-      setResults((prev) => [...prev, ...(response.jobs || [])]);
+      // Use SAME robust decoding for pagination
+      let newJobs: JobDiscoveryDTO[] = [];
+      if (Array.isArray(response)) {
+        newJobs = response;
+      } else if (response && typeof response === 'object') {
+        newJobs = response.jobs || response.Jobs || response.items || response.Items || response.data || response.Data || [];
+        if (newJobs.length === 0) {
+          const firstArray = Object.values(response).find(val => Array.isArray(val)) as JobDiscoveryDTO[];
+          if (firstArray) newJobs = firstArray;
+        }
+      }
+
+      setResults((prev) => [...prev, ...newJobs]);
       setFilters(nextFilters);
     } catch (err: any) {
       console.error("Load more search error:", err);
@@ -113,7 +162,7 @@ export function useJobSearch() {
   /**
    * Executes a specialized search using GET endpoints for better performance on specific criteria.
    */
-  const specializedSearch = useCallback(async (type: 'urgent' | 'today' | 'tomorrow' | 'weekend', location?: { latitude: number, longitude: number }) => {
+  const specializedSearch = useCallback(async (type: 'urgent' | 'today' | 'tomorrow' | 'upcoming', location?: { latitude: number, longitude: number }) => {
     setResults([]); // Immediate clear for instant feedback
     setIsLoading(true);
     setError(null);
@@ -121,13 +170,20 @@ export function useJobSearch() {
       let data: JobDiscoveryDTO[] = [];
       if (type === 'urgent' && location) {
         data = await jobService.getUrgentJobs({ ...location, maxDistanceKm: filters.maxDistanceKm || 50 });
-      } else if (['today', 'tomorrow', 'weekend'].includes(type)) {
-        data = await jobService.getJobsByDate(type);
+      } else if (['today', 'tomorrow', 'upcoming'].includes(type)) {
+        data = await jobService.getJobsByDate(type as any);
       }
       
       setResults(data);
       setTotalCount(data.length);
-      setFilters(prev => ({ ...prev, pageNumber: 1, dateFilter: type !== 'urgent' ? type : undefined, onlyUrgent: type === 'urgent' }));
+      setFilters(prev => ({ 
+        ...prev, 
+        pageNumber: 1, 
+        dateFilter: type !== 'urgent' ? type : undefined, 
+        onlyUrgent: type === 'urgent',
+        workerLatitude: location?.latitude || prev.workerLatitude,
+        workerLongitude: location?.longitude || prev.workerLongitude
+      }));
     } catch (err: any) {
       console.error("Specialized search error:", err);
       setError(err.message || "Đã xảy ra lỗi khi tìm kiếm.");

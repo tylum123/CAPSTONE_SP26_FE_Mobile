@@ -14,7 +14,6 @@ import { DeviceEventEmitter } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
@@ -30,11 +29,7 @@ export default function App() {
     registerForPushNotificationsAsync();
 
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      // Hiển thị Alert ngay lập tức khi app đang mở
-      const { title, body } = notification.request.content;
-      const { Alert } = require("react-native");
-      Alert.alert(title || "Thông báo mới", body || "");
-      
+      // Refresh dữ liệu khi có thông báo mới (ví dụ: công việc mới)
       DeviceEventEmitter.emit("REFRESH_DATA");
     });
 

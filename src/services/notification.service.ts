@@ -64,4 +64,10 @@ export const notificationService = {
   unregisterPushToken: async (token: string): Promise<void> => {
     await api.post(API_ENDPOINTS.NOTIFICATIONS.UNREGISTER_TOKEN, { token });
   },
+
+  // Get active device tokens
+  getActiveTokens: async (): Promise<string[]> => {
+    const response = await api.get<ApiResponse<string[]>>(API_ENDPOINTS.NOTIFICATIONS.TOKENS);
+    return response.data.data || [];
+  },
 };

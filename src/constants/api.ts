@@ -67,11 +67,9 @@ export const API_ENDPOINTS = {
   },
   // Job Detail (Daily Report replacement for Attendance)
   JOB_DETAIL: {
-    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
-
-    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
-    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
-
+    REPORT_DAILY: (id: string) => `${API_PREFIX}/job/detail/report/${id}`,
+    DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
   },
   // Disputes
   DISPUTE: {
@@ -91,6 +89,7 @@ export const API_ENDPOINTS = {
     USER_SPECIFIC: (userId: string) => `${API_PREFIX}/ratings/user/${userId}`,
     USER_ALL: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/all`,
     USER_AVERAGE: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/average`,
+    USER_GIVEN: `${API_PREFIX}/ratings/user/given`,
   },
   // Notifications
   NOTIFICATIONS: {
@@ -99,6 +98,7 @@ export const API_ENDPOINTS = {
     READ: `${API_PREFIX}/notification/read`, // Note: use PATCH { notificationId: string }
     READ_ALL: `${API_PREFIX}/notification/read-all`,
     DELETE: (id: string) => `${API_PREFIX}/notification/${id}`,
+    TOKENS: `${API_PREFIX}/notification/tokens`,
     REGISTER_TOKEN: `${API_PREFIX}/notification/register-token`,
     UNREGISTER_TOKEN: `${API_PREFIX}/notification/unregister-token`,
   },
@@ -119,13 +119,10 @@ export const API_ENDPOINTS = {
     COORDINATES: `${API_PREFIX}/weather/coordinates`,
     CITY: `${API_PREFIX}/weather/city`,
   },
-  // Chat
-  CHAT: {
-    CONVERSATIONS: `${API_PREFIX}/chat/conversations`,
-    MESSAGES: (conversationId: string) =>
-      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
-    SEND_MESSAGE: (conversationId: string) =>
-      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
+  // Messages
+  MESSAGES: {
+    BASE: `${API_PREFIX}/messages`,
+    MARK_AS_READ: `${API_PREFIX}/messages/read`,
   },
 } as const;
 

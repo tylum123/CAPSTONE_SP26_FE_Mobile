@@ -19,3 +19,5 @@ export * from "./wallet.service";
 export * from "./skill.service";
 export * from "./weather.service";
 export * from "./dispute.service";
+export * from "./message.service";
+export * from "./rating.service";

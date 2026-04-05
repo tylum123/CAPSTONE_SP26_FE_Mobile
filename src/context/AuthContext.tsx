@@ -235,27 +235,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // 1. Mark globally as logging out to stop axios interceptors from triggering forceLogout
     authTokenService.setIsLoggingOut(true);
-    try {
-      if (!user?.isDemo) {
-        await authService.logout();
-      }
-    } catch {
-      // ignore
-    }
 
     try {
+      const isDemo = user?.isDemo;
+
+      // 2. Clear state immediately for instant UI response (Optimistic Logout)
       setUser(null);
       authTokenService.setTokenToMemory(null);
+
+      // 3. Inform backend in background (don't block UI)
+      if (!isDemo) {
+        authService.logout().catch(() => undefined);
+      }
+
+      // 4. Clear local storage
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.AUTH_TOKEN,
         STORAGE_KEYS.USER_DATA,
         STORAGE_KEYS.REFRESH_TOKEN,
-      ]);
-      await GoogleSignin.signOut();
-    } catch { 
-      // silent
+      ]).catch(() => undefined);
+
+      // 5. Google Sign Out cleanup (catch potential crash)
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // silent
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
     } finally {
+      // 6. Reset flag
       authTokenService.setIsLoggingOut(false);
     }
   }, [user?.isDemo]);

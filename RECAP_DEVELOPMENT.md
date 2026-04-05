@@ -56,11 +56,14 @@
     - **Mapping thuộc tính:** Điều chỉnh FE để khớp với Schema mới của BE (`type`, `message`, `sentAt`, `relatedEntityId`).
 - **Tích hợp Expo Push Notification (04/04/2026):**
     - Chuyển đổi từ FCM Token sang **Expo Push Token** để tương thích với hạ tầng gửi tin của Backend.
-    - Triển khai **Foreground Alert**: Tự động hiển thị popup `Alert` ngay trong app khi có thông báo tới lúc đang mở app, đảm bảo trải nghiệm người dùng tức thì.
     - Tối ưu hóa đăng ký Token: Tự động đăng ký lại Token mới mỗi khi Login hoặc khởi động app với cơ chế log chuyên sâu để debug.
+- **Tối ưu hóa UX Thông báo (06/04/2026):** Thay thế popup `Alert.alert` gây gián đoạn bằng thông báo Native Banner (`shouldShowBanner`) tinh tế hơn khi ứng dụng đang mở.
 - **Tối ưu hóa Logging (04/04/2026):** Khắc phục lỗi in log 401 Unauthorized dư thừa khi người dùng bấm Đăng xuất (Logout).
     - Triển khai trạng thái **logoutGlobalState** để đồng bộ hóa giữa AuthContext và Axios Client.
     - Tự động ẩn các cảnh báo 401 nếu yêu cầu không có Token hoặc đang trong quá trình chuyển đổi đăng xuất, giúp màn hình terminal sạch sẽ và chuyên nghiệp hơn.
+- **Xử lý triệt để lỗi 401 & 404 (06/04/2026):**
+    - Chặn các lời gọi API ngầm (background fetch) ngay sau khi người dùng nhấn Đăng xuất, loại bỏ hoàn toàn lỗi 401 trong terminal.
+    - Xử lý lỗi độc lập (isolated catch) cho các API chưa hoàn thiện (như Nearby Jobs, Daily Reports) để tránh mã lỗi 404 làm sập toàn bộ giao diện màn hình chính.
 
 ### Xác thực & Bảo mật (Authentication & Security) [P1] ✅ Hoàn thành
 - **Luồng Quên mật khẩu (03/04/2026):** Triển khai quy trình 3 bước hoàn chỉnh (`Yêu cầu` -> `Xác thực OTP` -> `Thành công`) ngay trong `ForgotPasswordScreen.tsx`.
@@ -78,4 +81,4 @@
 ---
 
 > [!NOTE]
-> Các thay đổi trong ngày 03/04/2026 tập trung vào việc **hoàn thiện hệ thống tìm kiếm thông minh** và **chuẩn hóa dữ liệu với Backend**, đảm bảo ứng dụng hoạt động ổn định và chuyên nghiệp.
+> Các thay đổi trong ngày 06/04/2026 tập trung vào việc **tối ưu trải nghiệm thông báo (Native Banner)** và **cải thiện độ ổn định hệ thống (Error Handling)**, khắc phục triệt để các lỗi 401/404 rác trong terminal, giúp ứng dụng hoạt động mượt mà hơn.

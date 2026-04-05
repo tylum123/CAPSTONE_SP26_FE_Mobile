@@ -77,8 +77,10 @@ export function ReviewScreen({ navigation, route }: any) {
     try {
       await ratingService.createRating({
         jobPostId: jobId,
-        ratingValue: rating,
-        comment: selectedTags.length > 0 
+        raterId: route.params.raterId || "00000000-0000-0000-0000-000000000000",
+        rateeId: route.params.rateeId || "00000000-0000-0000-0000-000000000000",
+        ratingScore: rating,
+        reviewText: selectedTags.length > 0 
           ? `[${selectedTags.join(", ")}] ${review}` 
           : review,
       });
