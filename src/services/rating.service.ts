@@ -6,36 +6,76 @@
  */
 import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
-
-export interface CreateRatingRequest {
-  jobPostId: string;
-  ratingValue: number;
-  comment: string;
-  targetUserId?: string; // Optional if backend infers from JobPost/Context
-}
+import {
+  CreateRatingRequest,
+  UpdateRatingRequest,
+  RatingDTO,
+  ApiResponse,
+} from "../types/export_type_definitions";
 
 export const ratingService = {
   /**
-   * Create a new rating for a job/farmer
+   * Create a new rating for a job/farmer or worker
    */
-  createRating: async (data: CreateRatingRequest) => {
-    const response = await api.post(API_ENDPOINTS.RATING.CREATE, data);
-    return response.data;
+  createRating: async (data: CreateRatingRequest): Promise<RatingDTO> => {
+    const response = await api.post<ApiResponse<RatingDTO>>(
+      API_ENDPOINTS.RATING.CREATE,
+      data
+    );
+    return response.data.data!;
   },
 
   /**
-   * Get ratings for a specific user (farmer)
+   * Update an existing rating
    */
-  getUserRatings: async (userId: string) => {
-    const response = await api.get(API_ENDPOINTS.RATING.USER_ALL(userId));
+  updateRating: async (
+    id: string,
+    data: UpdateRatingRequest
+  ): Promise<RatingDTO> => {
+    const response = await api.put<ApiResponse<RatingDTO>>(
+      API_ENDPOINTS.RATING.DETAIL(id),
+      data
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * Get ratings for a specific user (farmer or worker)
+   */
+  getUserRatings: async (userId: string): Promise<RatingDTO[]> => {
+    const response = await api.get<ApiResponse<RatingDTO[]>>(
+      API_ENDPOINTS.RATING.USER_ALL(userId)
+    );
+    return response.data.data || [];
+  },
+
+  /**
+   * Get specific rating by user ID
+   */
+  getSpecificRatingByUserId: async (userId: string): Promise<RatingDTO> => {
+    const response = await api.get<ApiResponse<RatingDTO>>(
+      API_ENDPOINTS.RATING.USER_SPECIFIC(userId)
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * Get all ratings given by the current user
+   */
+  getGivenRatingsByUser: async (): Promise<RatingDTO[]> => {
+    const response = await api.get<ApiResponse<RatingDTO[]>>(
+      API_ENDPOINTS.RATING.USER_GIVEN
+    );
     return response.data.data || [];
   },
 
   /**
    * Get average rating for a user
    */
-  getAverageRating: async (userId: string) => {
-    const response = await api.get(API_ENDPOINTS.RATING.USER_AVERAGE(userId));
+  getAverageRating: async (userId: string): Promise<number> => {
+    const response = await api.get<ApiResponse<number>>(
+      API_ENDPOINTS.RATING.USER_AVERAGE(userId)
+    );
     return response.data.data || 0;
-  }
+  },
 };

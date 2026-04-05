@@ -217,6 +217,22 @@ export interface PaginatedJobDiscoveryResponse {
   message: string;
 }
 
+export interface PaginatedResponse<T> {
+  items?: T[];
+  data?: T[]; // Sometimes APIs return data under 'data'
+  pagination?: {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  };
+  totalCount?: number;
+  pageNumber?: number;
+  pageSize?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
+}
+
 export interface NotificationDTO {
   id: string;
   userId: string;
@@ -296,4 +312,54 @@ export interface WeatherDTO {
   sunrise: string;
   sunset: string;
   fetchedAt: string;
+}
+
+// ----------------------------------------------------
+// Message & Chat DTOs
+// ----------------------------------------------------
+export interface MessageDTO {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface CreateMessageRequest {
+  receiverId: string;
+  content: string;
+}
+
+export interface MarkConversationAsReadRequest {
+  senderId: string;
+}
+
+// ----------------------------------------------------
+// Rating & Review DTOs
+// ----------------------------------------------------
+export interface RatingDTO {
+  id: string;
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
+  ratingScore: number;
+  reviewText: string | null;
+  typeId: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateRatingRequest {
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
+  ratingScore: number;
+  reviewText?: string;
+  typeId?: number; // Backend usually defaults this to 1 (Job rating)
+}
+
+export interface UpdateRatingRequest {
+  ratingScore: number;
+  reviewText?: string;
 }

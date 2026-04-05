@@ -33,7 +33,7 @@ export const dailyReportService = {
    */
   submitDailyReport: async (data: CreateDailyReportRequest): Promise<JobDetailDTO> => {
     const response = await api.post<ApiResponse<JobDetailDTO>>(
-      API_ENDPOINTS.JOB_DETAIL.REPORT_DAILY,
+      API_ENDPOINTS.JOB_DETAIL.REPORT_DAILY(data.jobApplicationId),
       data
     );
     return response.data.data;

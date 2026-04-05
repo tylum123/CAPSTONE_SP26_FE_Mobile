@@ -2,7 +2,7 @@
 
 Tài liệu mô tả **chính xác** các API và DTO liên quan tới luồng **Worker**, đối soát trực tiếp từ source code Backend (`AgroTemp.API/Controllers`, `AgroTemp.Domain/DTO`, `AgroTemp.Domain/Entities`).
 
-**Cập nhật lần cuối:** 2026-04-03 (đối soát thực tế BE)
+**Cập nhật lần cuối:** 2026-04-06 (đối soát thực tế BE)
 
 ---
 
@@ -82,14 +82,14 @@ Farmer đăng ──► JobPost (1)
 **Response** của `GET /worker`.
 
 > [!WARNING]
-> `date_of_birth` dùng snake_case trong response, nhưng `dateOfBirth` camelCase khi gửi request PUT.
+> `Date_of_birth` dùng format đặc biệt có chữ hoa đầu trong response, nhưng `dateOfBirth` camelCase khi gửi request PUT.
 
 ```json
 {
   "id": "guid",
   "userId": "guid",
   "fullName": "string",
-  "date_of_birth": "1995-05-20",
+  "Date_of_birth": "1995-05-20",
   "primaryLocation": "string",
   "travelRadiusKmPreference": 10.5,
   "experienceLevelId": 2,
@@ -104,7 +104,9 @@ Farmer đăng ──► JobPost (1)
   "updatedAt": "2026-03-03T08:00:00Z",
   "skills": [
     { "id": "guid", "name": "Bón phân", "description": "..." }
-  ]
+  ],
+  "genderId": 1,
+  "gender": "Male"
 }
 ```
 
@@ -214,6 +216,9 @@ Farmer đăng ──► JobPost (1)
   "jobPostId": "guid",
   "statusId": 1,
   "coverLetter": "string?",
+  "appliedAt": "2026-03-10T10:00:00Z?",
+  "respondedAt": "2026-03-11T10:00:00Z?",
+  "responseMessage": "string?",
   "workDates": ["2026-03-24T10:00:00Z"]
 }
 ```
@@ -221,7 +226,7 @@ Farmer đăng ──► JobPost (1)
 ---
 
 ### 4.6 JobDetailResponseDTO (Daily Report)
-**Response** của các API `/JobDetail/...`.
+**Response** của các API `/job/detail/...`.
 
 > [!WARNING]
 > `evidenceUrl` và `jobPost` **CHƯA tồn tại** trong BE. FE sẽ KHÔNG tự fetch riêng — chờ BE bổ sung (`[PENDING]`).
@@ -390,7 +395,7 @@ Farmer đăng ──► JobPost (1)
 |---|---|---|---|
 | POST | `/job/application` | `CreateJobApplicationRequest` | `JobApplicationDTO` |
 | GET | `/job/application/worker` | — | `JobApplicationDTO[]` |
-| DELETE | `/job/application/cancel/{id}` | — | — |
+| PUT | `/job/application/cancel/{id}` | — | — |
 
 > [!NOTE]
 > Dùng `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy đúng quy trình.
@@ -399,12 +404,12 @@ Farmer đăng ──► JobPost (1)
 
 | Method | Endpoint | Body | Response |
 |---|---|---|---|
-| POST | `/JobDetail/report-daily` | `CreateDailyReportRequest` | `JobDetailResponseDTO` |
-| GET | `/JobDetail/{id}` | — | `JobDetailResponseDTO` |
-| GET | `/JobDetail/worker/{workerId}` | — | `JobDetailResponseDTO[]` |
+| POST | `/job/detail/report/{id}` | `CreateDailyReportRequest` | `JobDetailResponseDTO` |
+| GET | `/job/detail/{id}` | — | `JobDetailResponseDTO` |
+| GET | `/job/detail/worker/{id}` | — | `JobDetailResponseDTO[]` |
 
 > [!CAUTION]
-> Path `/JobDetail` phải viết **PascalCase** — BE dùng `[Route("api/v1/[controller]")]` nên controller tên `JobDetailController` → path tự động là `/JobDetail`.
+> Tuy Controller tên là `JobDetailController` nhưng `ApiEndpointConstants` ghi đè route thành `/job/detail`. Do đó phải dùng đúng `/job/detail` (viết thường). Ngoài ra endpoint report daily yêu cầu gắn thêm biến `{id}` (như `jobApplicationId` hoặc một guid tùy ý vì BE không thật sự bắt `[FromRoute]` biến này ở function, nhưng route template thì có).
 
 ### 6.4 Khiếu nại
 
@@ -419,6 +424,7 @@ Farmer đăng ──► JobPost (1)
 |---|---|---|---|
 | GET | `/wallet/me` | — | Thông tin ví & số dư |
 | GET | `/wallet-transaction/wallet/{walletId}` | — | Lịch sử giao dịch[] |
+| GET | `/withdraw` | — | Danh sách lịch sử rút tiền [] |
 | POST | `/withdraw` | Request rút tiền | Kết quả |
 | GET | `/withdraw/account-balance` | — | Số dư khả dụng PayOS |
 
@@ -428,10 +434,30 @@ Farmer đăng ──► JobPost (1)
 |---|---|---|---|---|
 | GET | `/notification` | — | `PaginatedResponse<NotificationDTO>` | Lấy tất cả thông báo |
 | GET | `/notification/unread` | — | `NotificationDTO[]` | Lấy thông báo chưa đọc |
+| GET | `/notification/tokens` | — | `string[]` | Lấy các device token đang active |
 | POST | `/notification/register-token` | `{ Token, DeviceName }` | — | Đăng ký Expo Push Token |
+| POST | `/notification/unregister-token` | `{ Token }` | — | Hủy đăng ký token |
 | PATCH | `/notification/read` | `{ notificationId: "guid" }` | — | Đánh dấu đã đọc |
-| POST | `/notification/read-all` | — | — | Đánh dấu đọc tất cả |
+| PATCH | `/notification/read-all` | — | — | Đánh dấu đọc tất cả |
 | POST | `/logout` | — | — | Đăng xuất (xóa token) |
+
+### 6.7 Nhắn tin (Messages)
+
+| Method | Endpoint | Body | Ghi chú |
+|---|---|---|---|
+| GET | `/messages` | Params: `userId` (GUID), `page`, `limit` | Tải lịch sử chat với 1 user cụ thể |
+| POST | `/messages` | `CreateMessageRequest` (`receiverId`, `content`) | Gửi tin nhắn mới |
+| PATCH | `/messages/read` | `MarkConversationAsReadRequest` (`senderId`) | Đánh dấu toàn bộ tin nhắn từ đối phương (`senderId`) là đã đọc |
+
+### 6.8 Đánh giá (Ratings)
+
+| Method | Endpoint | Body | Ghi chú |
+|---|---|---|---|
+| POST | `/ratings` | `CreateRatingRequest` | `raterId`, `rateeId`, `jobPostId`, `ratingScore`, `reviewText` |
+| PUT | `/ratings/{id}` | `UpdateRatingRequest` | Cập nhật số sao/review |
+| GET | `/ratings/user/given` | — | Lấy tất cả rating do user hiện tại gửi đi |
+| GET | `/ratings/user/{userId}/all` | — | Lấy tất cả rating của một user nhận được |
+| GET | `/ratings/user/{userId}/average` | — | Trả về số điểm đánh giá trung bình |
 
 ---
 
@@ -449,3 +475,62 @@ Farmer đăng ──► JobPost (1)
 | 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
 | 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |
 | 7 | `UpdateWorkerProfileRequest` thiếu trường `Address` → Worker entity có `[Required] Address` (NOT NULL) nhưng khi tạo mới worker, BE không set `Address` → `DbUpdateException: An error occurred while saving the entity changes` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` dòng 364-380 (thêm `Address = request.Address ?? request.PrimaryLocation`) | 🔴 P0 |
+
+---
+
+## 8) Luồng chức năng Worker (Worker Workflows)
+
+Phần này tóm tắt các bước mà ứng dụng Mobile sẽ tương tác với Backend để hoàn thành quy trình công việc của Worker.
+
+### 8.1 Luồng Đăng ký & Onboarding
+1. **Đăng ký (Register) & Xác thực email**:
+   - `POST /register`: Điền `email`, `password`, `phoneNumber`, và `roleId = 3` (Worker). BE sẽ gửi mã xác thực tới hộp thư email.
+   - `POST /verify-email`: Gửi email và OTP để kích hoạt tài khoản.
+   - Hoặc có thể gọi trực tiếp `POST /google-login` với `roleId = 3`.
+2. **Đăng nhập**: Gọi `POST /login` lấy JWT Token. Lưu Token và thêm vào Header `Authorization: Bearer <Token>` cho mọi API private tiếp theo.
+3. **Tạo Profile Worker**:
+   - Mobile có thể kiểm tra trạng thái bằng `GET /worker`, nếu BE trả ra HTTP 404 thì chứng tỏ tài khoản mới đăng ký chưa có profile, chuyển hướng sang UI tạo profile.
+   - Gọi `POST /worker/upload-avatar` (dạng form-data) để gửi ảnh chụp lên server lấy đường link avatar.
+   - Gọi `PUT /worker` gửi lên `UpdateWorkerProfileRequest` chứa kỹ năng, năm sinh, giới tính... (Lưu ý: BE đang bị lỗi DB khi thiếu `Address` như mô tả ở [PENDING #7], nên FE có thể thử bypass bằng cách gửi kèm keyword này xem BE có bypass qua model JSON serializer không).
+
+### 8.2 Luồng Tìm kiếm & Khám phá Việc Mới
+1. **Theo dõi việc xung quanh**: `GET /job/post/nearby` cung cấp `latitude`, `longitude`.
+2. **Tìm kiếm filter**: `POST /job/post/search` với các category ID.
+3. **Xem chi tiết Job Post**: `GET /job/post/{id}`.
+
+### 8.3 Luồng Ứng tuyển & Báo cáo hàng ngày (Daily Worker Flow)
+1. **Gửi đơn Ứng tuyển**: Gọi `POST /job/application` (chèn ID bài đăng, các ngày nhấp chọn, và thư ngỏ).
+2. **Quản lý đơn ứng tuyển**: `GET /job/application/worker`. Worker thấy thẻ mình đổi thành *Accepted* (status 2) tức là Farmer đã phê duyệt đơn.
+3. **Báo cáo sau giờ làm**:
+   - Nếu công việc theo hình thức Daily, Worker sau mỗi ngày đến Farm phải báo cáo đã làm gì.
+   - Gọi `POST /job/detail/report/{id}` và đưa vào dòng mô tả (đính kèm hình ảnh chứng thực - đợi fix ở [PENDING #1]).
+   - Khi báo cáo thành công, Farmer sẽ nhận thông báo, tiến hành thanh toán hoặc hoàn tiền qua PayOS trung gian.
+
+### 8.4 Luồng Xử lý Khiếu nại (Disputes)
+Hỗ trợ giải quyết tranh chấp (vd: Farmer trễ nợ quá hạn):
+1. **Tạo Ticket**: Gọi `POST /disputes`, loại (`disputeTypeId=2` ứng với Payment), đính kèm lý do/bằng chứng. Chủ thể lưu ý cần ID của thẻ Job Application hoặc Post.
+2. **Theo dõi Admin hỗ trợ**: Gọi `GET /disputes/mine`. Admin chuyển status từ `Pending` (1) qua `UnderReview` (2) rồi đóng ticket `Resolved` (3).
+
+### 8.5 Luồng Quản lý Ví và Rút Tiền (Wallet/Withdrawal)
+1. **Kiểm tra số dư thực tế**: `GET /wallet/me` (hiển thị số dư).
+2. **Thống kê giao dịch**: Lấy `walletId` từ API trên, gọi vào `GET /wallet-transaction/wallet/{walletId}`.
+3. **Lấy số dư khả dụng PayOS**: Gọi `GET /withdraw/account-balance` (Lưu ý chỉ khi đã KYC IP trên cổng PayOS thì BE mới gọi được - rule này áp dụng ở Dev / Production server).
+4. **Yêu cầu rút tiền**: Gọi `POST /withdraw`.
+5. **Xem lịch sử yêu cầu**: `GET /withdraw` - hiển thị tất cả các lượt withdraw cho tài khoản.
+
+### 8.6 Luồng Thông báo (Notification)
+1. **Đăng ký Device Token**: Ngay sau khi Login thành công trên Mobile, cần fetch token (vd `ExpoPushToken`) và gọi `POST /notification/register-token`.
+2. **Pull data / Tương tác**: Cứ mỗi phiên mở app, gọi `GET /notification` hoặc `GET /notification/unread`. Khi user chọn xem một push notification, gọi `PATCH /notification/read`. Có thể dùng `PATCH /notification/read-all` để clear badge báo đỏ.
+3. **Đăng xuất (Cực kỳ quan trọng)**: Trước khi gọi `POST /logout` để xóa JWT, bắt buộc phải gọi `POST /notification/unregister-token` (truyền lên Device Token) để xoá nó trên hệ thống, nếu không người dùng mới login vào thiết bị cũ sẽ đọc được thông báo của người lúc nãy.
+
+### 8.7 Luồng Nhắn tin (Messages)
+1. **Mở hộp thoại**: Khi ấn vào nút Chat ở Profile chủ vườn hay lịch sử Job, app gọi API `GET /messages` truyền lên `userId` (ID của Farmer đó đối với Worker) để lấy lịch sử nhắn tin hai người.
+2. **Đánh dấu đã đọc**: UI gọi `PATCH /messages/read` và truyền `senderId` là ID của người đang chat, để đổi cờ `isRead` thành true cho hiển thị đối phương.
+3. **Gửi Chat**: Gõ text và submit vào mạng qua `POST /messages` (`CreateMessageRequest`).
+
+### 8.8 Luồng Đánh giá sau việc làm (Rating)
+1. Sau khi hệ thống xác nhận Job Completed (đã làm xong & xử lý Payment xong).
+2. Worker sẽ rate Farmer (hoặc ngược lại) bằng cách sử dụng `POST /ratings`. Dữ liệu quan trọng nhất là `rateeId` (bên bị đánh giá) và `JobPostId`.
+3. Số sao lấy ra sẽ được aggregate và hiển thị ở profile mỗi người (`GET /ratings/user/{userId}/average`).
+
+

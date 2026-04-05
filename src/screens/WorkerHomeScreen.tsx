@@ -41,6 +41,7 @@ export function WorkerHomeScreen({ navigation }: any) {
 
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated) return; // Không fetch nếu đã logout
     let sourceJobs: any[] = [];
     let sourceApps: any[] = [];
     let sourceProfile: any = null;
@@ -127,14 +128,24 @@ export function WorkerHomeScreen({ navigation }: any) {
           : Promise.resolve([]);
 
         const [nearby, reports] = await Promise.all([
-          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius }),
+          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius })
+            .catch(e => { 
+                console.error("Nearby jobs error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
+                return []; 
+            }),
           fetchReportsPromise
+            .catch(e => { 
+                console.error("Fetch reports error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
+                return []; 
+            })
         ]);
         finalizedNearby = nearby;
         todayReports = reports;
       }
     } catch (e: any) {
-      console.error("Failed to fetch nearby jobs/reports", e?.response?.data || e.message);
+      if (isAuthenticated) {
+        console.error("Home screen load error:", e.message);
+      }
       finalizedNearby = sourceJobs;
     }
 

@@ -58,6 +58,7 @@ export function WorkerProfileScreen({ navigation }: any) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!isAuthenticated) return;
       try {
         setLoading(true);
         const [p, w, cats] = await Promise.all([
