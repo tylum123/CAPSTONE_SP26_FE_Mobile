@@ -12,8 +12,8 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
 import { PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
-import { Clock, MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info } from "lucide-react-native";
-import { jobService, workerProfileService } from "../services/export_services";
+import { Clock, MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare } from "lucide-react-native";
+import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
 import { JobPostDTO } from "../types/define_worker_interfaces";
 import { useAuth } from "../context/AuthContext";
 import { isPastDate } from "../utils/provide_formatting_helpers";
@@ -62,6 +62,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
     let sourceApps = [];
     let sourceAllJobs = [];
     let sourceProfile: any = null;
+    let sourceReports: any[] = [];
 
     if (!isAuthenticated || user?.isDemo) { 
       sourceApps = DEMO_APPLICATIONS;
@@ -78,6 +79,11 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         sourceApps = apps;
         sourceAllJobs = allJobs;
         sourceProfile = profile;
+
+        // Fetch reports if profile is available
+        if (profile?.id) {
+          sourceReports = await dailyReportService.getWorkerReports(profile.id);
+        }
       } catch {
         setAppliedJobs([]); 
         setUpcomingJobs([]); 
@@ -91,11 +97,17 @@ export function WorkerJobsScreen({ navigation, route }: any) {
       }
     }
 
+    const todayStr = new Date().toISOString().substring(0, 10);
+
     const myAppsMap = new Map();
     sourceApps.forEach(a => {
       const workerId = a.worker?.id || (a as any).workerId;
       if (workerId === sourceProfile?.id) {
-        myAppsMap.set(String(a.jobPostId), a);
+        const jobId = String(a.jobPostId);
+        // Only add if not already in map to keep the MOST RECENT application (since BE returns DESC)
+        if (!myAppsMap.has(jobId)) {
+          myAppsMap.set(jobId, a);
+        }
       }
     });
     
@@ -120,6 +132,12 @@ export function WorkerJobsScreen({ navigation, route }: any) {
 
       const mappedData = mapApplicationToUI(app, jobInfo);
       
+      // Check if reported today
+      const isReportedToday = sourceReports.some(r => 
+        String(r.jobApplicationId) === String(app.id) && 
+        r.workDate?.substring(0, 10) === todayStr
+      );
+
       return {
         ...mappedData,
         status: derivedStatus,
@@ -132,7 +150,8 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         review: null,
         rating: null,
         startDate: mappedData.date,
-        endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : mappedData.date
+        endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : mappedData.date,
+        isReportedToday
       };
     });
 
@@ -228,18 +247,22 @@ export function WorkerJobsScreen({ navigation, route }: any) {
           </View>
           <View className="flex-row gap-2 mt-3">
             <TouchableOpacity 
-              className={["flex-1 flex-row items-center justify-center rounded-2xl min-h-[42px] px-2 gap-1.5", isPastDate(job.endDate || job.startDate) ? "bg-slate-50 border border-slate-200" : "bg-primary-600"].join(" ")}
+              className={["flex-1 flex-row items-center justify-center rounded-2xl min-h-[42px] px-2 gap-1.5", (job.isReportedToday || isPastDate(job.endDate || job.startDate)) ? "bg-slate-100 border border-slate-200" : "bg-primary-600"].join(" ")}
               onPress={() => navigation.navigate("SubmitReport", { jobApplicationId: String(job.id) })}
-              disabled={isPastDate(job.endDate || job.startDate)}
+              disabled={job.isReportedToday || isPastDate(job.endDate || job.startDate)}
             >
-              <Text className={["text-[12px] font-bold", isPastDate(job.endDate || job.startDate) ? "text-slate-400" : "text-white"].join(" ")}>📝 Báo cáo</Text>
+              <FileText size={14} color={job.isReportedToday || isPastDate(job.endDate || job.startDate) ? "#94a3b8" : "#ffffff"} />
+              <Text className={["text-[12px] font-bold", (job.isReportedToday || isPastDate(job.endDate || job.startDate)) ? "text-slate-400" : "text-white"].join(" ")}>
+                {job.isReportedToday ? "Đã báo cáo" : "Báo cáo"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               className="flex-1 flex-row items-center justify-center bg-transparent border border-primary-600 rounded-2xl min-h-[42px] px-2 gap-1.5"
               onPress={() => navigation.navigate("Chat", { farmerId: job.farmer })}
             >
-              <Text className="text-[12px] font-bold text-primary-600">💬 Nhắn tin</Text>
+              <MessageSquare size={14} color="#059669" />
+              <Text className="text-[12px] font-bold text-primary-600">Nhắn tin</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -274,7 +297,13 @@ export function WorkerJobsScreen({ navigation, route }: any) {
               <Text className="text-[13px] text-slate-700 italic">"{job.review}"</Text>
             </View>
           ) : (
-            <Button variant="ghost" size="sm" onPress={() => navigation.navigate("Review", { jobId: job.jobPostId })}>Đánh giá công việc ⭐</Button>
+            <TouchableOpacity 
+              className="flex-row items-center justify-center bg-white border border-slate-200 rounded-xl px-4 py-2 mt-2 gap-2"
+              onPress={() => navigation.navigate("Review", { jobId: job.jobPostId })}
+            >
+              <Star size={16} color="#fbbf24" fill="#fbbf24" />
+              <Text className="text-[13px] font-bold text-slate-700">Đánh giá công việc</Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>

@@ -22,7 +22,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
 
   return (
     <>
-      {applicationInfo.statusId === 2 && (
+      {Number(applicationInfo.statusId) === 2 && (
         <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
           <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Báo cáo chi tiết</Text>
           <Text className="text-[13px] text-slate-400 mb-4">Lịch sử báo cáo và tiến độ được duyệt</Text>

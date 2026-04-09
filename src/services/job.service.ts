@@ -140,7 +140,7 @@ export const jobService = {
   },
 
   cancelApplication: async (id: string): Promise<void> => {
-    await api.delete(
+    await api.put(
       API_ENDPOINTS.JOB.CANCEL_APPLICATION(id),
     );
   },

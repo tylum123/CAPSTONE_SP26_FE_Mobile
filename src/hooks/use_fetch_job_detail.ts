@@ -72,7 +72,9 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       try {
         if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
           const allWorkerReports = await dailyReportService.getWorkerReports(sourceProfile.id);
-          reports = allWorkerReports.filter(r => String(r.jobPostId) === String(jobId));
+          reports = (allWorkerReports || []).filter(r => 
+            String(r.jobPostId).toLowerCase() === String(jobId).toLowerCase()
+          );
         } else if (user?.isDemo || !isAuthenticated) {
           // Mock some reports for demo
           reports = [

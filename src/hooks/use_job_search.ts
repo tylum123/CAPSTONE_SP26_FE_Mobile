@@ -79,14 +79,17 @@ export function useJobSearch() {
         pageNumber: customFilters?.pageNumber || 1 
       };
 
-      // CRITICAL: Ensure maxDistanceKm is at least 2000 if NO specific distance is provided
-      // This overrides the BE restrictive default of 20km.
+      // Ensure maxDistanceKm is at least 2000 if NO specific distance is provided but location exists
       if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && !mergedFilters.maxDistanceKm) {
         mergedFilters.maxDistanceKm = 2000;
       }
 
+      console.log("[SearchRequest] Payload:", JSON.stringify(mergedFilters, null, 2));
+
       const response: any = await jobService.searchJobs(mergedFilters);
       
+      console.log("[SearchResponse] Raw:", JSON.stringify(response, null, 2));
+
       // ULTIMATE DEFENSIVE DECODING: 
       // Handle PascalCase, camelCase, direct Array, or any object property that is an array
       let jobs: JobDiscoveryDTO[] = [];
