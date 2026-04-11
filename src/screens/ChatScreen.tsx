@@ -5,7 +5,7 @@
  * Dependencies: Chat service, Auth context, Navigation parameters. */
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Keyboard, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Send } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
@@ -23,14 +23,28 @@ export function ChatScreen({ navigation, route }: any) {
   const [messages, setMessages] = useState<MessageDTO[]>([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(true);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [kbVisible, setKbVisible] = useState(false);
+  // Animated.Value cho phép cập nhật native layout ngay lập tức (không qua React re-render)
+  const kbOffset = useRef(new Animated.Value(0)).current;
+  // Ref để luôn có giá triệ insets mới nhất bên trong effect (tránh stale closure)
+  const insetsRef = useRef(insets);
+  useEffect(() => { insetsRef.current = insets; }, [insets]);
   const scrollViewRef = useRef<ScrollView>(null);
   const isMounted = useRef(true);
 
   useEffect(() => {
     isMounted.current = true;
-    const showSub = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setKeyboardVisible(false));
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      // e.endCoordinates.height = keyboard height (edge-to-edge: nav bar nằm RIÊNg)
+      // Cộng thêm insets.bottom để đảm bảo input không bị che bởi nav bar
+      const totalOffset = e.endCoordinates.height + (insetsRef.current.bottom ?? 0);
+      kbOffset.setValue(totalOffset);
+      setKbVisible(true);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      kbOffset.setValue(0);
+      setKbVisible(false);
+    });
     return () => {
       isMounted.current = false;
       showSub.remove();
@@ -140,12 +154,7 @@ export function ChatScreen({ navigation, route }: any) {
   };
 
   return (
-    <View className="flex-1 bg-slate-50">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+    <Animated.View className="flex-1 bg-slate-50" style={{ paddingBottom: kbOffset }}>
         {/* Header */}
         <View 
           className="flex-row items-center px-4 pt-3 pb-3 bg-white border-b border-slate-100" 
@@ -220,57 +229,68 @@ export function ChatScreen({ navigation, route }: any) {
         </ScrollView>
 
         {/* Input */}
-        <View 
-          style={{ 
-            paddingHorizontal: 16, 
-            paddingTop: 12, 
-            paddingBottom: keyboardVisible ? 16 : Math.max(insets.bottom, 16),
-            backgroundColor: 'white',
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingTop: 8,
+            paddingBottom: kbVisible ? 8 : Math.max(insets.bottom, 10),
+            backgroundColor: '#ffffff',
             borderTopWidth: 1,
-            borderTopColor: '#f1f5f9'
+            borderTopColor: '#f1f5f9',
+            gap: 8,
           }}
         >
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'flex-end', 
-            backgroundColor: '#f8fafc', 
-            borderRadius: 16, 
-            borderWidth: 1, 
-            borderColor: '#e2e8f0', 
-            paddingHorizontal: 12, 
-            paddingVertical: 6,
-            gap: 8 
+          {/* Text field pill */}
+          <View style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#f1f5f9',
+            borderRadius: 24,
+            paddingHorizontal: 14,
+            paddingVertical: 0,
+            minHeight: 40,
+            maxHeight: 120,
           }}>
             <TextInput
-              style={{ 
-                flex: 1, 
-                maxHeight: 120, 
-                paddingHorizontal: 4, 
-                paddingVertical: 8, 
-                fontSize: 15, 
-                color: '#0f172a' 
-              }}
-              placeholder="Nhập tin nhắn..." placeholderTextColor="#94a3b8"
-              value={inputText} onChangeText={setInputText} multiline maxLength={1000}
-            />
-            <TouchableOpacity
-              onPress={handleSend} 
-              disabled={!inputText.trim()} 
-              activeOpacity={0.8}
               style={{
-                width: 36,
-                height: 36,
-                justifyContent: 'center',
-                alignItems: 'center',
-                borderRadius: 18,
-                backgroundColor: inputText.trim() ? '#059669' : '#e2e8f0'
+                flex: 1,
+                fontSize: 14,
+                color: '#0f172a',
+                lineHeight: 20,
+                paddingVertical: 10,
+                maxHeight: 120,
               }}
-            >
-              <Send size={18} color={inputText.trim() ? "#ffffff" : "#94a3b8"} />
-            </TouchableOpacity>
+              placeholder="Nhập tin nhắn..."
+              placeholderTextColor="#94a3b8"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={1000}
+            />
           </View>
+
+          {/* Send button */}
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!inputText.trim()}
+            activeOpacity={0.75}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: inputText.trim() ? '#059669' : '#e2e8f0',
+              flexShrink: 0,
+            }}
+          >
+            <Send size={16} color={inputText.trim() ? '#ffffff' : '#94a3b8'} />
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+    </Animated.View>
   );
+
 }
