@@ -26,6 +26,7 @@ import { ReportHistoryScreen } from "../screens/ReportHistoryScreen";
 import { ReportDetailScreen } from "../screens/ReportDetailScreen";
 import { EditProfileScreen } from "../screens/EditProfileScreen";
 import { WithdrawalScreen } from "../screens/WithdrawalScreen";
+import { WorkerWalletScreen } from "../screens/WorkerWalletScreen";
 import { DisputeHistoryScreen } from "../screens/DisputeHistoryScreen";
 
 const Stack = createStackNavigator();
@@ -115,6 +116,7 @@ export function RootNavigator() {
             component={ReportDetailScreen}
           />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="WorkerWallet" component={WorkerWalletScreen} />
           <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
           <Stack.Screen name="DisputeHistory" component={DisputeHistoryScreen} />
         </>
