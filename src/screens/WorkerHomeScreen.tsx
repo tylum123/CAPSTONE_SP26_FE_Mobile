@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun, MessageSquare } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
@@ -19,10 +19,10 @@ import { jobService, workerProfileService, nominatimService, dailyReportService,
 import { useAuth } from "../context/AuthContext";
 import { useLocalWeather } from "../hooks/use_local_weather";
 import { JobMap } from "../components/ui/JobMap";
+import { mapApplicationToUI, mapJobPostToUI } from "../utils/mapperUtils";
+import { WorkerApplicationStatsDTO } from "../types/export_type_definitions";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
-import { mapJobPostToUI } from "../utils/mapperUtils";
 import { WelcomeModal } from "../components/ui/WelcomeModal";
-import { mapApplicationToUI } from "../utils/mapperUtils";
 
 export function WorkerHomeScreen({ navigation }: any) {
   const { user, isAuthenticated } = useAuth();
@@ -55,16 +55,24 @@ export function WorkerHomeScreen({ navigation }: any) {
       setTodayEarnings(450000); // 450k hôm nay
     } else {
       try {
-        const [jobs, apps, profile, wallet] = await Promise.all([
+        const [jobs, apps, profile, wallet, stats] = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
-          walletService.getWallet()
+          walletService.getWallet(),
+          jobService.getWorkerStats().catch(() => null)
         ]);
         sourceJobs = jobs;
         sourceApps = apps;
         sourceProfile = profile;
         sourceWallet = wallet;
+
+        if (stats) {
+          setProfileRating(stats.averageRating ?? sourceProfile?.averageRating ?? 0);
+          setTotalJobsCompleted(stats.completedJobs ?? 0);
+          // todayEarnings will still be calculated from transactions for real-time accuracy, 
+          // or we can use totalEarnings if it's meant to be "Today's" in the future.
+        }
 
         if (wallet?.id) {
             const txs = await walletService.getTransactions(wallet.id);
@@ -273,6 +281,9 @@ export function WorkerHomeScreen({ navigation }: any) {
                   </View>
                   {/* Right: bell + avatar only */}
                   <View className="flex-row items-center gap-2">
+                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Wallet")}>
+                      <Wallet size={18} color="#ffffff" />
+                    </TouchableOpacity>
                     <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
                       <Bell size={18} color="#ffffff" />
                       <View className="absolute top-[8px] right-[8px] w-[6px] h-[6px] rounded-full bg-rice-400 border border-primary-600" />

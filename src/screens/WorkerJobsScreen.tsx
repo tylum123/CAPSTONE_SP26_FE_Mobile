@@ -259,7 +259,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
 
             <TouchableOpacity 
               className="flex-1 flex-row items-center justify-center bg-transparent border border-primary-600 rounded-2xl min-h-[42px] px-2 gap-1.5"
-              onPress={() => navigation.navigate("Chat", { farmerId: job.farmer })}
+              onPress={() => navigation.navigate("Chat", { farmerId: job.farmerId, farmerName: job.farmer, farmerAvatar: job.farmerAvatar })}
             >
               <MessageSquare size={14} color="#059669" />
               <Text className="text-[12px] font-bold text-primary-600">Nhắn tin</Text>

@@ -42,14 +42,10 @@ export const dailyReportService = {
   /**
    * Worker: Submit daily report
    */
-  submitDailyReport: async (data: CreateDailyReportRequest): Promise<JobDetailDTO> => {
-    // Temporarily stripping evidenceUrl as it's not supported by BE yet and might cause 400 errors
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { evidenceUrl, ...payload } = data;
-    
+  submitDailyReport: async (id: string, data: CreateDailyReportRequest): Promise<JobDetailDTO> => {
     const response = await api.post<ApiResponse<JobDetailDTO>>(
-      API_ENDPOINTS.JOB_DETAIL.REPORT_DAILY(data.jobApplicationId),
-      payload
+      API_ENDPOINTS.JOB_DETAIL.REPORT_DAILY(id),
+      data
     );
     return response.data?.data;
   },

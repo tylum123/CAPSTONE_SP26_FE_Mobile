@@ -34,6 +34,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     ...job,
     description: cleanDescription,
     farmer: { 
+      id: job.farmerProfileId,
       name: job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại", 
       avatar: "https://i.pravatar.cc/150?img=1", 
       rating: discovery.farmerAverageRating || 0, 
@@ -77,6 +78,8 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     ...app,
     title: job?.title || "Công việc",
     farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
+    farmerId: job?.farmerProfileId,
+    farmerAvatar: "https://i.pravatar.cc/150?img=1",
     date: formattedDate,
     time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
     status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"

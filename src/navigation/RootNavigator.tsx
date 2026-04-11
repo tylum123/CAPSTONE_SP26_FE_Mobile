@@ -70,28 +70,6 @@ export function RootNavigator() {
     checkProfile().catch(() => undefined);
   }, [isAuthenticated, user]);
 
-  const renderAuthenticatedScreens = () => (
-    <>
-      <Stack.Screen name="Worker" component={WorkerTabNavigator} />
-      <Stack.Screen name="JobDetail" component={JobDetailScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="Review" component={ReviewScreen} />
-      <Stack.Screen name="SubmitReport" component={SubmitReportScreen} />
-      <Stack.Screen
-        name="ReportHistory"
-        component={ReportHistoryScreen}
-      />
-      <Stack.Screen
-        name="ReportDetail"
-        component={ReportDetailScreen}
-      />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
-      <Stack.Screen name="DisputeHistory" component={DisputeHistoryScreen} />
-    </>
-  );
-
   return (
     <Stack.Navigator
       screenOptions={{
@@ -113,17 +91,33 @@ export function RootNavigator() {
       ) : profileStatus === "unknown" ? (
         // Loading state while checking profile
         <Stack.Screen name="RootLoading" component={SplashScreen} />
-      ) : profileStatus === "needsProfile" ? (
-        <>
-          <Stack.Screen
-            name="OnboardingProfile"
-            component={OnboardingProfileScreen}
-          />
-          {renderAuthenticatedScreens()}
-        </>
       ) : (
-        // Main App Stack - Đã đăng nhập (Worker real or Demo)
-        renderAuthenticatedScreens()
+        // Authenticated Stack - Đã đăng nhập
+        <>
+          {profileStatus === "needsProfile" && (
+            <Stack.Screen
+              name="OnboardingProfile"
+              component={OnboardingProfileScreen}
+            />
+          )}
+          <Stack.Screen name="Worker" component={WorkerTabNavigator} />
+          <Stack.Screen name="JobDetail" component={JobDetailScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Review" component={ReviewScreen} />
+          <Stack.Screen name="SubmitReport" component={SubmitReportScreen} />
+          <Stack.Screen
+            name="ReportHistory"
+            component={ReportHistoryScreen}
+          />
+          <Stack.Screen
+            name="ReportDetail"
+            component={ReportDetailScreen}
+          />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
+          <Stack.Screen name="DisputeHistory" component={DisputeHistoryScreen} />
+        </>
       )}
     </Stack.Navigator>
   );
