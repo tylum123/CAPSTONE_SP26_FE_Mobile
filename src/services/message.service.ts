@@ -11,23 +11,27 @@ import {
   MessageDTO,
   CreateMessageRequest,
   MarkConversationAsReadRequest,
-  PaginatedResponse, // NOTE: Assuming we might need to import or handle this
+  ConversationDTO,
+  PaginatedResponse, 
 } from "../types/export_type_definitions";
 
 // Message Service
 export const messageService = {
   // Get paginated messages for a conversation with a specific user
-  getMessages: async (userId: string, page: number = 1, limit: number = 20) => {
-    const response = await api.get<ApiResponse<any>>(API_ENDPOINTS.MESSAGES.BASE, {
-      params: { userId, page, limit },
-    });
-    // Backend returns PaginatedResponse<MessageDTO> wrapped in ApiResponse
-    if (response.data.data && Array.isArray(response.data.data.items)) {
-      // Typically PaginatedResponse has an 'items' or 'data' array
-      return response.data.data;
-    }
-    // Fallback if data is the array itself
-    return response.data;
+  getMessages: async (
+    userId: string,
+    page: number = 1,
+    limit: number = 100
+  ): Promise<any> => {
+    const response = await api.get<any>(
+      API_ENDPOINTS.MESSAGES.BASE,
+      {
+        params: { userId, page, limit },
+      }
+    );
+    // Backend trả về ApiResponse<PaginatedResponse<MessageDTO>> hoặc ApiResponse<MessageDTO[]>
+    // Normalize: luôn trả về raw data để ChatScreen tự parse
+    return response.data?.data ?? response.data ?? [];
   },
 
   // Send a new message to a specific user
@@ -46,5 +50,13 @@ export const messageService = {
       data
     );
     return response.data.data || 0;
+  },
+
+  // Get list of all conversations
+  getConversations: async (): Promise<ConversationDTO[]> => {
+    const response = await api.get<ApiResponse<ConversationDTO[]>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}?t=${new Date().getTime()}`
+    );
+    return response.data.data || [];
   },
 };

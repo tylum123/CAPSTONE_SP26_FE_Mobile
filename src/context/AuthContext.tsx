@@ -31,12 +31,13 @@ export const forceLogout = async () => {
 
 
 interface User {
-  id: string;
+  id: string; // Worker profile ID
+  authUserId: string; // Auth account GUID
   name: string;
   email: string;
   roleID: string;
   isDemo?: boolean; 
-  isNewUser?: boolean; // cờ đánh dấu người dùng chưa có profile
+  isNewUser?: boolean; 
 }
 
 // Hàm format tên hiển thị, không để lộ @gmail.com
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyUserProfile = useCallback(
     (profile: {
       id: string;
+      userId?: string;
       fullName?: string;
       email?: string;
       roleID?: string;
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       setUser({
         id: profile.id,
+        authUserId: profile.userId || profile.id, // Fallback to profile.id if userId is missing
         name: resolveName(profile.fullName, profile.email),
         email: profile.email || "",
         roleID: profile.roleID || "worker",
@@ -124,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const fbEmail = response.email || email;
         applyUserProfile({
           id: "me",
+          userId: "me",
           fullName: resolveName(undefined, fbEmail),
           email: fbEmail,
           roleID: "worker",
@@ -169,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // thì đánh dấu là người dùng mới để vào onboarding
         applyUserProfile({
           id: "me",
+          userId: "me",
           fullName: resolveName(undefined, response.email),
           email: response.email,
           roleID: "worker",
@@ -186,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     applyUserProfile({
       id: "demo",
+      userId: "demo",
       fullName: "Tài khoản Demo",
       email: "demo@agrotemp.vn",
       roleID: "worker",

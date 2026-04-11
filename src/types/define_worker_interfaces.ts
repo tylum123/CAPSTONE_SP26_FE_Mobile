@@ -120,9 +120,9 @@ export interface JobDetailDTO {
 }
 
 export interface CreateDailyReportRequest {
-  jobApplicationId: string;
+  // jobApplicationId: string;
   workerDescription: string;
-  evidenceUrl?: string; // Added to support image uploads
+  // evidenceUrl?: string; // Added to support image uploads
 }
 
 export interface ApproveJobDetailRequest {
@@ -313,10 +313,12 @@ export interface WeatherDTO {
   sunset: string;
   fetchedAt: string;
 }
+export interface UserBriefDTO {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+}
 
-// ----------------------------------------------------
-// Message & Chat DTOs
-// ----------------------------------------------------
 export interface MessageDTO {
   id: string;
   senderId: string;
@@ -324,6 +326,21 @@ export interface MessageDTO {
   content: string;
   read: boolean;
   createdAt: string;
+  sender?: UserBriefDTO;
+  receiver?: UserBriefDTO;
+}
+
+export interface ConversationDTO {
+  contact: UserBriefDTO;
+  lastMessage: MessageDTO;
+  unreadCount: number;
+}
+
+export interface WorkerApplicationStatsDTO {
+  averageRating: number;
+  completedJobs: number;
+  totalApplications: number;
+  totalEarnings?: number;
 }
 
 export interface CreateMessageRequest {

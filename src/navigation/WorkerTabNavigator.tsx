@@ -8,22 +8,22 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Home, Search, Briefcase, Wallet, User } from "lucide-react-native";
+import { Home, Search, Briefcase, User, MessageSquare } from "lucide-react-native";
 
 import { WorkerHomeScreen } from "../screens/WorkerHomeScreen";
 import { WorkerSearchScreen } from "../screens/WorkerSearchScreen";
 import { WorkerJobsScreen } from "../screens/WorkerJobsScreen";
-import { WorkerWalletScreen } from "../screens/WorkerWalletScreen";
 import { WorkerProfileScreen } from "../screens/WorkerProfileScreen";
+import { ConversationListScreen } from "../screens/ConversationListScreen";
 
 const Tab = createBottomTabNavigator();
 
 const TABS = [
-  { name: "Search",  label: "Tìm việc",  Icon: Search   },
-  { name: "Jobs",    label: "Công việc", Icon: Briefcase },
-  { name: "Home",    label: "Trang chủ", Icon: Home      }, // center
-  { name: "Wallet",  label: "Ví tiền",   Icon: Wallet    },
-  { name: "Profile", label: "Tôi",       Icon: User      },
+  { name: "Search",   label: "Tìm việc",  Icon: Search        },
+  { name: "Jobs",     label: "Công việc", Icon: Briefcase     },
+  { name: "Home",     label: "Trang chủ", Icon: Home          }, // center
+  { name: "Messages", label: "Tin nhắn",  Icon: MessageSquare },
+  { name: "Profile",  label: "Tôi",       Icon: User          },
 ];
 
 function CustomTabBar({ state, navigation }: any) {
@@ -95,12 +95,13 @@ export function WorkerTabNavigator() {
     <Tab.Navigator
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
+      initialRouteName="Home"
     >
-      <Tab.Screen name="Home"    component={WorkerHomeScreen}    options={{ title: "Trang chủ" }} />
-      <Tab.Screen name="Search"  component={WorkerSearchScreen}  options={{ title: "Tìm việc"  }} />
-      <Tab.Screen name="Jobs"    component={WorkerJobsScreen}    options={{ title: "Công việc" }} />
-      <Tab.Screen name="Wallet"  component={WorkerWalletScreen}  options={{ title: "Ví tiền"   }} />
-      <Tab.Screen name="Profile" component={WorkerProfileScreen} options={{ title: "Tôi"        }} />
+      <Tab.Screen name="Home"     component={WorkerHomeScreen}     options={{ title: "Trang chủ" }} />
+      <Tab.Screen name="Search"   component={WorkerSearchScreen}   options={{ title: "Tìm việc"  }} />
+      <Tab.Screen name="Jobs"     component={WorkerJobsScreen}     options={{ title: "Công việc" }} />
+      <Tab.Screen name="Messages" component={ConversationListScreen} options={{ title: "Tin nhắn"  }} />
+      <Tab.Screen name="Profile"  component={WorkerProfileScreen}  options={{ title: "Tôi"        }} />
     </Tab.Navigator>
   );
 }

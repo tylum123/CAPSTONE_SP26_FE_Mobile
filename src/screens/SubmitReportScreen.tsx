@@ -128,10 +128,10 @@ export function SubmitReportScreen({ navigation, route }: any) {
           setIsUploading(false);
         }
 
-        await dailyReportService.submitDailyReport({
-          jobApplicationId,
+        await dailyReportService.submitDailyReport(jobApplicationId, {
+          // jobApplicationId,
           workerDescription: description,
-          evidenceUrl // Now sending the joined URLs
+          // evidenceUrl // Now sending the joined URLs
         });
         hapticFeedback.success();
         DeviceEventEmitter.emit("REFRESH_DATA");

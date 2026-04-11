@@ -86,7 +86,7 @@ export function JobDetailScreen({ navigation, route }: any) {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
           >
             <RenderJobHeader jobDetail={jobDetail} />
-            <RenderFarmerInfoCard jobDetail={jobDetail} isAuthenticated={isAuthenticated} user={user} onChatPress={() => navigation.navigate("Chat", { farmerId: jobDetail.farmer?.name })} />
+            <RenderFarmerInfoCard jobDetail={jobDetail} isAuthenticated={isAuthenticated} user={user} onChatPress={() => navigation.navigate("Chat", { farmerId: jobDetail.farmer?.id, farmerName: jobDetail.farmer?.name, farmerAvatar: jobDetail.farmer?.avatar })} />
             <RenderJobInfoSections jobDetail={jobDetail} infoRows={infoRows} />
             <RenderTimeSlotsAndReports jobDetail={jobDetail} applicationInfo={applicationInfo} selectedTimeSlots={selectedTimeSlots} isApplied={isApplied} toggleTimeSlot={toggleTimeSlot} />
             <View style={{ height: 120 }} />

@@ -2,7 +2,7 @@
 
 Tài liệu mô tả **chính xác** các API và DTO liên quan tới luồng **Worker**, đối soát trực tiếp từ source code Backend (`AgroTemp.API/Controllers`, `AgroTemp.Domain/DTO`, `AgroTemp.Domain/Entities`).
 
-**Cập nhật lần cuối:** 2026-04-06 (đối soát thực tế BE)
+**Cập nhật lần cuối:** 2026-04-11 (đối soát thực tế BE)
 
 ---
 
@@ -228,8 +228,8 @@ Farmer đăng ──► JobPost (1)
 ### 4.6 JobDetailResponseDTO (Daily Report)
 **Response** của các API `/job/detail/...`.
 
-> [!WARNING]
-> `evidenceUrl` và `jobPost` **CHƯA tồn tại** trong BE. FE sẽ KHÔNG tự fetch riêng — chờ BE bổ sung (`[PENDING]`).
+> [!NOTE]
+> ✅ **[PENDING #3 đã fix một phần]** Trường `worker` đã được nhúng vào response. Tuy nhiên `evidenceUrl` và `jobPost` **vẫn chưa có** — chờ BE bổ sung (`[PENDING #1, #2]`).
 
 **Response hiện tại từ BE** (`JobDetailResponseDTO.cs` — đã xác nhận từ source):
 
@@ -239,6 +239,7 @@ Farmer đăng ──► JobPost (1)
   "jobApplicationId": "guid",
   "jobPostId": "guid",
   "workerId": "guid",
+  "worker": { "...WorkerProfileDTO..." },
   "statusId": 2,
   "workDate": "2026-03-03T00:00:00Z",
   "workerDescription": "Hôm nay tôi đã làm được...",
@@ -253,7 +254,7 @@ Farmer đăng ──► JobPost (1)
 }
 ```
 
-**Response mong muốn sau khi BE bổ sung (`[PENDING]`):**
+**Response mong muốn sau khi BE bổ sung (`[PENDING #1, #2]`):**
 
 ```json
 {
@@ -272,11 +273,13 @@ Farmer đăng ──► JobPost (1)
 **`CreateDailyReportRequest`** (Body gửi lên khi báo cáo):
 
 > [!CAUTION]
-> `evidenceUrl` đang bị comment out ở BE (`// ImageUrls`). Trường này FE gửi sẽ bị **bỏ qua hoàn toàn** — ảnh minh chứng không được lưu. Cần BE mở comment và thêm vào DTO.
+> `evidenceUrl` (`ImageUrls`) đang bị comment out ở BE. Trường này FE gửi sẽ bị **bỏ qua hoàn toàn** — ảnh minh chứng không được lưu (`[PENDING #1]`).
+
+> [!IMPORTANT]
+> `{id}` trong route `POST /job/detail/report/{id}` là **`jobApplicationId`** (truyền qua route, **KHÔNG phải trong body**). Body chỉ gồm:
 
 ```json
 {
-  "jobApplicationId": "guid",
   "workerDescription": "string"
 }
 ```
@@ -345,6 +348,51 @@ Farmer đăng ──► JobPost (1)
 
 ---
 
+### 4.9 MessageDTO & ConversationDTO
+**Response** của `GET /messages` và `GET /messages/conversations`.
+
+**`MessageDTO`** (1 tin nhắn):
+
+```json
+{
+  "id": "guid",
+  "senderId": "guid",
+  "receiverId": "guid",
+  "content": "string",
+  "read": false,
+  "createdAt": "2026-04-11T10:00:00Z",
+  "sender": { "id": "guid", "name": "string", "avatarUrl": "string?" },
+  "receiver": { "id": "guid", "name": "string", "avatarUrl": "string?" }
+}
+```
+
+**`ConversationDTO`** (cuộc hội thoại gần đây — dùng cho danh sách inbox):
+
+```json
+{
+  "contact": { "id": "guid", "name": "string", "avatarUrl": "string?" },
+  "lastMessage": { "...MessageDTO..." },
+  "unreadCount": 3
+}
+```
+
+### 4.10 WorkerApplicationStatsDTO
+**Response** của `GET /job/application/worker/stats`.
+
+```json
+{
+  "totalApplications": 10,
+  "pendingApplications": 2,
+  "acceptedApplications": 5,
+  "rejectedApplications": 1,
+  "cancelledApplications": 2,
+  "completedJobs": 4,
+  "totalEarnings": 2500000
+}
+```
+
+---
+
 ---
 
 ## 5) APIs Công Khai (Public — Không cần Token)
@@ -391,25 +439,39 @@ Farmer đăng ──► JobPost (1)
 
 ### 6.2 Ứng tuyển
 
-| Method | Endpoint | Body | Response |
-|---|---|---|---|
-| POST | `/job/application` | `CreateJobApplicationRequest` | `JobApplicationDTO` |
-| GET | `/job/application/worker` | — | `JobApplicationDTO[]` |
-| PUT | `/job/application/cancel/{id}` | — | — |
+| Method | Endpoint | Body / Params | Response | Ghi chú |
+|---|---|---|---|---|
+| POST | `/job/application` | `CreateJobApplicationRequest` | `JobApplicationDTO` | Gửi đơn ứng tuyển |
+| GET | `/job/application/worker` | — | `JobApplicationDTO[]` | Đơn của Worker hiện tại |
+| GET | `/job/application/worker/stats` | — | `WorkerApplicationStatsDTO` | Thống kê tổng hợp |
+| PUT | `/job/application/cancel/{id}` | — | — | Hủy đơn ứng tuyển |
 
 > [!NOTE]
 > Dùng `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy đúng quy trình.
 
 ### 6.3 Báo cáo công việc hằng ngày (JobDetail)
 
-| Method | Endpoint | Body | Response |
-|---|---|---|---|
-| POST | `/job/detail/report/{id}` | `CreateDailyReportRequest` | `JobDetailResponseDTO` |
-| GET | `/job/detail/{id}` | — | `JobDetailResponseDTO` |
-| GET | `/job/detail/worker/{id}` | — | `JobDetailResponseDTO[]` |
+| Method | Endpoint | Params / Body | Response | Ghi chú |
+|---|---|---|---|---|
+| POST | `/job/detail/report/{id}` | Body: `{ workerDescription }` | `JobDetailResponseDTO` | `{id}` = `jobApplicationId` (route param) |
+| GET | `/job/detail/{id}` | — | `JobDetailDTO` | Lấy 1 daily report |
+| GET | `/job/detail/worker/{id}` | `?page=1&limit=10` | `PaginatedResponse<JobDetailResponseDTO>` | `{id}` = `workerProfileId` |
+| GET | `/job/detail/post/{id}` | `?page=1&limit=10` | `PaginatedResponse<JobDetailResponseDTO>` | `{id}` = `jobPostId` |
+| POST | `/job/detail/approve/{id}` | Body: `ApproveJobDetailRequest` | `JobDetailResponseDTO` | Role: Farmer. `{id}` = jobDetailId |
+| PUT | `/job/detail/{id}` | Body: `UpdateJobDetailRequest` | `JobDetailDTO` | Cập nhật chi tiết |
+| PUT | `/job/detail/update-status/{id}` | `?status=string` | `JobDetailDTO` | Đổi trạng thái |
+
+**`ApproveJobDetailRequest`** (body khi Farmer phê duyệt):
+
+```json
+{
+  "farmerApprovedPercent": 100,
+  "farmerFeedback": "Làm tốt!"
+}
+```
 
 > [!CAUTION]
-> Tuy Controller tên là `JobDetailController` nhưng `ApiEndpointConstants` ghi đè route thành `/job/detail`. Do đó phải dùng đúng `/job/detail` (viết thường). Ngoài ra endpoint report daily yêu cầu gắn thêm biến `{id}` (như `jobApplicationId` hoặc một guid tùy ý vì BE không thật sự bắt `[FromRoute]` biến này ở function, nhưng route template thì có).
+> Route `/job/detail` đến từ `ApiEndpointConstants` (không phải tên Controller mặc định). `{id}` trong `POST /job/detail/report/{id}` là **`jobApplicationId`** truyền qua route, **KHÔNG** phải trong body.
 
 ### 6.4 Khiếu nại
 
@@ -443,11 +505,12 @@ Farmer đăng ──► JobPost (1)
 
 ### 6.7 Nhắn tin (Messages)
 
-| Method | Endpoint | Body | Ghi chú |
-|---|---|---|---|
-| GET | `/messages` | Params: `userId` (GUID), `page`, `limit` | Tải lịch sử chat với 1 user cụ thể |
-| POST | `/messages` | `CreateMessageRequest` (`receiverId`, `content`) | Gửi tin nhắn mới |
-| PATCH | `/messages/read` | `MarkConversationAsReadRequest` (`senderId`) | Đánh dấu toàn bộ tin nhắn từ đối phương (`senderId`) là đã đọc |
+| Method | Endpoint | Body / Params | Response | Ghi chú |
+|---|---|---|---|---|
+| GET | `/messages` | `?userId=guid&page=1&limit=20` | `PaginatedResponse<MessageDTO>` | Lịch sử chat với 1 user cụ thể |
+| GET | `/messages/conversations` | — | `ConversationDTO[]` | Danh sách cuộc hội thoại gần đây (inbox) |
+| POST | `/messages` | `{ receiverId, content }` | `MessageDTO` | Gửi tin nhắn mới |
+| PATCH | `/messages/read` | `{ senderId: "guid" }` | `int` (số tin đã mark) | Đánh dấu toàn bộ tin từ `senderId` là đã đọc |
 
 ### 6.8 Đánh giá (Ratings)
 
@@ -468,13 +531,13 @@ Farmer đăng ──► JobPost (1)
 
 | # | Vấn đề | File BE cần sửa | Mức độ |
 |---|---|---|---|
-| 1 | `evidenceUrl` trong `CreateDailyReportRequest` bị comment out → ảnh minh chứng không lưu được | `CreateDailyReportRequest.cs` | 🔴 P0 |
+| 1 | `evidenceUrl` (`ImageUrls`) trong `CreateDailyReportRequest` bị comment out → ảnh minh chứng không lưu được | `CreateDailyReportRequest.cs` | 🔴 P0 |
 | 2 | `JobDetailResponseDTO` không có `evidenceUrl` trong response | `JobDetailResponseDTO.cs` | 🔴 P0 |
-| 3 | `JobDetailResponseDTO` không nhúng `jobPost` → FE không hiển thị tên/địa chỉ job | `JobDetailService.GetById()` — cần thêm `include: jd => jd.Include(x => x.JobPost)` và thêm field vào DTO | 🟡 P1 |
+| 3 | ~~`JobDetailResponseDTO` không nhúng `Worker`~~ **✅ ĐÃ FIX** — trường `Worker` đã xuất hiện trong `JobDetailResponseDTO`. Trường `jobPost` vẫn chưa được nhúng — chờ BE bổ sung. | `JobDetailService.GetById()` — cần thêm include JobPost | 🟡 P1 |
 | 4 | `POST /job/post/search` không tính toán `distanceKm` ngay cả khi truyền tọa độ | `JobService.Search()` | 🔴 P0 |
 | 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
 | 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |
-| 7 | `UpdateWorkerProfileRequest` thiếu trường `Address` → Worker entity có `[Required] Address` (NOT NULL) nhưng khi tạo mới worker, BE không set `Address` → `DbUpdateException: An error occurred while saving the entity changes` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` dòng 364-380 (thêm `Address = request.Address ?? request.PrimaryLocation`) | 🔴 P0 |
+| 7 | `UpdateWorkerProfileRequest` **vẫn thiếu** trường `Address` → Worker entity có `[Required] Address` (NOT NULL) → `DbUpdateException` khi tạo mới profile. FE workaround bằng cách gửi đồng thời field `address` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` (thêm `Address = request.Address ?? request.PrimaryLocation`) | 🔴 P0 |
 
 ---
 

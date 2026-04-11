@@ -14,7 +14,8 @@ import {
   JobCategoryDTO,
   JobSearchFilterRequest,
   PaginatedJobDiscoveryResponse,
-  JobDiscoveryDTO
+  JobDiscoveryDTO,
+  WorkerApplicationStatsDTO
 } from "../types/export_type_definitions";
 
 export const jobService = {
@@ -143,5 +144,12 @@ export const jobService = {
     await api.put(
       API_ENDPOINTS.JOB.CANCEL_APPLICATION(id),
     );
+  },
+
+  getWorkerStats: async (): Promise<WorkerApplicationStatsDTO> => {
+    const response = await api.get<ApiResponse<WorkerApplicationStatsDTO>>(
+      API_ENDPOINTS.JOB.APPLICATION_STATS,
+    );
+    return response.data.data;
   },
 };
