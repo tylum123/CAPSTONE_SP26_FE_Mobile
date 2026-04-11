@@ -71,6 +71,7 @@ export const API_ENDPOINTS = {
     REPORT_DAILY: (id: string) => `${API_PREFIX}/job/detail/report/${id}`,
     DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
     WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
+    POST: (jobPostId: string) => `${API_PREFIX}/job/detail/post/${jobPostId}`, // GET - list daily reports by jobPostId
   },
   // Disputes
   DISPUTE: {
@@ -108,6 +109,7 @@ export const API_ENDPOINTS = {
     ME: `${API_PREFIX}/wallet/me`,
     TRANSACTIONS: (walletId: string) => `${API_PREFIX}/wallet-transaction/wallet/${walletId}`,
     WITHDRAW: `${API_PREFIX}/withdraw`,
+    WITHDRAW_HISTORY: `${API_PREFIX}/withdraw`, // GET - withdrawal history list (same route, different method)
     ACCOUNT_BALANCE: `${API_PREFIX}/withdraw/account-balance`,
   },
   // Skills

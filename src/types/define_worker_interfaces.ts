@@ -336,11 +336,17 @@ export interface ConversationDTO {
   unreadCount: number;
 }
 
+// Matches backend §4.10 WorkerApplicationStatsDTO — GET /job/application/worker/stats
 export interface WorkerApplicationStatsDTO {
-  averageRating: number;
-  completedJobs: number;
   totalApplications: number;
+  pendingApplications: number;
+  acceptedApplications: number;
+  rejectedApplications: number;
+  cancelledApplications: number;
+  completedJobs: number;
   totalEarnings?: number;
+  // Derived/calculated fields used in UI
+  averageRating?: number;
 }
 
 export interface CreateMessageRequest {

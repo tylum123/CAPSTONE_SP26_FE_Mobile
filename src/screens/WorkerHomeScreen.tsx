@@ -281,7 +281,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                   </View>
                   {/* Right: bell + avatar only */}
                   <View className="flex-row items-center gap-2">
-                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Wallet")}>
+                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("WorkerWallet")}>
                       <Wallet size={18} color="#ffffff" />
                     </TouchableOpacity>
                     <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
