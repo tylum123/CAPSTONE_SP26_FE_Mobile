@@ -35,10 +35,11 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     description: cleanDescription,
     farmer: { 
       id: job.farmerProfileId,
-      name: job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại", 
-      avatar: "https://i.pravatar.cc/150?img=1", 
-      rating: discovery.farmerAverageRating || 0, 
-      totalJobs: discovery.similarJobsCompleted || 0 
+      userId: job.farmer?.userId || (job as any).farmerUserId || job.farmerProfileId,
+      name: job.farmer?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
+      avatar: job.farmer?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
+      rating: job.farmer?.averageRating || (discovery as any).farmerAverageRating || 0, 
+      totalJobs: job.farmer?.totalJobsPosted || job.farmer?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
     },
     location: { 
       address: job.address || "Chưa cập nhật địa chỉ", 

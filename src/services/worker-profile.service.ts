@@ -6,7 +6,7 @@
  */
 import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
-import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest } from "../types/export_type_definitions";
+import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest, WorkerDashboardResponseDTO } from "../types/export_type_definitions";
 import { authTokenService } from "./auth-token.service";
 
 // Use JWT token directly for worker profile APIs
@@ -35,6 +35,13 @@ export const workerProfileService = {
       API_ENDPOINTS.WORKER_PROFILE.UPLOAD_AVATAR,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return response.data.data;
+  },
+  
+  getDashboardData: async (): Promise<WorkerDashboardResponseDTO> => {
+    const response = await api.get<ApiResponse<WorkerDashboardResponseDTO>>(
+      API_ENDPOINTS.WORKER_PROFILE.DASHBOARD,
     );
     return response.data.data;
   },

@@ -58,6 +58,7 @@ export interface JobSkillRequirementSummaryDTO {
 export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
+  farmer?: FarmerProfileDTO;
   contactName: string;
   jobSkillRequirements: JobSkillRequirementSummaryDTO[];
   farmId: string;
@@ -99,6 +100,30 @@ export interface JobDiscoveryDTO extends JobPostDTO {
   similarJobsCompleted: number;
 }
 
+export interface JobAttachmentDTO {
+  id: string;
+  jobDetailId: string;
+  cloudinaryPublicId: string;
+  fileUrl: string;
+  format?: string;
+  fileSize?: number;
+  createdAt: string;
+}
+
+export interface FarmerProfileDTO {
+  id: string;
+  userId: string;
+  contactName: string;
+  address: string;
+  dateOfBirth: string;
+  averageRating: number;
+  totalJobsPosted: number;
+  totalJobsCompleted: number;
+  avatarUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JobDetailDTO {
   id: string;
   jobApplicationId: string;
@@ -115,14 +140,14 @@ export interface JobDetailDTO {
   completedAt?: string;
   createdAt: string;
   updatedAt?: string;
-  evidenceUrl?: string; // Added to support report images
+  attachments?: JobAttachmentDTO[]; // Replaces evidenceUrl
   jobPost?: Partial<JobPostDTO>; 
+  farmer?: FarmerProfileDTO;
 }
 
 export interface CreateDailyReportRequest {
-  // jobApplicationId: string;
   workerDescription: string;
-  // evidenceUrl?: string; // Added to support image uploads
+  imageUrls?: string[]; // Official field from backend
 }
 
 export interface ApproveJobDetailRequest {
@@ -344,9 +369,15 @@ export interface WorkerApplicationStatsDTO {
   rejectedApplications: number;
   cancelledApplications: number;
   completedJobs: number;
-  totalEarnings?: number;
-  // Derived/calculated fields used in UI
+  totalEarnings: number;
   averageRating?: number;
+}
+
+export interface WorkerDashboardResponseDTO {
+  stats: WorkerApplicationStatsDTO;
+  recentApplications: JobApplicationDTO[];
+  recommendedJobs: JobDiscoveryDTO[];
+  totalEarnings: number;
 }
 
 export interface CreateMessageRequest {

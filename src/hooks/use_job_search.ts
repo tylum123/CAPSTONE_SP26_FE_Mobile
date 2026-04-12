@@ -23,6 +23,10 @@ const INITIAL_FILTERS: ExtendedJobFilter = {
   excludeApplied: false,
 };
 
+import { DEMO_JOB_POSTS } from "../constants/demoData";
+import { mapJobPostToUI } from "../utils/mapperUtils";
+
+
 export function useJobSearch() {
   const [filters, setFilters] = useState<ExtendedJobFilter>(INITIAL_FILTERS);
   const [results, setResults] = useState<JobDiscoveryDTO[]>([]);
@@ -67,11 +71,56 @@ export function useJobSearch() {
 
   /**
    * Executes the search request using current or custom filters.
+   * @returns The number of jobs found.
    */
-  const search = useCallback(async (customFilters?: Partial<ExtendedJobFilter>) => {
+  const search = useCallback(async (customFilters?: Partial<ExtendedJobFilter>, isDemo: boolean = false) => {
     setIsLoading(true);
     setError(null);
+    let resultCount = 0;
     try {
+      if (isDemo) {
+
+        // DEMO MODE: Local filtering
+        let filtered = [...DEMO_JOB_POSTS];
+        
+        const keyword = (customFilters?.searchKeyword || filters.searchKeyword)?.toLowerCase();
+        if (keyword) {
+          filtered = filtered.filter(j => 
+            j.title.toLowerCase().includes(keyword) || 
+            j.description.toLowerCase().includes(keyword) ||
+            j.address.toLowerCase().includes(keyword)
+          );
+        }
+
+        const typeId = customFilters?.jobTypeId || filters.jobTypeId;
+        if (typeId) {
+          filtered = filtered.filter(j => j.jobTypeId === Number(typeId));
+        }
+
+        const catId = customFilters?.jobCategoryId || filters.jobCategoryId;
+        if (catId) {
+          filtered = filtered.filter(j => j.jobCategoryId === catId);
+        }
+
+        const urgent = customFilters?.onlyUrgent ?? filters.onlyUrgent;
+        if (urgent !== undefined) {
+          filtered = filtered.filter(j => j.isUrgent === urgent);
+        }
+
+        // Map to JobDiscoveryDTO ensuring no fields are missing for UI
+        const mappedResults = filtered.map(j => ({
+          ...mapJobPostToUI(j),
+          distanceKm: Math.random() * 10,
+          matchScore: 0.8 + Math.random() * 0.2
+        })) as unknown as JobDiscoveryDTO[];
+
+        setResults(mappedResults);
+        setTotalCount(mappedResults.length);
+        setIsLoading(false);
+        return mappedResults.length;
+      }
+
+
       // Merge with existing filters but reset page to 1 for new searches
       const mergedFilters = { 
         ...filters, 
@@ -114,6 +163,7 @@ export function useJobSearch() {
       
       setResults(jobs);
       setTotalCount(total);
+      resultCount = total;
 
       // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
       refreshAppliedStatus();
@@ -122,10 +172,13 @@ export function useJobSearch() {
       const errorMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.";
       setError(errorMsg);
       setResults([]);
+      resultCount = 0;
     } finally {
       setIsLoading(false);
     }
+    return resultCount;
   }, [filters, refreshAppliedStatus]);
+
 
   /**
    * Loads the next page of results and appends them to the current list.
@@ -195,6 +248,26 @@ export function useJobSearch() {
     }
   }, [filters.maxDistanceKm]);
 
+  /**
+   * Executes a specialized search by job type using the new GET endpoint.
+   */
+  const searchByType = useCallback(async (typeId: string | number) => {
+    setResults([]);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await jobService.getJobsByType(Number(typeId));
+      setResults(data);
+      setTotalCount(data.length);
+      setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));
+    } catch (err: any) {
+      console.error("Search by type error:", err);
+      setError("Không thể tải danh sách việc theo loại.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     filters,
     results,
@@ -208,5 +281,6 @@ export function useJobSearch() {
     loadMore,
     appliedJobPostIds,
     refreshAppliedStatus,
+    searchByType,
   };
 }

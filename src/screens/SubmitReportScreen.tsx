@@ -123,16 +123,18 @@ export function SubmitReportScreen({ navigation, route }: any) {
               type: img.type || "image/jpeg"
             })
           );
-          const urls = await Promise.all(uploadPromises);
-          evidenceUrl = urls.join(",");
+          const imageUrls = await Promise.all(uploadPromises);
           setIsUploading(false);
-        }
 
-        await dailyReportService.submitDailyReport(jobApplicationId, {
-          // jobApplicationId,
-          workerDescription: description,
-          // evidenceUrl // Now sending the joined URLs
-        });
+          await dailyReportService.submitDailyReport(jobApplicationId, {
+            workerDescription: description,
+            imageUrls // Passing as array
+          });
+        } else {
+          await dailyReportService.submitDailyReport(jobApplicationId, {
+            workerDescription: description
+          });
+        }
         hapticFeedback.success();
         DeviceEventEmitter.emit("REFRESH_DATA");
         triggerSuccess();

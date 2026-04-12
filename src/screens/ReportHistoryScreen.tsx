@@ -55,9 +55,11 @@ export function ReportHistoryScreen({ navigation }: any) {
         setReports(demoReports);
         return;
       }
-      const data = await dailyReportService.getWorkerReports(user.id);
+      // Using the new global paginated endpoint from 12/04 spec
+      const data = await dailyReportService.getAllReports({ pageNumber: 1, pageSize: 50 });
       setReports(data.length > 0 ? data : demoReports);
-    } catch {
+    } catch (err) {
+      console.error("Load reports error:", err);
       setReports(demoReports);
     } finally {
       setLoading(false);

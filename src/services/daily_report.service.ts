@@ -20,6 +20,20 @@ export const dailyReportService = {
   },
 
   /**
+   * Worker/Farmer: Get all daily reports (paginated)
+   */
+  getAllReports: async (params?: { pageNumber?: number; pageSize?: number }): Promise<JobDetailDTO[]> => {
+    const response = await api.get<ApiResponse<any>>(
+      API_ENDPOINTS.JOB_DETAIL.LIST,
+      { params }
+    );
+    const responseData = response.data?.data;
+    if (Array.isArray(responseData)) return responseData;
+    if (responseData && Array.isArray(responseData.items)) return responseData.items;
+    return [];
+  },
+
+  /**
    * Worker: Get worker's reports
    */
   getWorkerReports: async (workerProfileId: string): Promise<JobDetailDTO[]> => {
@@ -48,5 +62,20 @@ export const dailyReportService = {
       data
     );
     return response.data?.data;
+  },
+
+  /**
+   * Get reports by job post ID (any worker's reports).
+   * Used to extract farmer info (avatarUrl, userId) when current worker has no reports yet.
+   */
+  getReportsByJobPostId: async (jobPostId: string, page: number = 1, limit: number = 1): Promise<JobDetailDTO[]> => {
+    const url = API_ENDPOINTS.JOB_DETAIL.POST(jobPostId);
+    const response = await api.get<ApiResponse<any>>(url, { params: { page, limit } });
+    const responseData = response.data?.data;
+
+    if (Array.isArray(responseData)) return responseData;
+    if (responseData && Array.isArray(responseData.items)) return responseData.items;
+    if (responseData && Array.isArray(responseData.data)) return responseData.data;
+    return [];
   },
 };

@@ -62,8 +62,9 @@ export function WorkerSearchScreen({ navigation }: any) {
       return;
     }
     // Only trigger live search when user actually types
-    search({ ...filters, pageNumber: 1 });
-  }, [debouncedKeyword]);
+    search({ ...filters, pageNumber: 1 }, user?.isDemo);
+  }, [debouncedKeyword, user?.isDemo]);
+
 
   const handleQuickFilter = (type: string) => {
     setActiveQuickFilter(type);
@@ -77,8 +78,9 @@ export function WorkerSearchScreen({ navigation }: any) {
     
     const updatedFilters = { ...filters, onlyUrgent: newUrgentFilter, pageNumber: 1 };
     updateFilter({ onlyUrgent: newUrgentFilter });
-    search(updatedFilters);
+    search(updatedFilters, user?.isDemo);
   };
+
 
   /**
    * Initializes screen by fetching user profile location or setting default coordinates.
@@ -111,10 +113,27 @@ export function WorkerSearchScreen({ navigation }: any) {
       await refreshAppliedStatus();
 
       // ULTIMATE FALLBACK: Search with NO filters except page size to ensure BE returns everything
-      await search({
+      const count = await search({
         pageNumber: 1,
         pageSize: 20,
-      });
+      }, user?.isDemo);
+
+      // REAL-WORLD DEFENSIVE LOGIC: 
+      // If a real user sees 0 results even with ultimate fallback, 
+      // it might be because the BE spatial search is broken (requiring coords that don't match).
+      // Try one more search with NO coordinates if we still have nothing.
+      if (!user?.isDemo && count === 0) {
+        console.log("[SearchFallback] Zero results with coords. Retrying with NO location filters.");
+        await search({
+          pageNumber: 1,
+          pageSize: 20,
+          workerLatitude: undefined,
+          workerLongitude: undefined,
+          maxDistanceKm: undefined
+        });
+      }
+
+
     } catch (err) {
       console.error("Search init error", err);
       // Fallback: search without any filters
@@ -131,8 +150,9 @@ export function WorkerSearchScreen({ navigation }: any) {
   const handleApplyFilters = (newFilters: any) => {
     setIsFilterVisible(false);
     updateFilter(newFilters);
-    search(newFilters);
+    search(newFilters, user?.isDemo);
   };
+
 
   const hasActiveFilters = !!(filters.requiredSkills?.length || filters.minWageAmount || filters.maxWageAmount || filters.onlyUrgent);
 
@@ -149,7 +169,8 @@ export function WorkerSearchScreen({ navigation }: any) {
             onChangeText={(txt) => updateFilter({ searchKeyword: txt })} 
             placeholderTextColor="#cbd5e1" 
             returnKeyType="search"
-            onSubmitEditing={() => search()}
+            onSubmitEditing={() => search(undefined, user?.isDemo)}
+
           />
           {filters.searchKeyword ? (
             <TouchableOpacity onPress={() => updateFilter({ searchKeyword: "" })}><X size={16} color="#94a3b8" /></TouchableOpacity>

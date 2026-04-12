@@ -39,6 +39,7 @@ export const API_ENDPOINTS = {
   WORKER_PROFILE: {
     BASE: `${API_PREFIX}/worker`,
     UPLOAD_AVATAR: `${API_PREFIX}/worker/upload-avatar`,
+    DASHBOARD: `${API_PREFIX}/worker/dashboard`,
   },
   // User
   USER: {
@@ -60,7 +61,9 @@ export const API_ENDPOINTS = {
     BY_SKILL: `${API_PREFIX}/job/post/by-skill`,
     BY_WAGE: `${API_PREFIX}/job/post/by-wage`,
     URGENT: `${API_PREFIX}/job/post/urgent`,
+    BY_TYPE: `${API_PREFIX}/job/post/by-type`,
     APPLICATION: `${API_PREFIX}/job/application`,
+    APPLICATION_AUTO_ACCEPT: `${API_PREFIX}/job/application/auto-accept`,
     APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
     CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
@@ -70,6 +73,7 @@ export const API_ENDPOINTS = {
   JOB_DETAIL: {
     REPORT_DAILY: (id: string) => `${API_PREFIX}/job/detail/report/${id}`,
     DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
+    LIST: `${API_PREFIX}/job/detail`,
     WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
     POST: (jobPostId: string) => `${API_PREFIX}/job/detail/post/${jobPostId}`, // GET - list daily reports by jobPostId
   },
