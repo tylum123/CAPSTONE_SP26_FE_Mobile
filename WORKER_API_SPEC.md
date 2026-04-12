@@ -71,8 +71,17 @@ Farmer đăng ──► JobPost (1)
 | `DisputeType` | 1 | JobQuality | `DisputeReportDTO.disputeTypeId` |
 |               | 2 | Payment |                                     |
 |               | 3 | Other |                                       |
-| `JobType` | 1 | PerJob | `JobPostDTO.jobTypeId` |
-|           | 2 | Daily |                         |
+| `JobType` | 1 | PerJob (⚠️ BE: 3) | `JobPostDTO.jobTypeId` |
+|           | 2 | Daily (⚠️ BE: 1) |                         |
+| `PenaltyTarget` | 0 | None | `DisputeReportDTO.penaltyTargetId` |
+|                 | 1 | Reporter |                                  |
+|                 | 2 | Accused |                                   |
+
+> [!CAUTION]
+> **Sự bất đồng bộ Enum `JobType`**:
+> - Trong Entity `JobPost.cs`: `1: PerJob`, `2: Daily`.
+> - Trong `JobDiscoveryController.cs`: `1: Daily`, `2: PerPlot`, `3: PerJob`.
+> Hiện tại SPEC vẫn giữ theo Entity, nhưng FE cần lưu ý khi gọi các API Search/Filter có thể gặp sai lệch. (Đang chờ BE thống nhất tại [PENDING #8]).
 
 ---
 
@@ -106,7 +115,8 @@ Farmer đăng ──► JobPost (1)
     { "id": "guid", "name": "Bón phân", "description": "..." }
   ],
   "genderId": 1,
-  "gender": "Male"
+  "gender": "Male",
+  "address": "string?"
 }
 ```
 
@@ -229,9 +239,9 @@ Farmer đăng ──► JobPost (1)
 **Response** của các API `/job/detail/...`.
 
 > [!NOTE]
-> ✅ **[PENDING #3 đã fix một phần]** Trường `worker` đã được nhúng vào response. Tuy nhiên `evidenceUrl` và `jobPost` **vẫn chưa có** — chờ BE bổ sung (`[PENDING #1, #2]`).
+> ✅ **[FIXED]** Trường `worker` đã được nhúng và `attachments` đã có trong response. Tuy nhiên `jobPost` **vẫn chưa có** — chờ BE bổ sung (`[PENDING #3]`).
 
-**Response hiện tại từ BE** (`JobDetailResponseDTO.cs` — đã xác nhận từ source):
+**Response hiện tại từ BE** (`JobDetailResponseDTO.cs`):
 
 ```json
 {
@@ -240,6 +250,7 @@ Farmer đăng ──► JobPost (1)
   "jobPostId": "guid",
   "workerId": "guid",
   "worker": { "...WorkerProfileDTO..." },
+  "farmer": { "...FarmerProfileDTO..." },
   "statusId": 2,
   "workDate": "2026-03-03T00:00:00Z",
   "workerDescription": "Hôm nay tôi đã làm được...",
@@ -250,37 +261,25 @@ Farmer đăng ──► JobPost (1)
   "refundAmount": 0,
   "completedAt": "2026-03-03T17:00:00Z",
   "createdAt": "2026-03-03T07:00:00Z",
-  "updatedAt": "2026-03-03T17:00:00Z"
-}
-```
-
-**Response mong muốn sau khi BE bổ sung (`[PENDING #1, #2]`):**
-
-```json
-{
-  "...tất cả trường hiện tại...",
-  "evidenceUrl": "https://cdn.example.com/img1.jpg,https://cdn.example.com/img2.jpg",
-  "jobPost": {
-    "title": "Hái cà phê Đắk Lắk",
-    "contactName": "Nguyễn Văn A",
-    "address": "Buôn Ma Thuột, Đắk Lắk",
-    "startDate": "2026-03-01",
-    "endDate": "2026-03-31"
-  }
+  "updatedAt": "2026-03-03T17:00:00Z",
+  "attachments": [
+    { "id": "guid", "fileUrl": "https://...", "createdAt": "..." }
+  ]
 }
 ```
 
 **`CreateDailyReportRequest`** (Body gửi lên khi báo cáo):
 
-> [!CAUTION]
-> `evidenceUrl` (`ImageUrls`) đang bị comment out ở BE. Trường này FE gửi sẽ bị **bỏ qua hoàn toàn** — ảnh minh chứng không được lưu (`[PENDING #1]`).
+> [!IMPORTANT]
+> ✅ **[FIXED]** `imageUrls` hiện đã được Backend hỗ trợ chính thức.
 
 > [!IMPORTANT]
 > `{id}` trong route `POST /job/detail/report/{id}` là **`jobApplicationId`** (truyền qua route, **KHÔNG phải trong body**). Body chỉ gồm:
 
 ```json
 {
-  "workerDescription": "string"
+  "workerDescription": "string",
+  "imageUrls": ["https://cdn.example.com/img1.jpg"]
 }
 ```
 
@@ -408,6 +407,7 @@ Farmer đăng ──► JobPost (1)
 | POST | `/forget` | `{ email }` | Gửi OTP reset password |
 | POST | `/reset` | `{ email, otp, newPassword }` | Đổi mật khẩu |
 | POST | `/google-login` | `{ googleToken, roleId? }` | Đăng nhập Google |
+| POST | `/logout` | — | Đăng xuất (xóa token trên server) |
 
 ### 5.2 Việc làm & Khám phá
 
@@ -421,9 +421,11 @@ Farmer đăng ──► JobPost (1)
 | GET | `/job/post/by-date` | `dateFilter` | `JobDiscoveryDTO[]` |
 | GET | `/job/post/by-skill` | `skills` (phân cách `,`) | `JobDiscoveryDTO[]` |
 | GET | `/job/post/by-wage` | `minWage`, `maxWage` | `JobDiscoveryDTO[]` |
+| GET | `/job/post/by-type` | `jobTypeId` (1: Daily, 2: PerPlot, 3: PerJob) | `JobDiscoveryDTO[]` |
 | GET | `/job/post/urgent` | Params vị trí | `JobDiscoveryDTO[]` |
 | GET | `/weather/coordinates` | `lat`, `lon` | Thời tiết |
 | GET | `/weather/city` | `city` | Thời tiết |
+| GET | `/weather/me` | — | Thời tiết tại nơi ở của User hiện tại |
 
 ---
 
@@ -435,6 +437,7 @@ Farmer đăng ──► JobPost (1)
 |---|---|---|---|
 | GET | `/worker` | — | `WorkerProfileDTO` |
 | PUT | `/worker` | `UpdateWorkerProfileRequest` | `WorkerProfileDTO` |
+| GET | `/worker/dashboard` | — | `WorkerApplicationStatsDTO` | Thống kê dashboard |
 | POST | `/worker/upload-avatar` | `multipart/form-data (image)` | URL ảnh |
 
 ### 6.2 Ứng tuyển
@@ -445,6 +448,7 @@ Farmer đăng ──► JobPost (1)
 | GET | `/job/application/worker` | — | `JobApplicationDTO[]` | Đơn của Worker hiện tại |
 | GET | `/job/application/worker/stats` | — | `WorkerApplicationStatsDTO` | Thống kê tổng hợp |
 | PUT | `/job/application/cancel/{id}` | — | — | Hủy đơn ứng tuyển |
+| POST | `/job/application/auto-accept` | — | — | Tự động nhận việc khẩn cấp |
 
 > [!NOTE]
 > Dùng `/cancel/{id}` thay vì DELETE đơn thuần để đảm bảo logic nghiệp vụ hủy đúng quy trình.
@@ -453,8 +457,9 @@ Farmer đăng ──► JobPost (1)
 
 | Method | Endpoint | Params / Body | Response | Ghi chú |
 |---|---|---|---|---|
-| POST | `/job/detail/report/{id}` | Body: `{ workerDescription }` | `JobDetailResponseDTO` | `{id}` = `jobApplicationId` (route param) |
+| POST | `/job/detail/report/{id}` | Body: `{ workerDescription, imageUrls }` | `JobDetailResponseDTO` | `{id}` = `jobApplicationId` |
 | GET | `/job/detail/{id}` | — | `JobDetailDTO` | Lấy 1 daily report |
+| GET | `/job/detail` | `?page=1&limit=10` | `PaginatedResponse<JobDetailResponseDTO>` | Lấy tất cả báo cáo |
 | GET | `/job/detail/worker/{id}` | `?page=1&limit=10` | `PaginatedResponse<JobDetailResponseDTO>` | `{id}` = `workerProfileId` |
 | GET | `/job/detail/post/{id}` | `?page=1&limit=10` | `PaginatedResponse<JobDetailResponseDTO>` | `{id}` = `jobPostId` |
 | POST | `/job/detail/approve/{id}` | Body: `ApproveJobDetailRequest` | `JobDetailResponseDTO` | Role: Farmer. `{id}` = jobDetailId |
@@ -501,7 +506,8 @@ Farmer đăng ──► JobPost (1)
 | POST | `/notification/unregister-token` | `{ Token }` | — | Hủy đăng ký token |
 | PATCH | `/notification/read` | `{ notificationId: "guid" }` | — | Đánh dấu đã đọc |
 | PATCH | `/notification/read-all` | — | — | Đánh dấu đọc tất cả |
-| POST | `/logout` | — | — | Đăng xuất (xóa token) |
+| POST | `/notification/send-push` | `{ userId, title, message }` | — | (Admin/Farmer) Gửi push test |
+| POST | `/logout` | — | — | Đăng xuất (xóa token & unregister token) |
 
 ### 6.7 Nhắn tin (Messages)
 
@@ -521,6 +527,7 @@ Farmer đăng ──► JobPost (1)
 | GET | `/ratings/user/given` | — | Lấy tất cả rating do user hiện tại gửi đi |
 | GET | `/ratings/user/{userId}/all` | — | Lấy tất cả rating của một user nhận được |
 | GET | `/ratings/user/{userId}/average` | — | Trả về số điểm đánh giá trung bình |
+| GET | `/ratings/user/{userId}` | — | Lấy rating cụ thể cho 1 user |
 
 ---
 
@@ -531,13 +538,15 @@ Farmer đăng ──► JobPost (1)
 
 | # | Vấn đề | File BE cần sửa | Mức độ |
 |---|---|---|---|
-| 1 | `evidenceUrl` (`ImageUrls`) trong `CreateDailyReportRequest` bị comment out → ảnh minh chứng không lưu được | `CreateDailyReportRequest.cs` | 🔴 P0 |
-| 2 | `JobDetailResponseDTO` không có `evidenceUrl` trong response | `JobDetailResponseDTO.cs` | 🔴 P0 |
-| 3 | ~~`JobDetailResponseDTO` không nhúng `Worker`~~ **✅ ĐÃ FIX** — trường `Worker` đã xuất hiện trong `JobDetailResponseDTO`. Trường `jobPost` vẫn chưa được nhúng — chờ BE bổ sung. | `JobDetailService.GetById()` — cần thêm include JobPost | 🟡 P1 |
+| 1 | ~~`evidenceUrl` (`ImageUrls`) trong `CreateDailyReportRequest` bị comment out~~ | **DONE** | ✅ |
+| 2 | ~~`JobDetailResponseDTO` không có `evidenceUrl` trong response~~ | **DONE (Attachments)** | ✅ |
+| 3 | ~~`JobDetailResponseDTO` không nhúng `Worker`~~ **✅ ĐÃ FIX**. Trường `jobPost` vẫn chưa được nhúng — chờ BE bổ sung. | `JobDetailService.GetById()` — cần thêm include JobPost | 🟡 P1 |
 | 4 | `POST /job/post/search` không tính toán `distanceKm` ngay cả khi truyền tọa độ | `JobService.Search()` | 🔴 P0 |
 | 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
 | 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |
-| 7 | `UpdateWorkerProfileRequest` **vẫn thiếu** trường `Address` → Worker entity có `[Required] Address` (NOT NULL) → `DbUpdateException` khi tạo mới profile. FE workaround bằng cách gửi đồng thời field `address` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` (thêm `Address = request.Address ?? request.PrimaryLocation`) | 🔴 P0 |
+| 7 | `UpdateWorkerProfileRequest` **vẫn thiếu** trường `Address` → Worker entity có `[Required] Address` (NOT NULL) → `DbUpdateException` khi tạo mới profile. FE workaround bằng cách gửi đồng thời field `address` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` | 🔴 P0 |
+| 8 | **[NEW]** Sự bất đồng bộ enum `JobType` giữa Entity (1:PerJob, 2:Daily) và Controller (1:Daily, 2:PerPlot, 3:PerJob) | `JobPost.cs` & `JobDiscoveryController.cs` | 🔴 P0 |
+| 9 | **[NEW]** `JobDetailResponseDTO` có trường `farmer` (FarmerProfileDTO) nhưng spec chưa ghi nhận | **DONE** (Đã cập nhật spec) | ✅ |
 
 ---
 
@@ -551,10 +560,11 @@ Phần này tóm tắt các bước mà ứng dụng Mobile sẽ tương tác v�
    - `POST /verify-email`: Gửi email và OTP để kích hoạt tài khoản.
    - Hoặc có thể gọi trực tiếp `POST /google-login` với `roleId = 3`.
 2. **Đăng nhập**: Gọi `POST /login` lấy JWT Token. Lưu Token và thêm vào Header `Authorization: Bearer <Token>` cho mọi API private tiếp theo.
-3. **Tạo Profile Worker**:
+3. **Kiểm tra Dashboard & Profile**:
+   - Gọi `GET /worker/dashboard` để lấy số liệu thống kê nhanh cho màn hình chính.
    - Mobile có thể kiểm tra trạng thái bằng `GET /worker`, nếu BE trả ra HTTP 404 thì chứng tỏ tài khoản mới đăng ký chưa có profile, chuyển hướng sang UI tạo profile.
    - Gọi `POST /worker/upload-avatar` (dạng form-data) để gửi ảnh chụp lên server lấy đường link avatar.
-   - Gọi `PUT /worker` gửi lên `UpdateWorkerProfileRequest` chứa kỹ năng, năm sinh, giới tính... (Lưu ý: BE đang bị lỗi DB khi thiếu `Address` như mô tả ở [PENDING #7], nên FE có thể thử bypass bằng cách gửi kèm keyword này xem BE có bypass qua model JSON serializer không).
+   - Gọi `PUT /worker` gửi lên `UpdateWorkerProfileRequest` chứa kỹ năng, năm sinh, giới tính... (Lưu ý: BE đang bị lỗi DB khi thiếu `Address` như mô tả ở [PENDING #7]).
 
 ### 8.2 Luồng Tìm kiếm & Khám phá Việc Mới
 1. **Theo dõi việc xung quanh**: `GET /job/post/nearby` cung cấp `latitude`, `longitude`.
@@ -584,7 +594,9 @@ Hỗ trợ giải quyết tranh chấp (vd: Farmer trễ nợ quá hạn):
 ### 8.6 Luồng Thông báo (Notification)
 1. **Đăng ký Device Token**: Ngay sau khi Login thành công trên Mobile, cần fetch token (vd `ExpoPushToken`) và gọi `POST /notification/register-token`.
 2. **Pull data / Tương tác**: Cứ mỗi phiên mở app, gọi `GET /notification` hoặc `GET /notification/unread`. Khi user chọn xem một push notification, gọi `PATCH /notification/read`. Có thể dùng `PATCH /notification/read-all` để clear badge báo đỏ.
-3. **Đăng xuất (Cực kỳ quan trọng)**: Trước khi gọi `POST /logout` để xóa JWT, bắt buộc phải gọi `POST /notification/unregister-token` (truyền lên Device Token) để xoá nó trên hệ thống, nếu không người dùng mới login vào thiết bị cũ sẽ đọc được thông báo của người lúc nãy.
+3. **Đăng xuất (Cực kỳ quan trọng)**: 
+   - Trước tiên gọi `POST /notification/unregister-token` (truyền lên Device Token) để xoá nó trên hệ thống.
+   - Gọi `POST /logout` để vô hiệu hóa JWT trên server. Xóa Token ở local storage. Nếu không người dùng mới login vào thiết bị cũ sẽ đọc được thông báo của người trước đó.
 
 ### 8.7 Luồng Nhắn tin (Messages)
 1. **Mở hộp thoại**: Khi ấn vào nút Chat ở Profile chủ vườn hay lịch sử Job, app gọi API `GET /messages` truyền lên `userId` (ID của Farmer đó đối với Worker) để lấy lịch sử nhắn tin hai người.

@@ -281,16 +281,22 @@ export function WorkerJobsScreen({ navigation, route }: any) {
       <View className="mb-2 bg-white rounded-[20px] flex-row overflow-hidden border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
         <View className="w-1 bg-primary-400" />
         <View className="flex-1 p-4">
-          <View className="flex-row items-center gap-2 mb-2">
-            <View className="w-[42px] h-[42px] rounded-full bg-primary-50 justify-center items-center"><CheckCircle2 size={24} color="#059669" /></View>
-            <View className="flex-1"><Text className="text-[15px] font-bold text-slate-800 mb-0.5">{job.title}</Text><Text className="text-xs text-slate-500">{job.farmer} • {job.completedDate}</Text></View>
-            <Badge variant="success">Xong</Badge>
-          </View>
-          <View className="h-px bg-slate-100 mb-2" />
-          <View className="flex-row flex-wrap gap-2 mb-2">
-            <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
-            <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5 border border-primary-100"><Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.paidAmount.toLocaleString("vi-VN")}đ</Text></View>
-          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}>
+            <View className="flex-row items-center gap-2 mb-2">
+              <View className="w-[42px] h-[42px] rounded-full bg-primary-50 justify-center items-center"><CheckCircle2 size={24} color="#059669" /></View>
+              <View className="flex-1">
+                <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text>
+                <Text className="text-xs text-slate-500">{job.farmer} • {job.completedDate}</Text>
+              </View>
+              <Badge variant="success">Xong</Badge>
+            </View>
+            <View className="h-px bg-slate-100 mb-2" />
+            <View className="flex-row flex-wrap gap-2 mb-2">
+              <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500">{job.location}</Text></View>
+              <View className="flex-row items-center gap-1 bg-primary-50 rounded-full px-2 py-0.5 border border-primary-100"><Banknote size={13} color="#059669" /><Text className="text-xs font-bold text-primary-700">{job.paidAmount.toLocaleString("vi-VN")}đ</Text></View>
+            </View>
+          </TouchableOpacity>
+
           {job.rating && job.review ? (
             <View className="bg-rice-50 border border-rice-200 rounded-xl p-2 gap-1.5">
               <View className="flex-row gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={14} color="#fbbf24" fill={i < job.rating ? "#fbbf24" : "none"} />)}</View>

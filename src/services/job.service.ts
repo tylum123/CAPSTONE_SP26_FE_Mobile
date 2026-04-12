@@ -106,6 +106,14 @@ export const jobService = {
     return Array.isArray(response.data.data) ? response.data.data : [];
   },
 
+  getJobsByType: async (jobTypeId: number): Promise<JobDiscoveryDTO[]> => {
+    const response = await api.get<ApiResponse<JobDiscoveryDTO[]>>(
+      API_ENDPOINTS.JOB.BY_TYPE,
+      { params: { jobTypeId } },
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
   getUrgentJobs: async (params: {
     latitude: number;
     longitude: number;
@@ -151,5 +159,12 @@ export const jobService = {
       API_ENDPOINTS.JOB.APPLICATION_STATS,
     );
     return response.data.data;
+  },
+
+  autoAcceptUrgentApplications: async (data: { jobPostId: string; workerProfileId: string }): Promise<void> => {
+    await api.post(
+      API_ENDPOINTS.JOB.APPLICATION_AUTO_ACCEPT,
+      data,
+    );
   },
 };
