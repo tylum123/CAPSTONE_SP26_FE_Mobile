@@ -5,22 +5,24 @@
  * Dependencies: Job service, Wallet service, Auth context. */
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun } from "lucide-react-native";
+import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun, MessageSquare } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
+import { WeatherWidget } from "../components/home/WeatherWidget";
 import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
 import { Job } from "../types/export_type_definitions";
-import { jobService, workerProfileService, nominatimService, reportService, walletService, weatherService } from "../services/export_services";
+import { jobService, workerProfileService, nominatimService, dailyReportService, walletService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
+import { useLocalWeather } from "../hooks/use_local_weather";
 import { JobMap } from "../components/ui/JobMap";
+import { mapApplicationToUI, mapJobPostToUI } from "../utils/mapperUtils";
+import { WorkerApplicationStatsDTO } from "../types/export_type_definitions";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
-import { mapJobPostToUI } from "../utils/mapperUtils";
 import { WelcomeModal } from "../components/ui/WelcomeModal";
-import { mapApplicationToUI } from "../utils/mapperUtils";
 
 export function WorkerHomeScreen({ navigation }: any) {
   const { user, isAuthenticated } = useAuth();
@@ -31,14 +33,17 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
   const [profileAvatar, setProfileAvatar]       = useState<string | null>(null);
   const [todayEarnings, setTodayEarnings]       = useState<number | null>(null);
-  const [weatherData, setWeatherData]           = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { weatherData, isLoading: isWeatherLoading, locationStatus, refetch: refetchWeather } = useLocalWeather();
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [pendingIndex, setPendingIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated) return; // Không fetch nếu đã logout
     let sourceJobs: any[] = [];
     let sourceApps: any[] = [];
     let sourceProfile: any = null;
@@ -50,21 +55,26 @@ export function WorkerHomeScreen({ navigation }: any) {
       sourceProfile = DEMO_WORKER_PROFILE;
       sourceWallet = { id: "demo-wallet-123", balance: 1250000 };
       setTodayEarnings(450000); // 450k hôm nay
-      setWeatherData({ city: "TP Hồ Chí Minh", temperature: 31, description: "Trời nắng nhẹ", humidity: 65 });
     } else {
       try {
-        const [jobs, apps, profile, wallet, weather] = await Promise.all([
+        const [jobs, apps, profile, wallet, stats] = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
           walletService.getWallet(),
-          weatherService.getWeather().catch(() => null)
+          jobService.getWorkerStats().catch(() => null)
         ]);
         sourceJobs = jobs;
         sourceApps = apps;
         sourceProfile = profile;
         sourceWallet = wallet;
-        setWeatherData(weather);
+
+        if (stats) {
+          setProfileRating(stats.averageRating ?? sourceProfile?.averageRating ?? 0);
+          setTotalJobsCompleted(stats.completedJobs ?? 0);
+          // todayEarnings will still be calculated from transactions for real-time accuracy, 
+          // or we can use totalEarnings if it's meant to be "Today's" in the future.
+        }
 
         if (wallet?.id) {
             const txs = await walletService.getTransactions(wallet.id);
@@ -124,24 +134,35 @@ export function WorkerHomeScreen({ navigation }: any) {
         todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
       } else {
         const fetchReportsPromise = sourceProfile?.id 
-          ? reportService.getWorkerReports(sourceProfile.id)
+          ? dailyReportService.getWorkerReports(sourceProfile.id)
           : Promise.resolve([]);
 
         const [nearby, reports] = await Promise.all([
-          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius }),
+          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius })
+            .catch(e => { 
+                console.error("Nearby jobs error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
+                return []; 
+            }),
           fetchReportsPromise
+            .catch(e => { 
+                console.error("Fetch reports error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
+                return []; 
+            })
         ]);
         finalizedNearby = nearby;
         todayReports = reports;
       }
     } catch (e: any) {
-      console.error("Failed to fetch nearby jobs/reports", e?.response?.data || e.message);
+      if (isAuthenticated) {
+        console.error("Home screen load error:", e.message);
+      }
       finalizedNearby = sourceJobs;
     }
 
     // FALLBACK: If nearby is empty but we have sourceJobs (global), show them
     if (finalizedNearby.length === 0 && sourceJobs.length > 0) {
-      finalizedNearby = sourceJobs;
+      // Only show Published jobs (statusId === 2) when falling back
+      finalizedNearby = sourceJobs.filter((j: any) => j.statusId === 2);
     }
 
     const myProfileId = sourceProfile?.id;
@@ -181,14 +202,14 @@ export function WorkerHomeScreen({ navigation }: any) {
     const myApps = Array.from(myAppsMap.values());
     const iterApps = [...myApps].reverse();
     
-    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
+    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3);
     const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
     
     const activeApps = activeAppsUntrimmed.filter(app => {
       const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
       const jobStatusId = (job as any)?.statusId || 2;
       return jobStatusId !== 5 && jobStatusId !== 6; 
-    }).slice(0, 3);
+    });
 
     const mapApp = (app: any) => {
       const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
@@ -213,6 +234,7 @@ export function WorkerHomeScreen({ navigation }: any) {
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
+    refetchWeather();
   };
 
   const formatCompact = (val: number) => {
@@ -253,44 +275,33 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="absolute w-[200px] h-[200px] rounded-full top-[-70px] right-[-50px]" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
                 <View className="absolute w-[130px] h-[130px] rounded-full bottom-2 left-[-30px]" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
 
-                <View className="flex-row justify-between items-start mb-3">
-                  <View>
+                {/* Header row: greeting (flex-1) | bell + avatar */}
+                <View className="flex-row items-center justify-between mb-3">
+                  {/* Left: Greeting */}
+                  <View className="flex-1 mr-3">
                     <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào 👋</Text>
-                    <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5">{user?.name || "BẠN MỚI"}</Text>
+                    <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5" numberOfLines={1}>{user?.name || "BẠN MỚI"}</Text>
                   </View>
-                  <View className="flex-row items-center gap-2.5">
-                    <TouchableOpacity className="w-[42px] h-[42px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
-                      <Bell size={20} color="#ffffff" />
-                      <View className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full bg-rice-400 border-[1.5px] border-primary-600" />
+                  {/* Right: bell + avatar only */}
+                  <View className="flex-row items-center gap-2">
+                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("WorkerWallet")}>
+                      <Wallet size={18} color="#ffffff" />
                     </TouchableOpacity>
-                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={44} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
+                    <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
+                      <Bell size={18} color="#ffffff" />
+                      <View className="absolute top-[8px] right-[8px] w-[6px] h-[6px] rounded-full bg-rice-400 border border-primary-600" />
+                    </TouchableOpacity>
+                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={38} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
                   </View>
                 </View>
 
-                {/* WEATHER WIDGET (Replaced Wallet) */}
-                <View className="flex-row justify-between items-center bg-white/10 px-4 py-3 rounded-2xl border border-white/20 mb-3">
-                  <View className="flex-row items-center gap-3">
-                    <View className="w-10 h-10 rounded-xl bg-white/20 justify-center items-center shadow-sm">
-                      <CloudSun size={20} color="white" />
-                    </View>
-                    <View>
-                       <Text className="text-white font-bold text-[15px]">{weatherData?.city || "Đang tải vị trí..."}</Text>
-                       <Text className="text-white/80 font-medium text-xs mt-0.5 capitalize">{weatherData?.description || "Cập nhật thời tiết"}</Text>
-                    </View>
-                  </View>
-                  <View className="flex-row items-start gap-1">
-                    <Text className="text-white text-3xl font-black tracking-tighter">
-                      {weatherData?.temperature ? Math.round(weatherData.temperature) : "--"}
-                    </Text>
-                    <Text className="text-white/80 text-xl font-bold mt-0.5">°C</Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-center self-start rounded-full px-3 py-1.5 mb-4 gap-2" style={{ backgroundColor: "rgba(255,255,255,0.13)" }}>
-                  <View className="flex-row items-center gap-1"><Star size={13} color="#fcd34d" fill="#fcd34d" /><Text className="text-white text-xs font-semibold">{profileRating ?? "—"} sao</Text></View>
-                  <View className="w-px h-3" style={{ backgroundColor: "rgba(255,255,255,0.3)" }} />
-                  <View className="flex-row items-center gap-1"><Briefcase size={13} color="#6ee7b7" /><Text className="text-white text-xs font-semibold">{totalJobsCompleted ?? 0} việc</Text></View>
-                </View>
+                {/* WEATHER WIDGET */}
+                <WeatherWidget 
+                    weatherData={weatherData} 
+                    isLoading={isWeatherLoading} 
+                    locationStatus={locationStatus}
+                    onRetry={refetchWeather}
+                />
 
                 <TouchableOpacity className="flex-row items-center gap-2 bg-white rounded-[20px] pl-4 pr-1.5 h-[50px]" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 4 }} onPress={() => navigation.navigate("Search")} activeOpacity={0.9}>
                   <Search size={17} color="#94a3b8" />
@@ -336,58 +347,100 @@ export function WorkerHomeScreen({ navigation }: any) {
             </View>
 
             {pendingApplications.length > 0 && (
-              <View className="px-4 mb-3">
-                <SectionHeader title="Đã ứng tuyển" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "applied" })} />
-                {pendingApplications.map((j) => (
-                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
-                    <Card variant="elevated" className="mb-2">
-                      <CardContent>
-                        <View className="flex-row items-center gap-2">
-                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
-                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+              <View className="mb-4">
+                <View className="px-4 mb-2">
+                  <SectionHeader title="Đã ứng tuyển" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "applied" })} />
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12, alignItems: 'stretch' }}
+                  snapToInterval={332}
+                  decelerationRate="fast"
+                  snapToAlignment="start"
+                  onScroll={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / 332);
+                    setPendingIndex(idx);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {pendingApplications.map((j) => (
+                    <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })} style={{ width: 320 }}>
+                      <Card variant="elevated" className="m-0 mb-1 flex-1">
+                        <CardContent>
+                          <View className="flex-row items-center gap-2">
+                            <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                              <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                              <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{j.title}</Text>
+                              <Text className="text-[12px] text-slate-500 mb-1" numberOfLines={1}>{j.farmer}</Text>
+                            </View>
+                            <Badge variant={j.status === "rejected" ? "danger" : "warning"}>
+                              {j.status === "rejected" ? "Từ chối" : "Chờ duyệt"}
+                            </Badge>
                           </View>
-                          <View className="flex-1">
-                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
-                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
-                          </View>
-                          <Badge variant={j.status === "rejected" ? "danger" : "warning"}>
-                            {j.status === "rejected" ? "Từ chối" : "Chờ duyệt"}
-                          </Badge>
-                        </View>
-                      </CardContent>
-                    </Card>
-                  </TouchableOpacity>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View className="flex-row justify-center mt-3 gap-1.5">
+                  {pendingApplications.map((_, i) => (
+                    <View key={i} className={`h-1.5 rounded-full ${i === pendingIndex ? "w-4 bg-primary-600" : "w-1.5 bg-slate-200"}`} />
+                  ))}
+                </View>
               </View>
             )}
 
             {activeApplications.length > 0 && (
-              <View className="px-4 mb-3">
-                <SectionHeader title="Đang thực hiện" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "upcoming" })} />
-                {activeApplications.map((j) => (
-                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
-                    <Card variant="elevated" className="mb-2">
-                      <CardContent>
-                        <View className="flex-row items-center gap-2">
-                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
-                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.substring(0, 4)}</Text>
+              <View className="mb-4">
+                <View className="px-4 mb-2">
+                  <SectionHeader title="Đang thực hiện" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "upcoming" })} />
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12, alignItems: 'stretch' }}
+                  snapToInterval={332}
+                  decelerationRate="fast"
+                  snapToAlignment="start"
+                  onScroll={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / 332);
+                    setActiveIndex(idx);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {activeApplications.map((j) => (
+                    <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })} style={{ width: 320 }}>
+                      <Card variant="elevated" className="m-0 mb-1 flex-1 justify-center">
+                        <CardContent>
+                          <View className="flex-row items-center gap-2">
+                            <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                              <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                              <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{j.title}</Text>
+                              <Text className="text-[12px] text-slate-500 mb-1" numberOfLines={1}>{j.farmer}</Text>
+                            </View>
+                            {j.reportedToday ? (
+                              <Badge variant="success">Đã báo cáo</Badge>
+                            ) : (
+                              <Badge variant="warning">Cần báo cáo</Badge>
+                            )}
                           </View>
-                          <View className="flex-1">
-                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
-                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
-                          </View>
-                          {j.reportedToday ? (
-                            <Badge variant="success">Đã báo cáo</Badge>
-                          ) : (
-                            <Badge variant="warning">Cần báo cáo</Badge>
-                          )}
-                        </View>
-                      </CardContent>
-                    </Card>
-                  </TouchableOpacity>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View className="flex-row justify-center mt-3 gap-1.5">
+                  {activeApplications.map((_, i) => (
+                    <View key={i} className={`h-1.5 rounded-full ${i === activeIndex ? "w-4 bg-primary-600" : "w-1.5 bg-slate-200"}`} />
+                  ))}
+                </View>
               </View>
             )}
 
@@ -429,8 +482,8 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
                   <View className="flex-row items-center gap-1.5">
                     <MapPin size={14} color="#64748b" />
-                    <Text className="text-xs text-slate-600 font-medium">
-                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : "Gần bạn"}
+                    <Text className="text-xs text-slate-600 font-medium" numberOfLines={1} style={{ flexShrink: 1 }}>
+                      {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.location || "Việt Nam")}
                     </Text>
                   </View>
                   <View className="w-px h-3 bg-slate-200" />

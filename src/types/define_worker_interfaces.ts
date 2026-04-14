@@ -9,8 +9,7 @@ export interface WorkerProfileDTO {
   id: string;
   userId: string;
   fullName: string;
-  dateOfBirth: string;       // CamelCase used in legacy or UI
-  date_of_birth?: string;    // Snake_case returned by BE DTO
+  date_of_birth: string;
   primaryLocation: string;
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number;
@@ -21,19 +20,27 @@ export interface WorkerProfileDTO {
   avatarUrl: string;
   createdAt: string;
   updatedAt: string;
-  email?: string;            // Returned by BE along with profile
-  phoneNumber?: string;      // Returned by BE along with profile
+  email?: string;
+  phoneNumber?: string;
+  skills: SkillResponse[];
+  genderId: number;
+  gender: string;
 }
 
 // Matches backend UpdateWorkerProfileRequest.cs
+// WORKAROUND: BE Worker entity requires `address` (NOT NULL) but DTO doesn't have it yet (PENDING #7).
+// FE sends `address = primaryLocation` until BE adds the field to its DTO.
 export interface UpdateWorkerProfileRequest {
   fullName: string;
-  dateOfBirth: string;       // Replaced ageRange
+  dateOfBirth: string;
   primaryLocation: string;
+  address: string;           // PENDING #7: NOT NULL in DB, use primaryLocation as fallback
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number; // Required, range 1-3
   availabilitySchedule: string;
   avatarUrl: string;         // Required by BE (send empty string "" if no avatar)
+  skillIds: string[];
+  genderId: number;          // Required, range 1-2
 }
 
 export interface JobCategoryDTO {
@@ -51,6 +58,8 @@ export interface JobSkillRequirementSummaryDTO {
 export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
+  farmer?: FarmerProfileDTO;
+  farmerProfile?: FarmerProfileDTO;
   contactName: string;
   jobSkillRequirements: JobSkillRequirementSummaryDTO[];
   farmId: string;
@@ -92,6 +101,30 @@ export interface JobDiscoveryDTO extends JobPostDTO {
   similarJobsCompleted: number;
 }
 
+export interface JobAttachmentDTO {
+  id: string;
+  jobDetailId: string;
+  cloudinaryPublicId: string;
+  fileUrl: string;
+  format?: string;
+  fileSize?: number;
+  createdAt: string;
+}
+
+export interface FarmerProfileDTO {
+  id: string;
+  userId: string;
+  contactName: string;
+  address: string;
+  dateOfBirth: string;
+  averageRating: number;
+  totalJobsPosted: number;
+  totalJobsCompleted: number;
+  avatarUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JobDetailDTO {
   id: string;
   jobApplicationId: string;
@@ -108,14 +141,14 @@ export interface JobDetailDTO {
   completedAt?: string;
   createdAt: string;
   updatedAt?: string;
-  evidenceUrl?: string; // Added to support report images
+  attachments?: JobAttachmentDTO[]; // Replaces evidenceUrl
   jobPost?: Partial<JobPostDTO>; 
+  farmer?: FarmerProfileDTO;
 }
 
 export interface CreateDailyReportRequest {
-  jobApplicationId: string;
   workerDescription: string;
-  evidenceUrl?: string; // Added to support image uploads
+  imageUrls?: string[]; // Official field from backend
 }
 
 export interface ApproveJobDetailRequest {
@@ -128,23 +161,28 @@ export interface DisputeReportDTO {
   farmerId: string | null;
   workerId: string | null;
   jobPostId: string;
-  disputeTypeId: number;
+  disputeTypeId: number;   // 1=JobQuality, 2=Payment, 3=Other
   reason: string;
   description: string | null;
   evidenceUrl: string | null;
-  statusId: number;
+  statusId: number;        // 1=Pending, 2=UnderReview, 3=Resolved, 4=Rejected
   adminNote: string | null;
   resolvedById: string | null;
+  reporterUserId: string | null;
+  accusedUserId: string | null;
+  penaltyTargetId: number; // 0=None, 1=Reporter, 2=Accused
   createdAt: string;
   resolvedAt: string | null;
 }
 
 export interface CreateDisputeReportRequest {
   jobPostId: string;
-  disputeTypeId: number;
-  reason: string;
+  disputeTypeId: number;   // 1=JobQuality, 2=Payment, 3=Other
+  reason: string;          // bắt buộc, tối đa 512 ký tự
   description?: string;
   evidenceUrl?: string;
+  farmerId?: string;       // optional — BE tự resolve từ token nếu không gửi
+  workerId?: string;       // optional — BE tự resolve từ token nếu không gửi
 }
 
 export interface JobApplicationDTO {
@@ -203,6 +241,22 @@ export interface PaginatedJobDiscoveryResponse {
   hasPreviousPage: boolean;
   hasNextPage: boolean;
   message: string;
+}
+
+export interface PaginatedResponse<T> {
+  items?: T[];
+  data?: T[]; // Sometimes APIs return data under 'data'
+  pagination?: {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  };
+  totalCount?: number;
+  pageNumber?: number;
+  pageSize?: number;
+  totalPages?: number;
+  hasNextPage?: boolean;
 }
 
 export interface NotificationDTO {
@@ -284,4 +338,83 @@ export interface WeatherDTO {
   sunrise: string;
   sunset: string;
   fetchedAt: string;
+}
+export interface UserBriefDTO {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+}
+
+export interface MessageDTO {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+  sender?: UserBriefDTO;
+  receiver?: UserBriefDTO;
+}
+
+export interface ConversationDTO {
+  contact: UserBriefDTO;
+  lastMessage: MessageDTO;
+  unreadCount: number;
+}
+
+// Matches backend §4.10 WorkerApplicationStatsDTO — GET /job/application/worker/stats
+export interface WorkerApplicationStatsDTO {
+  totalApplications: number;
+  pendingApplications: number;
+  acceptedApplications: number;
+  rejectedApplications: number;
+  cancelledApplications: number;
+  completedJobs: number;
+  totalEarnings: number;
+  averageRating?: number;
+}
+
+export interface WorkerDashboardResponseDTO {
+  stats: WorkerApplicationStatsDTO;
+  recentApplications: JobApplicationDTO[];
+  recommendedJobs: JobDiscoveryDTO[];
+  totalEarnings: number;
+}
+
+export interface CreateMessageRequest {
+  receiverId: string;
+  content: string;
+}
+
+export interface MarkConversationAsReadRequest {
+  senderId: string;
+}
+
+// ----------------------------------------------------
+// Rating & Review DTOs
+// ----------------------------------------------------
+export interface RatingDTO {
+  id: string;
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
+  ratingScore: number;
+  reviewText: string | null;
+  typeId: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateRatingRequest {
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
+  ratingScore: number;
+  reviewText?: string;
+  typeId?: number; // Backend usually defaults this to 1 (Job rating)
+}
+
+export interface UpdateRatingRequest {
+  ratingScore: number;
+  reviewText?: string;
 }

@@ -22,11 +22,21 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
 
   return (
     <>
-      {applicationInfo.statusId === 2 && (
+      {Number(applicationInfo.statusId) === 2 && (
         <View className="bg-white rounded-[20px] p-4 mb-4 border border-slate-100">
           <Text className="text-base font-bold text-slate-800 mb-1" style={{ letterSpacing: -0.2 }}>Báo cáo chi tiết</Text>
           <Text className="text-[13px] text-slate-400 mb-4">Lịch sử báo cáo và tiến độ được duyệt</Text>
           
+          {applicationInfo.responseMessage && (
+            <View className="mb-4 bg-primary-50 p-4 rounded-2xl border border-primary-100 flex-row gap-3">
+              <MessageCircle size={18} color="#059669" />
+              <View className="flex-1">
+                <Text className="text-[11px] text-primary-600 font-bold uppercase mb-0.5">Lời nhắn từ Farmer</Text>
+                <Text className="text-[13px] text-slate-700 italic">"{applicationInfo.responseMessage}"</Text>
+              </View>
+            </View>
+          )}
+
           <View className="gap-3">
             {jobDetail.reports?.length > 0 ? (
               jobDetail.reports.map((report: any, i: number) => (

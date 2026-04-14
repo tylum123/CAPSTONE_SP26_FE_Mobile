@@ -12,11 +12,17 @@ import { ApiResponse, NotificationDTO } from "../types/export_type_definitions";
 export const notificationService = {
   // Get all notifications
   getNotifications: async (): Promise<NotificationDTO[]> => {
-    const response = await api.get<ApiResponse<NotificationDTO[]>>(
+    const response = await api.get<ApiResponse<any>>(
       API_ENDPOINTS.NOTIFICATIONS.LIST,
     );
+    // Backend returns PaginatedResponse<NotificationDTO>
+    // Structure: { data: { data: NotificationDTO[], pagination: { ... } }, ... }
+    if (response.data.data && Array.isArray(response.data.data.data)) {
+      return response.data.data.data;
+    }
+    // Fallback for non-paginated or unexpected structure
     // @ts-ignore
-    return response.data.data || response.data;
+    return response.data.data || [];
   },
 
   // Get unread notifications
@@ -45,11 +51,23 @@ export const notificationService = {
 
   // Register push notification token
   registerPushToken: async (token: string, deviceName: string = "Mobile Device"): Promise<void> => {
-    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { token, deviceName });
+    // Gửi cả 2 định dạng PascalCase và camelCase để đảm bảo tính tương thích tuyệt đối với Backend
+    await api.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_TOKEN, { 
+      Token: token, 
+      DeviceName: deviceName,
+      token: token,
+      deviceName: deviceName
+    });
   },
 
   // Unregister push notification token
   unregisterPushToken: async (token: string): Promise<void> => {
     await api.post(API_ENDPOINTS.NOTIFICATIONS.UNREGISTER_TOKEN, { token });
+  },
+
+  // Get active device tokens
+  getActiveTokens: async (): Promise<string[]> => {
+    const response = await api.get<ApiResponse<string[]>>(API_ENDPOINTS.NOTIFICATIONS.TOKENS);
+    return response.data.data || [];
   },
 };

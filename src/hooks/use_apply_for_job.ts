@@ -48,13 +48,13 @@ export function useApplyForJob(
         : [];
 
       await jobService.applyJob({
-        jobPostId: String(jobId), // Use jobId from route params
+        jobPostId: String(jobId),
         statusId: 1, // Pending
         coverLetter: "Tôi rất mong muốn được nhận công việc này.",
         appliedAt: new Date().toISOString(),
         respondedAt: new Date().toISOString(),
         responseMessage: null,
-        workDates: workDates, // Include selected days formatted as UTC
+        workDates: workDates,
       });
       setIsApplied(true);
       DeviceEventEmitter.emit("REFRESH_DATA");

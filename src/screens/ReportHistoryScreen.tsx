@@ -11,7 +11,7 @@ import { ChevronLeft, ClipboardCheck, Calendar, Info } from "lucide-react-native
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { JobDetailDTO } from "../types/export_type_definitions";
-import { reportService } from "../services/report.service";
+import { dailyReportService } from "../services/daily_report.service";
 import { useAuth } from "../context/AuthContext";
 
 export function ReportHistoryScreen({ navigation }: any) {
@@ -55,9 +55,11 @@ export function ReportHistoryScreen({ navigation }: any) {
         setReports(demoReports);
         return;
       }
-      const data = await reportService.getWorkerReports(user.id);
+      // Using the new global paginated endpoint from 12/04 spec
+      const data = await dailyReportService.getAllReports({ pageNumber: 1, pageSize: 50 });
       setReports(data.length > 0 ? data : demoReports);
-    } catch {
+    } catch (err) {
+      console.error("Load reports error:", err);
       setReports(demoReports);
     } finally {
       setLoading(false);

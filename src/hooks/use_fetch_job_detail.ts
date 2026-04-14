@@ -6,14 +6,15 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { DeviceEventEmitter } from "react-native";
-import { jobService, workerProfileService, reportService } from "../services/export_services";
+import { jobService, workerProfileService, dailyReportService, messageService } from "../services/export_services";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isApplied, setIsApplied] = useState(false);
-  const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number }>({});
+  const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number; responseMessage?: string | null }>({});
+  const [lastMessage, setLastMessage] = useState<any>(null);
   const [jobDetail, setJobDetail] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,6 +39,9 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         sourceJob = data;
         sourceApps = apps;
         sourceProfile = profile;
+
+        // NOTE: chat partner resolution is deferred until after reports are fetched,
+        // because JobPostDTO does not include farmer.userId — only reports (JobDetailResponseDTO) do.
       } catch (error) {
         console.error("Load job detail error:", error);
         setJobDetail(null);
@@ -55,7 +59,11 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
 
       if (existing && existing.statusId !== 3) {
         setIsApplied(true);
-        setApplicationInfo({ id: existing.id, statusId: existing.statusId });
+        setApplicationInfo({ 
+          id: existing.id, 
+          statusId: existing.statusId, 
+          responseMessage: existing.responseMessage 
+        });
         // Pre-populate selected slots from existing application
         if (existing.workDates && existing.workDates.length > 0) {
           // Normalize to YYYY-MM-DD for consistent internal state
@@ -67,12 +75,20 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         setSelectedTimeSlots([]);
       }
 
-      // Fetch Reports for this job
+      // Fetch Reports for this job (JobDetailResponseDTO includes farmer with avatarUrl, userId)
       let reports: any[] = [];
+      let reportFarmer: any = null;
       try {
         if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
-          const allWorkerReports = await reportService.getWorkerReports(sourceProfile.id);
-          reports = allWorkerReports.filter(r => String(r.jobPostId) === String(jobId));
+          const allWorkerReports = await dailyReportService.getWorkerReports(sourceProfile.id);
+          reports = (allWorkerReports || []).filter(r => 
+            String(r.jobPostId).toLowerCase() === String(jobId).toLowerCase()
+          );
+          // Extract farmer data from the first report that has it
+          const reportWithFarmer = reports.find(r => r.farmer);
+          if (reportWithFarmer?.farmer) {
+            reportFarmer = reportWithFarmer.farmer;
+          }
         } else if (user?.isDemo || !isAuthenticated) {
           // Mock some reports for demo
           reports = [
@@ -82,6 +98,37 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         }
       } catch (err) {
         console.error("Fetch reports error", err);
+      }
+
+      // Fallback: if worker has no reports with farmer data, try fetching ANY report for this job post
+      // GET /job/detail/post/{jobPostId} returns reports from all workers — farmer info is the same
+      if (!reportFarmer && isAuthenticated && !user?.isDemo) {
+        try {
+          const jobPostReports = await dailyReportService.getReportsByJobPostId(String(jobId), 1, 1);
+          const anyReport = (jobPostReports || []).find(r => r.farmer);
+          if (anyReport?.farmer) {
+            reportFarmer = anyReport.farmer;
+          }
+        } catch (err) {
+          // Silently ignore — farmer avatar will just show fallback letter
+        }
+      }
+
+      // Fetch latest message from farmer — only when we have a confirmed userId
+      // reportFarmer.userId is the User table ID (correct for Messages API)
+      // sourceJob.farmerProfileId is the Farmer table ID (WRONG for Messages API — skip)
+      const farmerUserId = reportFarmer?.userId || sourceJob?.farmerProfile?.userId || sourceJob?.farmer?.userId || null;
+      if (farmerUserId && isAuthenticated && !user?.isDemo) {
+        try {
+          const messages = await messageService.getMessages(farmerUserId, 1, 1);
+          // Normalize paginated vs array response
+          const msgList = Array.isArray(messages) ? messages : (messages?.data || messages?.items || []);
+          if (msgList.length > 0) {
+            setLastMessage(msgList[0]);
+          }
+        } catch (mErr) {
+          console.error("Fetch last message error:", mErr);
+        }
       }
 
       const mappedData = mapJobPostToUI(sourceJob);
@@ -107,8 +154,19 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         });
       }
 
+      // Enrich farmer info from report data (has avatarUrl, userId from JobDetailResponseDTO)
+      const enrichedFarmer = reportFarmer ? {
+        ...mappedData.farmer,
+        userId: reportFarmer.userId || mappedData.farmer?.userId,
+        name: reportFarmer.contactName || mappedData.farmer?.name,
+        avatar: reportFarmer.avatarUrl || mappedData.farmer?.avatar,
+        rating: reportFarmer.averageRating ?? mappedData.farmer?.rating,
+        totalJobs: reportFarmer.totalJobsPosted ?? reportFarmer.totalJobsCompleted ?? mappedData.farmer?.totalJobs,
+      } : mappedData.farmer;
+
       const mapped = {
         ...mappedData,
+        farmer: enrichedFarmer,
         reports: reports.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime()),
         timeSlots
       };
@@ -155,6 +213,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
     applicationInfo,
     selectedTimeSlots,
     setSelectedTimeSlots,
+    lastMessage,
     loadJobData,
     onRefresh,
     toggleTimeSlot

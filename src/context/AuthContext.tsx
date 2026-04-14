@@ -31,12 +31,13 @@ export const forceLogout = async () => {
 
 
 interface User {
-  id: string;
+  id: string; // Worker profile ID
+  authUserId: string; // Auth account GUID
   name: string;
   email: string;
   roleID: string;
   isDemo?: boolean; 
-  isNewUser?: boolean; // cờ đánh dấu người dùng chưa có profile
+  isNewUser?: boolean; 
 }
 
 // Hàm format tên hiển thị, không để lộ @gmail.com
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyUserProfile = useCallback(
     (profile: {
       id: string;
+      userId?: string;
       fullName?: string;
       email?: string;
       roleID?: string;
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }) => {
       setUser({
         id: profile.id,
+        authUserId: profile.userId || profile.id, // Fallback to profile.id if userId is missing
         name: resolveName(profile.fullName, profile.email),
         email: profile.email || "",
         roleID: profile.roleID || "worker",
@@ -124,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const fbEmail = response.email || email;
         applyUserProfile({
           id: "me",
+          userId: "me",
           fullName: resolveName(undefined, fbEmail),
           email: fbEmail,
           roleID: "worker",
@@ -169,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // thì đánh dấu là người dùng mới để vào onboarding
         applyUserProfile({
           id: "me",
+          userId: "me",
           fullName: resolveName(undefined, response.email),
           email: response.email,
           roleID: "worker",
@@ -186,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     applyUserProfile({
       id: "demo",
+      userId: "demo",
       fullName: "Tài khoản Demo",
       email: "demo@agrotemp.vn",
       roleID: "worker",
@@ -228,55 +234,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       roleId: number;
     }) => {
-      const response = await authService.register(payload);
-      await AsyncStorage.multiSet([[STORAGE_KEYS.AUTH_TOKEN, response.token]]);
-      authTokenService.setTokenToMemory(response.token);
-
-      try {
-        const profile = await workerProfileService.getProfile();
-        const profileWithEmail = {
-          ...profile,
-          email: response.email || payload.email,
-        };
-        await AsyncStorage.setItem(
-          STORAGE_KEYS.USER_DATA,
-          JSON.stringify(profileWithEmail),
-        );
-        applyUserProfile(profileWithEmail);
-      } catch {
-        const fEmail = response.email || payload.email;
-        applyUserProfile({
-          id: "me",
-          fullName: resolveName(undefined, fEmail),
-          email: fEmail,
-          roleID: String(payload.roleId),
-          isNewUser: true,
-        });
-      }
+      // Backend now sends OTP after registration, no token is returned.
+      await authService.register(payload);
     },
-    [applyUserProfile],
+    [],
   );
 
   const logout = useCallback(async () => {
-    try {
-      if (!user?.isDemo) {
-        await authService.logout();
-      }
-    } catch {
-      // ignore
-    }
+    // 1. Mark globally as logging out to stop axios interceptors from triggering forceLogout
+    authTokenService.setIsLoggingOut(true);
 
     try {
+      const isDemo = user?.isDemo;
+
+      // 2. Clear state immediately for instant UI response (Optimistic Logout)
       setUser(null);
       authTokenService.setTokenToMemory(null);
+
+      // 3. Inform backend in background (don't block UI)
+      if (!isDemo) {
+        authService.logout().catch(() => undefined);
+      }
+
+      // 4. Clear local storage
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.AUTH_TOKEN,
         STORAGE_KEYS.USER_DATA,
         STORAGE_KEYS.REFRESH_TOKEN,
-      ]);
-      await GoogleSignin.signOut();
-    } catch { 
-      // silent
+      ]).catch(() => undefined);
+
+      // 5. Google Sign Out cleanup (catch potential crash)
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // silent
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // 6. Reset flag
+      authTokenService.setIsLoggingOut(false);
     }
   }, [user?.isDemo]);
 
@@ -352,11 +349,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (user && !user.isDemo) {
-      registerForPushNotificationsAsync().then((token) => {
+      registerForPushNotificationsAsync().then(async (token) => {
         if (token) {
           const deviceName = `${Platform.OS === 'ios' ? 'iOS' : 'Android'} Device`;
-          notificationService.registerPushToken(token, deviceName)
-            .catch(err => console.log("Failed to register push token with backend", err));
+          try {
+            await notificationService.registerPushToken(token, deviceName);
+            console.log("--- SUCCESS: Push token registered with backend ---");
+          } catch (err) {
+            console.error("--- ERROR: Failed to register push token with backend ---", err);
+          }
         }
       });
     }

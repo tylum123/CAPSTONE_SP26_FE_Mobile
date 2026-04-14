@@ -31,7 +31,7 @@ export function JobDetailScreen({ navigation, route }: any) {
   const {
     jobDetail, isLoading, refreshing, isApplied, setIsApplied,
     applicationInfo, selectedTimeSlots, setSelectedTimeSlots,
-    loadJobData, onRefresh, toggleTimeSlot
+    lastMessage, loadJobData, onRefresh, toggleTimeSlot
   } = useFetchJobDetail(jobId, isAuthenticated, user);
 
   const {
@@ -86,9 +86,47 @@ export function JobDetailScreen({ navigation, route }: any) {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
           >
             <RenderJobHeader jobDetail={jobDetail} />
-            <RenderFarmerInfoCard jobDetail={jobDetail} isAuthenticated={isAuthenticated} user={user} onChatPress={() => navigation.navigate("Chat", { farmerId: jobDetail.farmer?.name })} />
+            <RenderFarmerInfoCard 
+              jobDetail={jobDetail} 
+              isAuthenticated={isAuthenticated} 
+              user={user} 
+              lastMessage={lastMessage} 
+              onChatPress={() => {
+                // farmer.userId comes from JobDetailResponseDTO (enriched from reports)
+                // This is the User table ID needed by the Messages API
+                const partnerId = jobDetail.farmer?.userId;
+                if (!partnerId) {
+                  console.warn("No farmer userId available — worker may not have reports yet for this job.");
+                  return;
+                }
+                
+                let chatName = jobDetail.farmer.name;
+                let chatAvatar = jobDetail.farmer.avatar;
+                
+                // Enrich from last message data if available
+                if (lastMessage) {
+                  const fId = partnerId.toLowerCase();
+                  const partner = lastMessage.senderId?.toLowerCase() === fId 
+                    ? lastMessage.sender 
+                    : lastMessage.receiverId?.toLowerCase() === fId 
+                      ? lastMessage.receiver 
+                      : null;
+                  if (partner) {
+                    if (partner.name) chatName = partner.name;
+                    if (partner.avatarUrl) chatAvatar = partner.avatarUrl;
+                  }
+                }
+
+                navigation.navigate("Chat", { 
+                  farmerId: partnerId, 
+                  farmerName: chatName, 
+                  farmerAvatar: chatAvatar 
+                });
+              }} 
+            />
             <RenderJobInfoSections jobDetail={jobDetail} infoRows={infoRows} />
             <RenderTimeSlotsAndReports jobDetail={jobDetail} applicationInfo={applicationInfo} selectedTimeSlots={selectedTimeSlots} isApplied={isApplied} toggleTimeSlot={toggleTimeSlot} />
+
             <View style={{ height: 120 }} />
           </ScrollView>
 

@@ -33,11 +33,13 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `${API_PREFIX}/forget`,
     RESET_PASSWORD: `${API_PREFIX}/reset`,
     VERIFY_EMAIL: `${API_PREFIX}/verify-email`,
+    RESEND_VERIFICATION: `${API_PREFIX}/resend-verification`,
   },
   // Worker profile
   WORKER_PROFILE: {
     BASE: `${API_PREFIX}/worker`,
     UPLOAD_AVATAR: `${API_PREFIX}/worker/upload-avatar`,
+    DASHBOARD: `${API_PREFIX}/worker/dashboard`,
   },
   // User
   USER: {
@@ -55,16 +57,25 @@ export const API_ENDPOINTS = {
     NEARBY: `${API_PREFIX}/job/post/nearby`,
     SEARCH: `${API_PREFIX}/job/post/search`,
     FILTER: `${API_PREFIX}/job/post/filter`,
+    BY_DATE: `${API_PREFIX}/job/post/by-date`,
+    BY_SKILL: `${API_PREFIX}/job/post/by-skill`,
+    BY_WAGE: `${API_PREFIX}/job/post/by-wage`,
+    URGENT: `${API_PREFIX}/job/post/urgent`,
+    BY_TYPE: `${API_PREFIX}/job/post/by-type`,
     APPLICATION: `${API_PREFIX}/job/application`,
+    APPLICATION_AUTO_ACCEPT: `${API_PREFIX}/job/application/auto-accept`,
+    APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
+    CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
+    APPLICATION_STATS: `${API_PREFIX}/job/application/worker/stats`,
   },
-  // Job Detail (Replaces Attendance/Daily Report)
+  // Job Detail (Daily Report replacement for Attendance)
   JOB_DETAIL: {
-    REPORT_DAILY: `${API_PREFIX}/JobDetail/report-daily`,
-    APPROVE: (id: string) => `${API_PREFIX}/JobDetail/${id}/approve`,
-    DETAIL: (id: string) => `${API_PREFIX}/JobDetail/${id}`,
-    WORKER: (workerProfileId: string) => `${API_PREFIX}/JobDetail/worker/${workerProfileId}`,
-    FARM: (jobPostId: string) => `${API_PREFIX}/JobDetail/job-post/${jobPostId}`,
+    REPORT_DAILY: (id: string) => `${API_PREFIX}/job/detail/report/${id}`,
+    DETAIL: (id: string) => `${API_PREFIX}/job/detail/${id}`,
+    LIST: `${API_PREFIX}/job/detail`,
+    WORKER: (workerProfileId: string) => `${API_PREFIX}/job/detail/worker/${workerProfileId}`,
+    POST: (jobPostId: string) => `${API_PREFIX}/job/detail/post/${jobPostId}`, // GET - list daily reports by jobPostId
   },
   // Disputes
   DISPUTE: {
@@ -84,6 +95,7 @@ export const API_ENDPOINTS = {
     USER_SPECIFIC: (userId: string) => `${API_PREFIX}/ratings/user/${userId}`,
     USER_ALL: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/all`,
     USER_AVERAGE: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/average`,
+    USER_GIVEN: `${API_PREFIX}/ratings/user/given`,
   },
   // Notifications
   NOTIFICATIONS: {
@@ -92,6 +104,7 @@ export const API_ENDPOINTS = {
     READ: `${API_PREFIX}/notification/read`, // Note: use PATCH { notificationId: string }
     READ_ALL: `${API_PREFIX}/notification/read-all`,
     DELETE: (id: string) => `${API_PREFIX}/notification/${id}`,
+    TOKENS: `${API_PREFIX}/notification/tokens`,
     REGISTER_TOKEN: `${API_PREFIX}/notification/register-token`,
     UNREGISTER_TOKEN: `${API_PREFIX}/notification/unregister-token`,
   },
@@ -100,6 +113,7 @@ export const API_ENDPOINTS = {
     ME: `${API_PREFIX}/wallet/me`,
     TRANSACTIONS: (walletId: string) => `${API_PREFIX}/wallet-transaction/wallet/${walletId}`,
     WITHDRAW: `${API_PREFIX}/withdraw`,
+    WITHDRAW_HISTORY: `${API_PREFIX}/withdraw`, // GET - withdrawal history list (same route, different method)
     ACCOUNT_BALANCE: `${API_PREFIX}/withdraw/account-balance`,
   },
   // Skills
@@ -109,14 +123,14 @@ export const API_ENDPOINTS = {
   // Weather
   WEATHER: {
     ME: `${API_PREFIX}/weather/me`,
+    COORDINATES: `${API_PREFIX}/weather/coordinates`,
+    CITY: `${API_PREFIX}/weather/city`,
   },
-  // Chat
-  CHAT: {
-    CONVERSATIONS: `${API_PREFIX}/chat/conversations`,
-    MESSAGES: (conversationId: string) =>
-      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
-    SEND_MESSAGE: (conversationId: string) =>
-      `${API_PREFIX}/chat/conversations/${conversationId}/messages`,
+  // Messages
+  MESSAGES: {
+    BASE: `${API_PREFIX}/messages`,
+    MARK_AS_READ: `${API_PREFIX}/messages/read`,
+    CONVERSATIONS: `${API_PREFIX}/messages/conversations`,
   },
 } as const;
 
