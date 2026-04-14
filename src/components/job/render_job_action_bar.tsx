@@ -8,7 +8,7 @@ import React from "react";
 import { View, Text } from "react-native";
 import { CheckCircle } from "lucide-react-native";
 import { Button } from "../ui/Button";
-import { isPastDate } from "../../utils/provide_formatting_helpers";
+import { isPastEndDateWithGrace } from "../../utils/provide_formatting_helpers";
 
 type Props = {
   jobDetail: any;
@@ -23,6 +23,10 @@ type Props = {
 
 export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, applicationInfo, insets, isSubmitting, onReportPress, onApplyPress }: Props) {
   if (!jobDetail) return null;
+
+  const isExpired = isPastEndDateWithGrace(jobDetail.endDate || jobDetail.startDate);
+  // Status checked: 1=Draft, 2=Published, 3=Closed, 4=InProgress, 5=Completed, 6=Cancelled
+  const isActive = jobDetail.statusId === 2 || jobDetail.statusId === 4;
 
   return (
     <View className="flex-row items-center gap-4 px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 8, shadowColor: "#0f172a", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8 }}>
@@ -43,11 +47,11 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
           onPress={onReportPress}
           size="lg"
           variant="default"
-          disabled={isPastDate(jobDetail.endDate || jobDetail.startDate)}
+          disabled={isExpired || !isActive}
         >
           <View className="flex-row items-center gap-2">
             <CheckCircle size={18} color="white" />
-            <Text className="text-white font-bold">Nộp Báo Cáo</Text>
+            <Text className="text-white font-bold">{isExpired ? "Hết hạn báo cáo" : "Nộp Báo Cáo"}</Text>
           </View>
         </Button>
       ) : applicationInfo.statusId === 2 ? (

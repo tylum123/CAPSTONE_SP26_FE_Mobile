@@ -27,6 +27,7 @@ import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config/export_configurations";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
+import { getErrorMessage } from "../utils/error_handling";
 
 if (CONFIG.GOOGLE_WEB_CLIENT_ID) {
   GoogleSignin.configure({
@@ -65,11 +66,8 @@ export function LoginScreen({ navigation }: any) {
     setLoading(true);
     try { await login(identifier, password); }
     catch (error: any) { 
-      if (error?.message === "UNAUTHORIZED_ROLE") {
-        showFeedback({ title: "Không có quyền", message: "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng dành cho Người lao động (Worker).", variant: "error" });
-      } else {
-        showFeedback({ title: "Đăng nhập thất bại", message: "Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.", variant: "error" }); 
-      }
+      const errorMessage = getErrorMessage(error, "Số điện thoại/Email hoặc mật khẩu không đúng.");
+      showFeedback({ title: "Đăng nhập thất bại", message: errorMessage, variant: "error" }); 
     }
     finally { setLoading(false); }
   };

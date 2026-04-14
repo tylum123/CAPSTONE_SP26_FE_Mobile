@@ -69,13 +69,24 @@ const processQueue = (error: any, token: string | null = null) => {
 
 api.interceptors.response.use(
   (response) => {
+    // Handle logical failures disguised as HTTP 200
+    const bodyStatus = response.data?.status_code;
+    if (bodyStatus && bodyStatus >= 400) {
+      return Promise.reject({
+        response: response,
+        message: response.data?.message || "Logical failure detected in API body",
+      });
+    }
     return response;
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as any;
+    const responseData = error.response?.data as any;
+    const bodyStatus = responseData?.status_code;
+    const httpStatus = error.response?.status;
 
     // Handle 401 Unauthorized
-    if (error.response?.status === HTTP_STATUS.UNAUTHORIZED) {
+    if (httpStatus === HTTP_STATUS.UNAUTHORIZED || bodyStatus === 401) {
       const requestUrl = originalRequest.url || "";
       const isLogoutUrl = requestUrl.toLowerCase().includes("logout");
       const isAuthRequest =
@@ -84,11 +95,13 @@ api.interceptors.response.use(
         requestUrl.includes(API_ENDPOINTS.AUTH.GOOGLE_LOGIN) ||
         isLogoutUrl;
 
-      const errorMessage = (error.response?.data as any)?.message || "";
+      const errorMessage = responseData?.message || "";
       const isProfileNotFound = errorMessage.toLowerCase().includes("profile not found");
+      const hasAuthHeader = !!originalRequest.headers.Authorization;
+      const isLoggingOutManual = authTokenService.getIsLoggingOut();
 
-      if (!isAuthRequest && !isProfileNotFound && !isLoggingOut) {
-        console.log("Axios: 401 Unauthorized detected. URL:", requestUrl, "Message:", errorMessage);
+      if (!isAuthRequest && !isProfileNotFound && !isLoggingOut && !isLoggingOutManual && hasAuthHeader) {
+        console.log("Axios: 401 Unauthorized detected. BodyStatus:", bodyStatus, "URL:", requestUrl);
         
         const isOnboardingRequest = requestUrl.includes("/worker") || requestUrl.includes("/user/profile");
         
@@ -104,9 +117,8 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle network errors (Backend Down -> "Sập")
-    if (error.message === "Network Error" || error.code === "ECONNABORTED" || error.response?.status === 502 || error.response?.status === 503) {
-      // Don't force logout on simple network errors, just let the screen handle the failure state
+    // Handle network errors (Backend Down)
+    if (error.message === "Network Error" || error.code === "ECONNABORTED" || httpStatus === 502 || httpStatus === 503) {
       console.log("Network error or server hiccup detected.");
     }
 

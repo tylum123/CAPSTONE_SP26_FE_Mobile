@@ -10,7 +10,7 @@ export const DEMO_WORKER_PROFILE: WorkerProfileDTO = {
   id: "demo-worker-123",
   userId: "demo-user-123",
   fullName: "Nguyễn Văn Demo",
-  dateOfBirth: "1998-01-01T00:00:00Z",
+  date_of_birth: "1998-01-01T00:00:00Z",
   primaryLocation: "Thốt Nốt, Cần Thơ",
   travelRadiusKmPreference: 15,
   experienceLevelId: 2,
@@ -23,6 +23,9 @@ export const DEMO_WORKER_PROFILE: WorkerProfileDTO = {
   email: "demo@agrotemp.vn",
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-03-01T00:00:00Z",
+  genderId: 1,
+  gender: "Nam",
+  skills: [],
 };
 
 export const DEMO_CATEGORIES: JobCategoryDTO[] = [

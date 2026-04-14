@@ -49,4 +49,13 @@ export const walletService = {
     );
     return response.data.data;
   },
+
+  // Get withdrawal request history list
+  // Spec §6.5: GET /withdraw
+  getWithdrawalHistory: async (): Promise<WithdrawalResponse[]> => {
+    const response = await api.get<ApiResponse<WithdrawalResponse[]>>(
+      API_ENDPOINTS.WALLET.WITHDRAW_HISTORY
+    );
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
 };
