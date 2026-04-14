@@ -24,7 +24,15 @@ export function RenderJobMapCallout({ selectedJob, onCalloutPress }: RenderJobMa
                     <Text style={styles.calloutTitle} numberOfLines={1}>{selectedJob.title}</Text>
                     {selectedJob.urgent && <View style={styles.urgentBadge}><Text style={styles.urgentText}>GẤP</Text></View>}
                 </View>
-                <Text style={styles.calloutFarmer}>{selectedJob.farmer}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Text style={[styles.calloutFarmer, { marginBottom: 0 }]} numberOfLines={1}>
+                        {selectedJob.farmer || selectedJob.contactName || "Chủ nông trại"}
+                    </Text>
+                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#cbd5e1', marginHorizontal: 6 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366f1' }} numberOfLines={1}>
+                        {selectedJob.distanceKm ? `${selectedJob.distanceKm.toFixed(1)} km` : (selectedJob.locationName || selectedJob.address || "Việt Nam")}
+                    </Text>
+                </View>
                 <Text style={styles.calloutWage}>{(selectedJob.wageAmount || 0).toLocaleString()}đ</Text>
                 <View style={styles.calloutActions}>
                     <TouchableOpacity 

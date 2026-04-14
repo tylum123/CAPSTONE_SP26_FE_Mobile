@@ -15,4 +15,32 @@ export const weatherService = {
     );
     return response.data.data;
   },
+
+  getWeatherByCoords: async (
+    lat: number,
+    lon: number
+  ): Promise<WeatherDTO> => {
+    const response = await api.get<ApiResponse<WeatherDTO>>(
+      API_ENDPOINTS.WEATHER.COORDINATES,
+      {
+        params: {
+          lat, // Note: BE uses 'lat' and 'lon' as query params for this endpoint
+          lon,
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  getWeatherByCity: async (city: string): Promise<WeatherDTO> => {
+    const response = await api.get<ApiResponse<WeatherDTO>>(
+      API_ENDPOINTS.WEATHER.CITY,
+      {
+        params: {
+          city,
+        },
+      }
+    );
+    return response.data.data;
+  },
 };

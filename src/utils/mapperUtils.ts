@@ -30,14 +30,18 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
   const timeRange = (job.startTime && job.endTime) ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` : "";
   const duration = job.estimatedHours ? `${job.estimatedHours} giờ` : (timeRange || "Thỏa thuận");
 
+  const fProfile = job.farmerProfile || job.farmer;
+
   return {
     ...job,
     description: cleanDescription,
     farmer: { 
-      name: job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại", 
-      avatar: "https://i.pravatar.cc/150?img=1", 
-      rating: discovery.farmerAverageRating || 0, 
-      totalJobs: discovery.similarJobsCompleted || 0 
+      id: job.farmerProfileId,
+      userId: fProfile?.userId || (job as any).farmerUserId || null,
+      name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
+      avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
+      rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
+      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
     },
     location: { 
       address: job.address || "Chưa cập nhật địa chỉ", 
@@ -77,6 +81,8 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     ...app,
     title: job?.title || "Công việc",
     farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
+    farmerId: job?.farmerProfileId,
+    farmerAvatar: "https://i.pravatar.cc/150?img=1",
     date: formattedDate,
     time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
     status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"

@@ -5,7 +5,7 @@
  * Rule: DO NOT modify existing code logic.
  */
 import React, { useEffect } from 'react';
-import { StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
+import { View, ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,21 +40,14 @@ export const Shimmer = ({ style, className }: ShimmerProps) => {
   });
 
   return (
-    <View style={[styles.container, style]} className={className}>
+    <View style={style} className={`overflow-hidden bg-slate-200 rounded-lg ${className}`}>
       <AnimatedLinearGradient
         colors={['transparent', 'rgba(255,255,255,0.4)', 'transparent']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={[StyleSheet.absoluteFill, animatedStyle]}
+        style={animatedStyle}
+        className="absolute inset-0"
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-    backgroundColor: '#e2e8f0',
-    borderRadius: 8,
-  },
-});
