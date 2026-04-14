@@ -109,8 +109,8 @@ export function ReportDetailScreen({ navigation, route }: any) {
   const isApproved = data?.statusId === 2;
   const isPending = data?.statusId === 1;
   const approvedPercent = data?.farmerApprovedPercent ?? 0;
-  const evidenceUrls = data?.evidenceUrl
-    ? data.evidenceUrl.split(",").map((u) => u.trim()).filter(Boolean)
+  const evidenceUrls = data?.attachments
+    ? data.attachments.map((a) => a.fileUrl).filter(Boolean)
     : [];
 
   // ─── Loading skeleton ────────────────────────────────────────────────────────

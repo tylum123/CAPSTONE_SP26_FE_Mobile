@@ -2,7 +2,7 @@
 
 Tài liệu mô tả **chính xác** các API và DTO liên quan tới luồng **Worker**, đối soát trực tiếp từ source code Backend (`AgroTemp.API/Controllers`, `AgroTemp.Domain/DTO`, `AgroTemp.Domain/Entities`).
 
-**Cập nhật lần cuối:** 2026-04-11 (đối soát thực tế BE)
+**Cập nhật lần cuối:** 2026-04-14 (đối soát thực tế BE)
 
 ---
 
@@ -150,6 +150,7 @@ Farmer đăng ──► JobPost (1)
 {
   "id": "guid",
   "farmerProfileId": "guid",
+  "farmerProfile": { "...FarmerProfileSummaryDTO..." },
   "contactName": "string",
   "farmId": "guid",
   "jobCategoryId": "guid",
@@ -543,7 +544,7 @@ Farmer đăng ──► JobPost (1)
 | 3 | ~~`JobDetailResponseDTO` không nhúng `Worker`~~ **✅ ĐÃ FIX**. Trường `jobPost` vẫn chưa được nhúng — chờ BE bổ sung. | `JobDetailService.GetById()` — cần thêm include JobPost | 🟡 P1 |
 | 4 | `POST /job/post/search` không tính toán `distanceKm` ngay cả khi truyền tọa độ | `JobService.Search()` | 🔴 P0 |
 | 5 | Chưa thống nhất tên trường tọa độ (Search dùng `workerLatitude`, Nearby dùng `latitude`) | `JobSearchFilterRequest.cs` | 🟡 P1 |
-| 6 | Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có | `JobDiscoveryDTO.cs` | 🔵 P2 |
+| 6 | ~~Thêm trường `locationName` hoặc `address` vào `JobDiscoveryDTO` nếu chưa có~~ | **DONE** (Đã kiểm tra BE có sẵn `LocationName` và `Address`) | ✅ |
 | 7 | `UpdateWorkerProfileRequest` **vẫn thiếu** trường `Address` → Worker entity có `[Required] Address` (NOT NULL) → `DbUpdateException` khi tạo mới profile. FE workaround bằng cách gửi đồng thời field `address` | `UpdateWorkerProfileRequest.cs` + `UserService.cs` | 🔴 P0 |
 | 8 | **[NEW]** Sự bất đồng bộ enum `JobType` giữa Entity (1:PerJob, 2:Daily) và Controller (1:Daily, 2:PerPlot, 3:PerJob) | `JobPost.cs` & `JobDiscoveryController.cs` | 🔴 P0 |
 | 9 | **[NEW]** `JobDetailResponseDTO` có trường `farmer` (FarmerProfileDTO) nhưng spec chưa ghi nhận | **DONE** (Đã cập nhật spec) | ✅ |

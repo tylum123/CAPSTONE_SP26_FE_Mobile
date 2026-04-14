@@ -117,7 +117,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       // Fetch latest message from farmer — only when we have a confirmed userId
       // reportFarmer.userId is the User table ID (correct for Messages API)
       // sourceJob.farmerProfileId is the Farmer table ID (WRONG for Messages API — skip)
-      const farmerUserId = reportFarmer?.userId || sourceJob?.farmer?.userId || null;
+      const farmerUserId = reportFarmer?.userId || sourceJob?.farmerProfile?.userId || sourceJob?.farmer?.userId || null;
       if (farmerUserId && isAuthenticated && !user?.isDemo) {
         try {
           const messages = await messageService.getMessages(farmerUserId, 1, 1);

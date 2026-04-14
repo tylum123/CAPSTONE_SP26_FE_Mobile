@@ -59,6 +59,7 @@ export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
   farmer?: FarmerProfileDTO;
+  farmerProfile?: FarmerProfileDTO;
   contactName: string;
   jobSkillRequirements: JobSkillRequirementSummaryDTO[];
   farmId: string;

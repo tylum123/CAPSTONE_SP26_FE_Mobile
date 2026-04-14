@@ -5,7 +5,7 @@
  * Dependencies: Job service, Wallet service, Auth context. */
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun, MessageSquare } from "lucide-react-native";
@@ -38,6 +38,8 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(10);
+  const [pendingIndex, setPendingIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
 
   const loadData = useCallback(async () => {
@@ -159,7 +161,8 @@ export function WorkerHomeScreen({ navigation }: any) {
 
     // FALLBACK: If nearby is empty but we have sourceJobs (global), show them
     if (finalizedNearby.length === 0 && sourceJobs.length > 0) {
-      finalizedNearby = sourceJobs;
+      // Only show Published jobs (statusId === 2) when falling back
+      finalizedNearby = sourceJobs.filter((j: any) => j.statusId === 2);
     }
 
     const myProfileId = sourceProfile?.id;
@@ -199,14 +202,14 @@ export function WorkerHomeScreen({ navigation }: any) {
     const myApps = Array.from(myAppsMap.values());
     const iterApps = [...myApps].reverse();
     
-    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3);
+    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3);
     const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
     
     const activeApps = activeAppsUntrimmed.filter(app => {
       const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
       const jobStatusId = (job as any)?.statusId || 2;
       return jobStatusId !== 5 && jobStatusId !== 6; 
-    }).slice(0, 3);
+    });
 
     const mapApp = (app: any) => {
       const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
@@ -344,58 +347,100 @@ export function WorkerHomeScreen({ navigation }: any) {
             </View>
 
             {pendingApplications.length > 0 && (
-              <View className="px-4 mb-3">
-                <SectionHeader title="Đã ứng tuyển" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "applied" })} />
-                {pendingApplications.map((j) => (
-                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
-                    <Card variant="elevated" className="mb-2">
-                      <CardContent>
-                        <View className="flex-row items-center gap-2">
-                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
-                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+              <View className="mb-4">
+                <View className="px-4 mb-2">
+                  <SectionHeader title="Đã ứng tuyển" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "applied" })} />
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12, alignItems: 'stretch' }}
+                  snapToInterval={332}
+                  decelerationRate="fast"
+                  snapToAlignment="start"
+                  onScroll={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / 332);
+                    setPendingIndex(idx);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {pendingApplications.map((j) => (
+                    <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })} style={{ width: 320 }}>
+                      <Card variant="elevated" className="m-0 mb-1 flex-1">
+                        <CardContent>
+                          <View className="flex-row items-center gap-2">
+                            <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                              <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                              <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{j.title}</Text>
+                              <Text className="text-[12px] text-slate-500 mb-1" numberOfLines={1}>{j.farmer}</Text>
+                            </View>
+                            <Badge variant={j.status === "rejected" ? "danger" : "warning"}>
+                              {j.status === "rejected" ? "Từ chối" : "Chờ duyệt"}
+                            </Badge>
                           </View>
-                          <View className="flex-1">
-                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
-                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
-                          </View>
-                          <Badge variant={j.status === "rejected" ? "danger" : "warning"}>
-                            {j.status === "rejected" ? "Từ chối" : "Chờ duyệt"}
-                          </Badge>
-                        </View>
-                      </CardContent>
-                    </Card>
-                  </TouchableOpacity>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View className="flex-row justify-center mt-3 gap-1.5">
+                  {pendingApplications.map((_, i) => (
+                    <View key={i} className={`h-1.5 rounded-full ${i === pendingIndex ? "w-4 bg-primary-600" : "w-1.5 bg-slate-200"}`} />
+                  ))}
+                </View>
               </View>
             )}
 
             {activeApplications.length > 0 && (
-              <View className="px-4 mb-3">
-                <SectionHeader title="Đang thực hiện" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "upcoming" })} />
-                {activeApplications.map((j) => (
-                  <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })}>
-                    <Card variant="elevated" className="mb-2">
-                      <CardContent>
-                        <View className="flex-row items-center gap-2">
-                          <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
-                            <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
-                            <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+              <View className="mb-4">
+                <View className="px-4 mb-2">
+                  <SectionHeader title="Đang thực hiện" actionLabel="Tất cả" onPressAction={() => navigation.navigate("Jobs", { initialTab: "upcoming" })} />
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12, alignItems: 'stretch' }}
+                  snapToInterval={332}
+                  decelerationRate="fast"
+                  snapToAlignment="start"
+                  onScroll={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / 332);
+                    setActiveIndex(idx);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {activeApplications.map((j) => (
+                    <TouchableOpacity key={j.id} activeOpacity={0.8} onPress={() => navigation.navigate("JobDetail", { jobId: j.jobPostId })} style={{ width: 320 }}>
+                      <Card variant="elevated" className="m-0 mb-1 flex-1 justify-center">
+                        <CardContent>
+                          <View className="flex-row items-center gap-2">
+                            <View className="bg-primary-50 border border-primary-100 rounded-xl px-2.5 py-1.5 items-center min-w-[50px]">
+                              <Text className="text-[10px] text-primary-500 font-bold uppercase mb-0.5" numberOfLines={1}>BẮT ĐẦU</Text>
+                              <Text className="text-[13px] font-extrabold text-primary-700">{j.date.split("/").slice(0, 2).join("/")}</Text>
+                            </View>
+                            <View className="flex-1">
+                              <Text className="text-[15px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{j.title}</Text>
+                              <Text className="text-[12px] text-slate-500 mb-1" numberOfLines={1}>{j.farmer}</Text>
+                            </View>
+                            {j.reportedToday ? (
+                              <Badge variant="success">Đã báo cáo</Badge>
+                            ) : (
+                              <Badge variant="warning">Cần báo cáo</Badge>
+                            )}
                           </View>
-                          <View className="flex-1">
-                            <Text className="text-[15px] font-bold text-slate-800 mb-0.5">{j.title}</Text>
-                            <Text className="text-[12px] text-slate-500 mb-1">{j.farmer}</Text>
-                          </View>
-                          {j.reportedToday ? (
-                            <Badge variant="success">Đã báo cáo</Badge>
-                          ) : (
-                            <Badge variant="warning">Cần báo cáo</Badge>
-                          )}
-                        </View>
-                      </CardContent>
-                    </Card>
-                  </TouchableOpacity>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View className="flex-row justify-center mt-3 gap-1.5">
+                  {activeApplications.map((_, i) => (
+                    <View key={i} className={`h-1.5 rounded-full ${i === activeIndex ? "w-4 bg-primary-600" : "w-1.5 bg-slate-200"}`} />
+                  ))}
+                </View>
               </View>
             )}
 

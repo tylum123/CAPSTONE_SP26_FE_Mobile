@@ -61,14 +61,6 @@ export function RenderFarmerInfoCard({ jobDetail, isAuthenticated, user, lastMes
           </View>
         )}
 
-        {lastMessage && (
-          <View className="mt-1 flex-row items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
-            <MessageCircle size={12} color="#64748b" />
-            <Text className="text-[11px] text-slate-500 italic flex-1" numberOfLines={1}>
-              {lastMessage.content}
-            </Text>
-          </View>
-        )}
       </View>
       <TouchableOpacity 
         className="flex-row items-center bg-primary-50 border border-primary-200 px-4 py-2 rounded-full gap-2" 

@@ -30,16 +30,18 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
   const timeRange = (job.startTime && job.endTime) ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` : "";
   const duration = job.estimatedHours ? `${job.estimatedHours} giờ` : (timeRange || "Thỏa thuận");
 
+  const fProfile = job.farmerProfile || job.farmer;
+
   return {
     ...job,
     description: cleanDescription,
     farmer: { 
       id: job.farmerProfileId,
-      userId: job.farmer?.userId || (job as any).farmerUserId || job.farmerProfileId,
-      name: job.farmer?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
-      avatar: job.farmer?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
-      rating: job.farmer?.averageRating || (discovery as any).farmerAverageRating || 0, 
-      totalJobs: job.farmer?.totalJobsPosted || job.farmer?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
+      userId: fProfile?.userId || (job as any).farmerUserId || null,
+      name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
+      avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
+      rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
+      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
     },
     location: { 
       address: job.address || "Chưa cập nhật địa chỉ", 
