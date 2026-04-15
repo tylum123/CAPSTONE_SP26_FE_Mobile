@@ -49,6 +49,13 @@ export type RootStackParamList = {
     rateeId: string;
     rateeName?: string;
   };
+  SubmitDispute: {
+    jobPostId: string;
+    reportId?: string;
+    farmerName?: string;
+    jobTitle?: string;
+    isKhoán?: boolean;
+  };
   EditProfile: undefined;
 };
 
