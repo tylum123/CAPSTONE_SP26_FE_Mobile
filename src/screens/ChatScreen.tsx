@@ -11,6 +11,9 @@ import { ArrowLeft, Send } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { messageService } from "../services/message.service";
 import { useAuth } from "../context/AuthContext";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { CONFIG } from "../config/export_configurations";
+import { authTokenService } from "../services/auth-token.service";
 import { MessageDTO } from "../types/export_type_definitions";
 
 export function ChatScreen({ navigation, route }: any) {
@@ -110,10 +113,77 @@ export function ChatScreen({ navigation, route }: any) {
   }, [farmerId, initialAvatar, initialName]);
 
   useEffect(() => {
-    fetchMessages();
-    const intervalId = setInterval(fetchMessages, 5000); 
-    return () => clearInterval(intervalId);
-  }, [fetchMessages]);
+    let isSubscribed = true;
+    let connection: any = null;
+
+    const connectSignalR = async () => {
+      try {
+        const token = await authTokenService.getToken();
+        if (!token) return;
+
+        let baseUrl = CONFIG.API_BASE_URL;
+        if (baseUrl.endsWith("/api/v1")) {
+          baseUrl = baseUrl.replace("/api/v1", "");
+        } else if (baseUrl.endsWith("/api")) {
+          baseUrl = baseUrl.replace("/api", "");
+        }
+
+        connection = new HubConnectionBuilder()
+          .withUrl(`${baseUrl}/hubs/chat`, {
+            accessTokenFactory: () => token,
+          })
+          .configureLogging(LogLevel.Information)
+          .withAutomaticReconnect()
+          .build();
+
+        connection.on("NewMessage", (message: MessageDTO) => {
+          if (!isSubscribed) return;
+          if (
+            message.senderId.toLowerCase() === farmerId?.toLowerCase() ||
+            message.receiverId.toLowerCase() === farmerId?.toLowerCase()
+          ) {
+            setMessages((prev) => {
+              const exists = prev.find((m) => m.id === message.id);
+              if (exists) return prev;
+              const filtered = prev.filter(
+                (m) =>
+                  !m.id.toString().startsWith("temp-") ||
+                  m.content !== message.content
+              );
+              return [...filtered, message].sort(
+                (a, b) =>
+                  new Date(a.createdAt).getTime() -
+                  new Date(b.createdAt).getTime()
+              );
+            });
+            if (message.senderId.toLowerCase() === farmerId?.toLowerCase()) {
+              messageService.markAsRead({ senderId: farmerId }).catch(() => {});
+            }
+          }
+        });
+
+        await connection.start();
+        console.log("ChatScreen: SignalR Connected");
+      } catch (err) {
+        console.log("ChatScreen: SignalR Connection Error", err);
+      }
+    };
+
+    fetchMessages().then(() => {
+      connectSignalR();
+    });
+
+    // Fallback polling format if socket drops for any reason but hasn't closed technically
+    const backupInterval = setInterval(fetchMessages, 15000); 
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(backupInterval);
+      if (connection) {
+        connection.stop();
+      }
+    };
+  }, [fetchMessages, farmerId]);
 
   useEffect(() => { 
     if (messages.length > 0) {
