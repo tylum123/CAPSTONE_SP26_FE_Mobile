@@ -9,12 +9,11 @@ import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmit
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
-import { Button } from "../components/ui/Button";
 import { Avatar } from "../components/ui/Avatar";
 import { PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
-import { Clock, MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare } from "lucide-react-native";
+import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare } from "lucide-react-native";
 import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
-import { JobPostDTO } from "../types/define_worker_interfaces";
+import { ratingService } from "../services/rating.service";
 import { useAuth } from "../context/AuthContext";
 import { isPastDate } from "../utils/provide_formatting_helpers";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
@@ -63,6 +62,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
     let sourceAllJobs = [];
     let sourceProfile: any = null;
     let sourceReports: any[] = [];
+    let sourceRatings: any[] = [];
 
     if (!isAuthenticated || user?.isDemo) { 
       sourceApps = DEMO_APPLICATIONS;
@@ -71,14 +71,16 @@ export function WorkerJobsScreen({ navigation, route }: any) {
     } else {
       setIsLoading(true);
       try {
-        const [apps, allJobs, profile] = await Promise.all([
+        const [apps, allJobs, profile, givenRatings] = await Promise.all([
           jobService.getApplications(),
           jobService.getJobPosts(),
-          workerProfileService.getProfile()
+          workerProfileService.getProfile(),
+          ratingService.getGivenRatingsByUser().catch(() => []) // Fallback to empty array if no ratings found (404)
         ]);
         sourceApps = apps;
         sourceAllJobs = allJobs;
         sourceProfile = profile;
+        sourceRatings = givenRatings || [];
 
         // Fetch reports if profile is available
         if (profile?.id) {
@@ -138,6 +140,9 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         r.workDate?.substring(0, 10) === todayStr
       );
 
+      // Attach rating if exists
+      const ratingForJob = sourceRatings.find((r: any) => String(r.jobPostId) === String(app.jobPostId));
+
       return {
         ...mappedData,
         status: derivedStatus,
@@ -147,8 +152,8 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         appliedDate: app.appliedAt ? new Date(app.appliedAt).toLocaleDateString("vi-VN") : "",
         completedDate: jobStatusId === 5 && jobInfo?.updatedAt ? new Date(jobInfo.updatedAt).toLocaleDateString("vi-VN") : undefined,
         paidAmount: jobStatusId === 5 ? (jobInfo?.wageAmount || 0) : 0,
-        review: null,
-        rating: null,
+        review: ratingForJob?.reviewText || null,
+        rating: ratingForJob?.ratingScore || null,
         startDate: mappedData.date,
         endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : mappedData.date,
         isReportedToday
@@ -297,10 +302,10 @@ export function WorkerJobsScreen({ navigation, route }: any) {
             </View>
           </TouchableOpacity>
 
-          {job.rating && job.review ? (
-            <View className="bg-rice-50 border border-rice-200 rounded-xl p-2 gap-1.5">
+          {job.rating ? (
+            <View className="bg-rice-50 border border-rice-200 rounded-xl p-2 gap-1.5 mt-2">
               <View className="flex-row gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={14} color="#fbbf24" fill={i < job.rating ? "#fbbf24" : "none"} />)}</View>
-              <Text className="text-[13px] text-slate-700 italic">"{job.review}"</Text>
+              {job.review && <Text className="text-[13px] text-slate-700 italic">"{job.review}"</Text>}
             </View>
           ) : (
             <TouchableOpacity 

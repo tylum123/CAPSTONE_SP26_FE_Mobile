@@ -69,6 +69,7 @@ export function ReviewScreen({ navigation, route }: any) {
             },
             completedDate: new Date().toLocaleDateString("vi-VN"), // Typically updated date
             farmerProfileId: detail.farmerProfileId,
+            farmerUserId: detail.farmer?.userId || detail.farmerProfile?.userId,
           });
         } else {
           // Keep mock data for Demo users
@@ -77,7 +78,8 @@ export function ReviewScreen({ navigation, route }: any) {
              title: "Thu hoạch lúa (Demo)", 
              farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12" }, 
              completedDate: new Date().toLocaleDateString("vi-VN"),
-             farmerProfileId: passedRateeId || "00000000-0000-0000-0000-000000000000"
+             farmerProfileId: passedRateeId || "00000000-0000-0000-0000-000000000000",
+             farmerUserId: "00000000-0000-0000-0000-000000000000"
           });
         }
       } catch (err) {
@@ -122,13 +124,15 @@ export function ReviewScreen({ navigation, route }: any) {
     setIsSubmitting(true);
     try {
       const actualRaterId = passedRaterId || user?.id || "00000000-0000-0000-0000-000000000000";
-      const actualRateeId = passedRateeId || jobInfo?.farmerProfileId || "00000000-0000-0000-0000-000000000000";
+      // Backend REQUIRES User ID, not Profile ID for ratee
+      const actualRateeId = passedRateeId || jobInfo?.farmerUserId || "00000000-0000-0000-0000-000000000000";
 
       await ratingService.createRating({
         jobPostId: jobId,
         raterId: actualRaterId,
         rateeId: actualRateeId,
         ratingScore: rating,
+        typeId: 2, // 2 = WorkerToFarmer
         reviewText: selectedTags.length > 0 
           ? `[${selectedTags.join(", ")}] ${review}` 
           : review,
