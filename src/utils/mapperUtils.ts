@@ -77,12 +77,15 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     ? new Date(startDate).toLocaleDateString("vi-VN") 
     : "Chưa rõ";
 
+  const fProfile = job?.farmerProfile || job?.farmer;
+
   return {
     ...app,
     title: job?.title || "Công việc",
-    farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
+    farmer: fProfile?.contactName || (job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"),
     farmerId: job?.farmerProfileId,
-    farmerAvatar: "https://i.pravatar.cc/150?img=1",
+    farmerUserId: fProfile?.userId || (job as any)?.farmerUserId || null,
+    farmerAvatar: fProfile?.avatarUrl || "https://i.pravatar.cc/150?img=1",
     date: formattedDate,
     time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
     status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"

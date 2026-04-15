@@ -6,18 +6,17 @@
 
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, DeviceEventEmitter, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { X, Star } from "lucide-react-native";
-import { Card, CardContent } from "../components/ui/Card";
-import { Avatar } from "../components/ui/Avatar";
-import { Button } from "../components/ui/Button";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { X, Star, Calendar } from "lucide-react-native";
+import { Avatar, FeedbackModal } from "../components/ui/export_ui_components";
 import { ratingService } from "../services/rating.service";
 import { jobService } from "../services/job.service";
+import { dailyReportService } from "../services/daily_report.service";
 import { hapticFeedback } from "../utils/haptic";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { useAuth } from "../context/AuthContext";
 
 export function ReviewScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { jobId, raterId: passedRaterId, rateeId: passedRateeId } = route.params || {};
   const { user, isAuthenticated } = useAuth();
   
@@ -59,17 +58,24 @@ export function ReviewScreen({ navigation, route }: any) {
         
         // Fetch real job data to get farmer detail and job title
         if (isAuthenticated && !user?.isDemo) {
-          const detail = await jobService.getJobPostDetail(jobId);
+          const [detail, reports] = await Promise.all([
+            jobService.getJobPostDetail(jobId),
+            dailyReportService.getReportsByJobPostId(jobId)
+          ]);
+
+          const reportWithFarmer = reports?.find(r => r?.farmer?.userId);
+          const farmerUserId = reportWithFarmer?.farmer?.userId || detail?.farmer?.userId || detail?.farmerProfile?.userId || passedRateeId;
+
           setJobInfo({
             id: detail.id,
             title: detail.title || "Công việc nông nghiệp",
             farmer: {
-              name: detail.contactName && detail.contactName !== "string" ? detail.contactName : "Chủ kinh doanh",
-              avatar: (detail as any).farmerAvatar || (detail as any).avatarUrl || undefined,
+              name: reportWithFarmer?.farmer?.contactName || detail?.farmer?.contactName || (detail?.contactName && detail?.contactName !== "string" ? detail?.contactName : "Chủ kinh doanh"),
+              avatar: reportWithFarmer?.farmer?.avatarUrl || detail?.farmer?.avatarUrl || detail?.farmerProfile?.avatarUrl || undefined,
             },
             completedDate: new Date().toLocaleDateString("vi-VN"), // Typically updated date
             farmerProfileId: detail.farmerProfileId,
-            farmerUserId: detail.farmer?.userId || detail.farmerProfile?.userId,
+            farmerUserId: farmerUserId,
           });
         } else {
           // Keep mock data for Demo users
@@ -79,7 +85,7 @@ export function ReviewScreen({ navigation, route }: any) {
              farmer: { name: "Nguyễn Văn A", avatar: "https://i.pravatar.cc/150?img=12" }, 
              completedDate: new Date().toLocaleDateString("vi-VN"),
              farmerProfileId: passedRateeId || "00000000-0000-0000-0000-000000000000",
-             farmerUserId: "00000000-0000-0000-0000-000000000000"
+             farmerUserId: passedRateeId || "00000000-0000-0000-0000-000000000000"
           });
         }
       } catch (err) {
@@ -164,11 +170,19 @@ export function ReviewScreen({ navigation, route }: any) {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       <View className="flex-1 bg-slate-50">
         {/* Header */}
-        <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
-          <Text className="text-xl font-bold text-slate-900">Đánh giá công việc</Text>
-          <TouchableOpacity className="p-1" onPress={() => navigation.goBack()}>
-            <X size={24} color="#374151" />
-          </TouchableOpacity>
+        <View className="px-6 pt-10 pb-6 bg-white shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-[28px] font-black text-slate-900 leading-tight">Đánh giá</Text>
+              <Text className="text-[14px] text-slate-500 font-medium">Chia sẻ trải nghiệm làm việc của bạn</Text>
+            </View>
+            <TouchableOpacity 
+              className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center" 
+              onPress={() => navigation.goBack()}
+            >
+              <X size={20} color="#64748b" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLoading ? (
@@ -182,28 +196,29 @@ export function ReviewScreen({ navigation, route }: any) {
         ) : (
           <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
             {/* Job info */}
-            <Card className="m-4 mb-0">
-              <CardContent>
-                <View className="flex-row gap-4">
-                  <Avatar 
-                    source={jobInfo.farmer.avatar ? { uri: jobInfo.farmer.avatar } : undefined} 
-                    fallback={jobInfo.farmer.name?.[0] || "C"}
-                    size={56} 
-                  />
-                  <View className="flex-1 justify-center">
-                    <Text className="text-lg font-bold text-slate-900 mb-1">{jobInfo.title}</Text>
-                    <Text className="text-sm text-slate-600 mb-1">{jobInfo.farmer.name}</Text>
-                    <Text className="text-xs text-primary-600">Hoàn thành: {jobInfo.completedDate}</Text>
+            <View className="mx-6 mt-6 mb-2">
+              <View className="flex-row items-center gap-4 bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm">
+                <Avatar 
+                  source={jobInfo?.farmer?.avatar ? { uri: jobInfo?.farmer?.avatar } : undefined} 
+                  fallback={jobInfo?.farmer?.name?.[0] || "C"}
+                  size={60} 
+                />
+                <View className="flex-1">
+                  <Text className="text-[17px] font-extrabold text-slate-900 mb-0.5" numberOfLines={1}>{jobInfo.title}</Text>
+                  <Text className="text-[13px] text-slate-500 font-bold uppercase tracking-wider">{jobInfo.farmer.name}</Text>
+                  <View className="flex-row items-center gap-1 mt-1">
+                    <Calendar size={12} color="#94a3b8" />
+                    <Text className="text-[11px] text-slate-400 font-medium">Hoàn thành: {jobInfo.completedDate}</Text>
                   </View>
                 </View>
-              </CardContent>
-            </Card>
+              </View>
+            </View>
 
             {/* Rating */}
-            <Card className="m-4 mb-0">
-              <CardContent>
-                <Text className="text-base font-semibold text-slate-900 mb-4">Bạn đánh giá thế nào về công việc này?</Text>
-                <View className="flex-row justify-center gap-2 my-4">
+            <View className="mx-6 mt-4">
+              <Text className="text-[16px] font-black text-slate-800 mb-4 px-1">Mức độ hài lòng của bạn?</Text>
+              <View className="bg-white rounded-[32px] p-8 items-center border border-slate-100 shadow-sm">
+                <View className="flex-row justify-center gap-3">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity 
                       key={star} 
@@ -214,72 +229,84 @@ export function ReviewScreen({ navigation, route }: any) {
                       activeOpacity={0.7}
                     >
                       <Star 
-                        size={48} 
-                        color={star <= (hoveredRating || rating) ? "#fbbf24" : "#e2e8f0"} 
+                        size={44} 
+                        color={star <= (hoveredRating || rating) ? "#fbbf24" : "#f1f5f9"} 
                         fill={star <= (hoveredRating || rating) ? "#fbbf24" : "none"} 
+                        strokeWidth={1.5}
                       />
                     </TouchableOpacity>
                   ))}
                 </View>
-                {rating > 0 && (
-                  <Text className="text-lg font-semibold text-rice-600 text-center mt-2">{RATING_LABELS[rating]}</Text>
+                {rating > 0 ? (
+                  <View className="mt-6 bg-amber-50 px-6 py-2 rounded-full border border-amber-100">
+                    <Text className="text-[18px] font-black text-amber-600">{RATING_LABELS[rating]}</Text>
+                  </View>
+                ) : (
+                  <Text className="mt-6 text-[14px] text-slate-400 font-medium italic">Chạm vào sao để đánh giá</Text>
                 )}
-              </CardContent>
-            </Card>
+              </View>
+            </View>
 
             {/* Tags */}
-            <Card className="m-4 mb-0">
-              <CardContent>
-                <Text className="text-base font-semibold text-slate-900 mb-4">Thêm nhãn đánh giá (tùy chọn)</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {TAGS.map((tag) => (
+            <View className="mx-6 mt-6">
+              <Text className="text-[16px] font-black text-slate-800 mb-4 px-1">Điều gì làm bạn ấn tượng? <Text className="text-slate-400 font-medium">(Tùy chọn)</Text></Text>
+              <View className="flex-row flex-wrap gap-2.5">
+                {TAGS.map((tag) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
                     <TouchableOpacity
                       key={tag}
-                      className={["px-4 py-2 border", selectedTags.includes(tag) ? "bg-primary-100 border-primary-600" : "bg-slate-100 border-slate-200"].join(" ")}
+                      className={["px-5 py-2.5 rounded-2xl border transition-all", isSelected ? "bg-primary-600 border-primary-600 shadow-md" : "bg-white border-slate-100"].join(" ")}
                       onPress={() => handleTagToggle(tag)}
                     >
-                      <Text className={selectedTags.includes(tag) ? "text-sm text-primary-700 font-semibold" : "text-sm text-slate-600"}>{tag}</Text>
+                      <Text className={["text-[13px] font-black", isSelected ? "text-white" : "text-slate-600"].join(" ")}>{tag}</Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-              </CardContent>
-            </Card>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Review text */}
-            <Card className="m-4 mb-0">
-              <CardContent>
-                <Text className="text-base font-semibold text-slate-900 mb-4">Chia sẻ trải nghiệm của bạn (tùy chọn)</Text>
+            <View className="mx-6 mt-6 pb-10">
+              <Text className="text-[16px] font-black text-slate-800 mb-4 px-1">Lời nhắn gửi <Text className="text-slate-400 font-medium">(Tùy chọn)</Text></Text>
+              <View className="bg-white rounded-[24px] border border-slate-100 p-4 shadow-sm">
                 <TextInput
-                  className="min-h-[120px] p-4 bg-slate-50 border border-slate-200 text-[15px] text-slate-900 leading-[22px]"
-                  placeholder="Viết đánh giá chi tiết về công việc, người thuê, môi trường làm việc..." placeholderTextColor="#9ca3af"
-                  value={review} onChangeText={setReview} multiline numberOfLines={6} maxLength={500} textAlignVertical="top"
+                  className="min-h-[140px] text-[15px] text-slate-900 leading-[24px]"
+                  placeholder="Chia sẻ chi tiết hơn về trải nghiệm của bạn..." 
+                  placeholderTextColor="#94a3b8"
+                  value={review} 
+                  onChangeText={setReview} 
+                  multiline 
+                  numberOfLines={6} 
+                  maxLength={500} 
+                  textAlignVertical="top"
                 />
-                <Text className="text-xs text-slate-500 text-right mt-1">{review.length}/500 ký tự</Text>
-              </CardContent>
-            </Card>
+                <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                  <Text className="text-[11px] text-slate-400 font-medium italic">Ý kiến của bạn giúp cộng đồng tốt hơn</Text>
+                  <Text className="text-[11px] text-slate-500 font-bold">{review.length}/500</Text>
+                </View>
+              </View>
+            </View>
 
-            {/* Tips */}
-            <Card className="m-4 bg-blue-50">
-              <CardContent>
-                <Text className="text-sm font-semibold text-blue-900 mb-2">💡 Gợi ý đánh giá:</Text>
-                <Text className="text-[13px] text-blue-800 leading-5">
-                  • Đánh giá về thái độ và sự hỗ trợ của người thuê{"\n"}• Điều kiện làm việc và môi trường{"\n"}• Tính rõ ràng của công việc{"\n"}• Việc thanh toán có đúng hạn không
-                </Text>
-              </CardContent>
-            </Card>
           </ScrollView>
         )}
 
         {/* Footer */}
-        <View className="p-4 bg-white border-t border-slate-200">
-          <Button 
+        <View 
+          className="px-6 py-6 bg-white shadow-2xl"
+          style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+        >
+          <TouchableOpacity 
+            className={["w-full h-[56px] rounded-2xl items-center justify-center shadow-lg transition-all", rating === 0 || isSubmitting ? "bg-slate-200" : "bg-primary-600"].join(" ")}
             onPress={handleSubmit} 
-            disabled={rating === 0 || isSubmitting || isLoading || !jobInfo} 
-            loading={isSubmitting}
-            fullWidth
+            disabled={rating === 0 || isSubmitting || isLoading || !jobInfo}
           >
-            Gửi đánh giá
-          </Button>
+            {isSubmitting ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="text-[16px] font-black text-white uppercase tracking-widest">Gửi đánh giá ngay</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
