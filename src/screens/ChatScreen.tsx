@@ -11,10 +11,52 @@ import { ArrowLeft, Send } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { messageService } from "../services/message.service";
 import { useAuth } from "../context/AuthContext";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { CONFIG } from "../config/export_configurations";
 import { authTokenService } from "../services/auth-token.service";
 import { MessageDTO } from "../types/export_type_definitions";
+
+interface HubConnectionStats {
+  totalConnections: number;
+  uniqueUsers: number;
+  myConnections: number;
+}
+
+function normalizeIncomingMessage(raw: any): MessageDTO | null {
+  const payload = raw?.data ?? raw?.message ?? raw;
+
+  const id = String(payload?.id ?? payload?.Id ?? payload?.messageId ?? payload?.MessageId ?? "");
+  const senderId = String(
+    payload?.senderId ?? payload?.SenderId ?? payload?.fromUserId ?? payload?.FromUserId ?? payload?.sender?.id ?? ""
+  );
+  const receiverId = String(
+    payload?.receiverId ??
+      payload?.ReceiverId ??
+      payload?.recipientId ??
+      payload?.RecipientId ??
+      payload?.toUserId ??
+      payload?.ToUserId ??
+      payload?.receiver?.id ??
+      payload?.recipient?.id ??
+      ""
+  );
+  const content = String(payload?.content ?? payload?.Content ?? payload?.messageContent ?? payload?.MessageContent ?? "");
+
+  if (!id || !senderId || !receiverId) {
+    return null;
+  }
+
+  return {
+    id,
+    senderId,
+    receiverId,
+    content,
+    read: !!(payload?.read ?? payload?.Read),
+    createdAt: payload?.createdAt ?? payload?.CreatedAt ?? payload?.sentAt ?? payload?.SentAt ?? new Date().toISOString(),
+    sender: payload?.sender,
+    receiver: payload?.receiver,
+  };
+}
 
 export function ChatScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
@@ -114,13 +156,17 @@ export function ChatScreen({ navigation, route }: any) {
 
   useEffect(() => {
     let isSubscribed = true;
-    let connection: any = null;
+    let connection: HubConnection | null = null;
+
+    if (!farmerId) {
+      fetchMessages();
+      return () => {};
+    }
+
+    const realtimeEvents = ["NewMessage", "ReceiveMessage", "newMessage", "receiveMessage", "MessageReceived"] as const;
 
     const connectSignalR = async () => {
       try {
-        const token = await authTokenService.getToken();
-        if (!token) return;
-
         let baseUrl = CONFIG.API_BASE_URL;
         if (baseUrl.endsWith("/api/v1")) {
           baseUrl = baseUrl.replace("/api/v1", "");
@@ -130,14 +176,17 @@ export function ChatScreen({ navigation, route }: any) {
 
         connection = new HubConnectionBuilder()
           .withUrl(`${baseUrl}/hubs/chat`, {
-            accessTokenFactory: () => token,
+            accessTokenFactory: async () => (await authTokenService.getToken()) ?? "",
           })
           .configureLogging(LogLevel.Information)
           .withAutomaticReconnect()
           .build();
 
-        connection.on("NewMessage", (message: MessageDTO) => {
+        const onRealtimeMessage = (raw: any) => {
+          const message = normalizeIncomingMessage(raw);
+          if (!message) return;
           if (!isSubscribed) return;
+
           if (
             message.senderId.toLowerCase() === farmerId?.toLowerCase() ||
             message.receiverId.toLowerCase() === farmerId?.toLowerCase()
@@ -160,10 +209,28 @@ export function ChatScreen({ navigation, route }: any) {
               messageService.markAsRead({ senderId: farmerId }).catch(() => {});
             }
           }
+        };
+
+        for (const eventName of realtimeEvents) {
+          connection.on(eventName, onRealtimeMessage);
+        }
+
+        connection.onreconnected(async () => {
+          try {
+            const stats = await connection?.invoke<HubConnectionStats>("GetConnectionStats");
+            console.log("ChatScreen: SignalR Reconnected", stats);
+          } catch (err) {
+            console.log("ChatScreen: SignalR Reconnect Stats Error", err);
+          }
         });
 
         await connection.start();
-        console.log("ChatScreen: SignalR Connected");
+        try {
+          const stats = await connection.invoke<HubConnectionStats>("GetConnectionStats");
+          console.log("ChatScreen: SignalR Connected", stats);
+        } catch (err) {
+          console.log("ChatScreen: SignalR Connected (stats unavailable)", err);
+        }
       } catch (err) {
         console.log("ChatScreen: SignalR Connection Error", err);
       }
