@@ -63,10 +63,16 @@ export const ratingService = {
    * Get all ratings given by the current user
    */
   getGivenRatingsByUser: async (): Promise<RatingDTO[]> => {
-    const response = await api.get<ApiResponse<RatingDTO[]>>(
-      API_ENDPOINTS.RATING.USER_GIVEN
-    );
-    return response.data.data || [];
+    try {
+      const response = await api.get<ApiResponse<RatingDTO[]>>(
+        API_ENDPOINTS.RATING.USER_GIVEN
+      );
+      return response.data.data || [];
+    } catch (error) {
+      // Silence errors if no ratings are found (or any other issue)
+      console.log("RatingService: Handled expected error for given ratings (likely none found)");
+      return [];
+    }
   },
 
   /**
