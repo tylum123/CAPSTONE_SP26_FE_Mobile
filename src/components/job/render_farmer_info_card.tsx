@@ -51,16 +51,20 @@ export function RenderFarmerInfoCard({ jobDetail, isAuthenticated, user, lastMes
       
       <View className="flex-1">
         <Text className="text-[15px] font-bold text-slate-800 mb-1">{farmerName}</Text>
-        {(isDemo || jobDetail.farmer.rating > 0) && (
-          <View className="flex-row items-center gap-1">
-            <Star size={14} color="#fbbf24" fill="#fbbf24" />
-            <Text className="text-[13px] font-bold text-slate-700">{jobDetail.farmer.rating}</Text>
-            {jobDetail.farmer.totalJobs > 0 && (
-              <Text className="text-[13px] text-slate-500">• {jobDetail.farmer.totalJobs} công việc</Text>
-            )}
+        <View className="flex-row items-center flex-wrap">
+          <View className="flex-row items-center gap-1 mr-2">
+            <Star size={13} color="#fbbf24" fill="#fbbf24" />
+            <Text className="text-[13px] font-bold text-slate-700">{jobDetail.farmer.rating || "0"}</Text>
           </View>
-        )}
-
+          
+          <Text className="text-[12px] text-slate-400 mr-2">|</Text>
+          
+          <Text className="text-[10px] text-slate-500 mr-2">Đã đăng: <Text className="font-semibold text-slate-700">{jobDetail.farmer.totalJobsPosted || 0}</Text></Text>
+          
+          <Text className="text-[10px] text-slate-400 mr-2">•</Text>
+          
+          <Text className="text-[10px] text-slate-500">Hoàn thành: <Text className="font-semibold text-slate-700">{jobDetail.farmer.totalJobsCompleted || 0}</Text></Text>
+        </View>
       </View>
       <TouchableOpacity 
         className="flex-row items-center bg-primary-50 border border-primary-200 px-4 py-2 rounded-full gap-2" 

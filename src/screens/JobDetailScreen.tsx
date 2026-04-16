@@ -62,7 +62,9 @@ export function JobDetailScreen({ navigation, route }: any) {
         <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 justify-center items-center" onPress={() => navigation.goBack()}>
           <ArrowLeft size={20} color="#334155" />
         </TouchableOpacity>
-        <Text className="text-base font-bold text-slate-800">Chi tiết công việc</Text>
+        <Text className="text-base font-bold text-slate-800" numberOfLines={1}>
+          {jobDetail?.jobType || "Chi tiết công việc"}
+        </Text>
         <View className="w-10" />
       </View>
 

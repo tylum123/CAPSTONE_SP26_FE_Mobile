@@ -28,6 +28,9 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
   // Status checked: 1=Draft, 2=Published, 3=Closed, 4=InProgress, 5=Completed, 6=Cancelled
   const isActive = jobDetail.statusId === 2 || jobDetail.statusId === 4;
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isReportedToday = jobDetail.reports?.some((r: any) => r.workDate?.startsWith(todayStr));
+
   return (
     <View className="flex-row items-center gap-4 px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 8, shadowColor: "#0f172a", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8 }}>
       <View className="flex-1">
@@ -42,7 +45,7 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
         )}
       </View>
       
-      {(applicationInfo.statusId === 2 && !jobDetail.timeSlots?.find((s: any) => s.date === new Date().toLocaleDateString("vi-VN") && s.reportedAt)) ? (
+      {(applicationInfo.statusId === 2 && !isReportedToday) ? (
         <Button 
           onPress={onReportPress}
           size="lg"
@@ -54,9 +57,10 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
             <Text className="text-white font-bold">{isExpired ? "Hết hạn báo cáo" : "Nộp Báo Cáo"}</Text>
           </View>
         </Button>
-      ) : applicationInfo.statusId === 2 ? (
-        <View className="bg-primary-50 px-4 py-2 rounded-xl border border-primary-100">
-          <Text className="text-primary-700 font-bold text-center">Đã báo cáo hôm nay ✓</Text>
+      ) : (applicationInfo.statusId === 2 && isReportedToday) ? (
+        <View className="bg-primary-50 px-4 py-2.5 rounded-xl border border-primary-100 flex-row items-center gap-2">
+          <CheckCircle size={16} color="#059669" />
+          <Text className="text-primary-700 font-bold text-center">Đã báo cáo hôm nay</Text>
         </View>
       ) : (
         <Button 

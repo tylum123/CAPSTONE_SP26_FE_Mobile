@@ -7,6 +7,7 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { CheckCircle, Wrench } from "lucide-react-native";
+import { Badge } from "../ui/Badge";
 
 export function RenderJobInfoSections({ jobDetail, infoRows }: { jobDetail: any, infoRows: any[] }) {
   if (!jobDetail) return null;
@@ -29,7 +30,17 @@ export function RenderJobInfoSections({ jobDetail, infoRows }: { jobDetail: any,
               </View>
               <View className="flex-1">
                 <Text className="text-[11px] text-slate-400 font-semibold uppercase mb-0.5" style={{ letterSpacing: 0.4 }}>{row.label}</Text>
-                <Text className="text-sm text-slate-700 font-semibold">{row.value}</Text>
+                {row.label === "Kỹ năng yêu cầu" && row.value !== "Không yêu cầu" ? (
+                  <View className="flex-row flex-wrap gap-1.5 mt-1">
+                    {row.value.split(",").map((skill: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="px-2 py-0.5">
+                        {skill.trim()}
+                      </Badge>
+                    ))}
+                  </View>
+                ) : (
+                  <Text className="text-sm text-slate-700 font-semibold">{row.value}</Text>
+                )}
                 {row.hint && <Text className="text-xs text-primary-600 mt-0.5">{row.hint}</Text>}
               </View>
             </View>

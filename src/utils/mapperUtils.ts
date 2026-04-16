@@ -41,7 +41,9 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
       name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
       avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
       rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
-      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
+      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0,
+      totalJobsPosted: fProfile?.totalJobsPosted || 0,
+      totalJobsCompleted: fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0
     },
     location: { 
       address: job.address || "Chưa cập nhật địa chỉ", 

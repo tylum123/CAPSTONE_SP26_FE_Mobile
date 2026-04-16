@@ -79,14 +79,14 @@ export function WorkerHomeScreen({ navigation }: any) {
         }
 
         if (wallet?.id) {
-            const txs = await walletService.getTransactions(wallet.id);
+            const txsResult = await walletService.getTransactions(wallet.id);
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             const todayLocal = `${year}-${month}-${day}`;
 
-            const earnedToday = txs
+            const earnedToday = (txsResult?.data || [])
                 .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
                 .reduce((sum, tx) => sum + tx.amount, 0);
             setTodayEarnings(earnedToday);
@@ -509,7 +509,12 @@ export function WorkerHomeScreen({ navigation }: any) {
                 </View>
 
                 <View className="flex-row items-center flex-wrap gap-2">
-                   <View className="flex-row items-center gap-1"><MapPin size={13} color="#94a3b8" /><Text className="text-xs text-slate-500" numberOfLines={1}>{job.location}</Text></View>
+                   <View className="flex-row items-center gap-1 flex-1">
+                     <MapPin size={13} color="#94a3b8" />
+                     <Text className="text-xs text-slate-500" numberOfLines={1} ellipsizeMode="tail">
+                       {job.location}
+                     </Text>
+                   </View>
                    <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: "auto" }} />
                 </View>
               </View>
