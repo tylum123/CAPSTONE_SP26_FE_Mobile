@@ -32,9 +32,12 @@ export function RenderJobHeader({ jobDetail }: { jobDetail: any }) {
     <View className="bg-white rounded-[20px] p-6 mb-4 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-row gap-2">
+          {jobDetail.urgent && (
+            <Badge variant="danger">Cần gấp</Badge>
+          )}
           {jobDetail.jobType ? (
-            <Badge variant={jobDetail.urgent ? "danger" : categoryVariant}>
-              {jobDetail.urgent ? "Cần gấp" : jobDetail.jobType}
+            <Badge variant={categoryVariant}>
+              {jobDetail.jobType}
             </Badge>
           ) : null}
           {isInProgressButExpired && (
