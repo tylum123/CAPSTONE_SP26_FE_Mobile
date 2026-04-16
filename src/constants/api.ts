@@ -112,6 +112,7 @@ export const API_ENDPOINTS = {
   WALLET: {
     ME: `${API_PREFIX}/wallet/me`,
     TRANSACTIONS: (walletId: string) => `${API_PREFIX}/wallet-transaction/wallet/${walletId}`,
+    TRANSACTION_DETAIL:(id: string) => `${API_PREFIX}/wallet-transaction/${id}`,
     WITHDRAW: `${API_PREFIX}/withdraw`,
     WITHDRAW_HISTORY: `${API_PREFIX}/withdraw`, // GET - withdrawal history list (same route, different method)
     ACCOUNT_BALANCE: `${API_PREFIX}/withdraw/account-balance`,

@@ -48,7 +48,9 @@ export function RenderJobHeader({ jobDetail }: { jobDetail: any }) {
             {jobDetail.wage?.toLocaleString("vi-VN")}<Text className="text-lg font-semibold"> đ</Text>
           </Text>
         </View>
-        <Text className="text-sm text-slate-500">/ {jobDetail.wageTypeId || "ngày"}</Text>
+        {jobDetail.wageTypeId?.toLowerCase() === "ngày" && (
+          <Text className="text-sm text-slate-500">/ ngày</Text>
+        )}
       </View>
     </View>
   );

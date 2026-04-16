@@ -5,9 +5,9 @@
  * Dependencies: Report service, Media service, Expo Image Picker. */
 
 import React, { useState, useRef } from "react";
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Upload, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
+import { ChevronLeft, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { dailyReportService } from "../services/daily_report.service";
@@ -250,20 +250,18 @@ export function SubmitReportScreen({ navigation, route }: any) {
             style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
             className="bg-white w-full rounded-[40px] p-8 items-center border border-white/20 shadow-2xl"
           >
-            <View className="w-24 h-24 bg-primary-500 rounded-full items-center justify-center mb-6 shadow-xl shadow-primary-500/50">
-              <CheckCircle2 size={56} color="white" strokeWidth={2.5} />
+            <View className="relative mb-8">
+              <View className="absolute -inset-4 bg-primary-50 rounded-full opacity-60" />
+              <View className="absolute -inset-2 bg-primary-100 rounded-full opacity-80" />
+              <View className="w-24 h-24 bg-primary-500 rounded-full items-center justify-center shadow-xl shadow-primary-500/40">
+                <CheckCircle2 size={52} color="white" strokeWidth={3} />
+              </View>
             </View>
             
-            <Text className="text-2xl font-black text-slate-900 mb-2 text-center">Tuyệt vời!</Text>
-            <Text className="text-slate-500 text-center mb-8 leading-5">
-              Báo cáo của bạn đã được gửi. Chúc bạn một ngày làm việc năng suất!
+            <Text className="text-3xl font-black text-slate-900 mb-3 text-center" style={{ letterSpacing: -0.5 }}>Báo cáo đã gửi!</Text>
+            <Text className="text-slate-500 text-center mb-10 leading-6 px-4">
+              Tuyệt vời! Công việc của bạn đã được ghi nhận. Hệ thống sẽ thông báo khi chủ nông trại duyệt báo cáo này.
             </Text>
-
-            <View className="flex-row gap-2 mb-8">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star key={s} size={20} fill="#fbbf24" color="#fbbf24" />
-              ))}
-            </View>
 
             <View className="w-full gap-3">
               <Button 

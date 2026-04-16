@@ -41,6 +41,7 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
           <View className="items-end">
             <Text className="text-[17px] font-extrabold text-primary-600">
               {(job.wageAmount || 0).toLocaleString("vi-VN")}₫
+              {job.jobTypeId !== 1 && <Text className="text-[11px] text-slate-400 font-medium"> /ngày</Text>}
             </Text>
             {job.isUrgent && <Badge variant="danger">Cần gấp</Badge>}
           </View>

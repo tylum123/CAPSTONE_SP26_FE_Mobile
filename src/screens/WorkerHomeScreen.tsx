@@ -19,6 +19,7 @@ import { jobService, workerProfileService, nominatimService, dailyReportService,
 import { useAuth } from "../context/AuthContext";
 import { useLocalWeather } from "../hooks/use_local_weather";
 import { JobMap } from "../components/ui/JobMap";
+import { useUnreadCounts } from "../hooks/use_unread_counts";
 import { mapApplicationToUI, mapJobPostToUI } from "../utils/mapperUtils";
 import { WorkerApplicationStatsDTO } from "../types/export_type_definitions";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
@@ -40,6 +41,7 @@ export function WorkerHomeScreen({ navigation }: any) {
   const [radiusKm, setRadiusKm] = useState<number>(10);
   const [pendingIndex, setPendingIndex] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const { unreadNotifications } = useUnreadCounts();
 
 
   const loadData = useCallback(async () => {
@@ -187,7 +189,8 @@ export function WorkerHomeScreen({ navigation }: any) {
         wageAmount: mapped.wage,
         duration: mapped.duration,
         rating: mapped.farmer.rating,
-        urgent: mapped.urgent
+        urgent: mapped.urgent,
+        wageUnit: mapped.wageUnit
       };
     }));
 
@@ -279,7 +282,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                 <View className="flex-row items-center justify-between mb-3">
                   {/* Left: Greeting */}
                   <View className="flex-1 mr-3">
-                    <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào 👋</Text>
+                    <Text className="text-primary-200 text-[13px] font-medium mb-0.5">Xin chào,</Text>
                     <Text className="text-white text-2xl font-black uppercase tracking-tight -mt-0.5" numberOfLines={1}>{user?.name || "BẠN MỚI"}</Text>
                   </View>
                   {/* Right: bell + avatar only */}
@@ -289,9 +292,14 @@ export function WorkerHomeScreen({ navigation }: any) {
                     </TouchableOpacity>
                     <TouchableOpacity className="w-[38px] h-[38px] rounded-full justify-center items-center relative" style={{ backgroundColor: "rgba(255,255,255,0.18)" }} onPress={() => navigation.navigate("Notifications")}>
                       <Bell size={18} color="#ffffff" />
-                      <View className="absolute top-[8px] right-[8px] w-[6px] h-[6px] rounded-full bg-rice-400 border border-primary-600" />
+                      {unreadNotifications > 0 && (
+                        <View 
+                          className="absolute top-[7px] right-[7px] w-[10px] h-[10px] rounded-full bg-rose-500 border-2 border-[#065f46]" 
+                          style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 }} 
+                        />
+                      )}
                     </TouchableOpacity>
-                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback="?" size={38} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
+                    <Avatar source={profileAvatar ? { uri: profileAvatar } : undefined} fallback={user?.name?.[0] || "?"} size={38} style={{ borderWidth: 2, borderColor: "rgba(255,255,255,0.35)" }} />
                   </View>
                 </View>
 
@@ -473,7 +481,7 @@ export function WorkerHomeScreen({ navigation }: any) {
                     <Text className="text-[16px] font-bold text-slate-800" numberOfLines={1}>{job.title}</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-[17px] font-extrabold text-primary-600">{job.wage}₫</Text>
+                    <Text className="text-[17px] font-extrabold text-primary-600">{job.wage}₫<Text className="text-[11px] text-slate-400 font-medium"> {job.wageUnit}</Text></Text>
                     {job.urgent && <Badge variant="danger">Gấp</Badge>}
                   </View>
                 </View>
