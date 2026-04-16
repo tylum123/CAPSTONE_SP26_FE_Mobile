@@ -13,6 +13,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Animated,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -35,8 +37,10 @@ import {
 import { Badge } from "../components/ui/Badge";
 import { walletService } from "../services/wallet.service";
 import { useAuth } from "../context/AuthContext";
-import { DEMO_WALLET, DEMO_TRANSACTIONS } from "../constants/demoData";
 import { WalletTransactionType, WalletTransactionTypeLabels } from "../constants/enums";
+import { WalletTransactionDTO } from "../types/export_type_definitions";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -44,13 +48,14 @@ type TxType = "income" | "withdraw" | "escrow" | "refund" | "lock";
 type TxStatus = "completed" | "pending" | "failed" | "processing";
 
 interface Transaction {
-  id: string | number;
+  id: string; // Real IDs are strings
   type: TxType;
   amount: number;
   description: string;
   date: string;
   status: TxStatus;
   jobTitle?: string;
+  createdAt?: string; // Original timestamp
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -128,6 +133,16 @@ export function WorkerWalletScreen() {
   const [refreshing, setRefreshing]     = useState(false);
   const [filter, setFilter]             = useState<"all" | TxType>("all");
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  // Detail Modal
+  const [selectedTx, setSelectedTx] = useState<WalletTransactionDTO | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
   // Animate hero balance
   const balanceAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim    = useRef(new Animated.Value(0)).current;
@@ -139,64 +154,89 @@ export function WorkerWalletScreen() {
     ]).start();
   };
 
-  const fetchData = useCallback(async () => {
-    if (user?.isDemo) {
-      setBalance(DEMO_WALLET.balance);
-      setEscrow(DEMO_WALLET.escrowBalance || 0);
-      // @ts-ignore
-      setTransactions(DEMO_TRANSACTIONS.map(tx => ({
-        ...tx,
-        type: mapBackendTxType(tx.type as WalletTransactionType),
-        date: new Date(tx.date).toLocaleDateString("vi-VN"),
-        status: tx.status as TxStatus,
-      })));
-      setLoading(false);
-      animateIn();
-      return;
+  const fetchData = useCallback(async (isInitial = true) => {
+    if (isInitial) {
+        setLoading(true);
+        setPage(1);
+        setHasMore(true);
+    } else {
+        setIsFetchingMore(true);
     }
 
     try {
       const wallet = await walletService.getWallet();
-      const hasRealData = wallet.balance > 0 || (wallet.escrowBalance ?? 0) > 0;
-      setBalance(hasRealData ? wallet.balance : DEMO_WALLET.balance);
-      setEscrow(hasRealData ? (wallet.escrowBalance || 0) : (DEMO_WALLET.escrowBalance || 0));
-
-      const txs = await walletService.getTransactions(wallet.id);
-      if (txs.length === 0) {
-        // @ts-ignore
-        setTransactions(DEMO_TRANSACTIONS.map(tx => ({
-          ...tx,
-          type: mapBackendTxType(tx.type as WalletTransactionType),
-          date: new Date(tx.date).toLocaleDateString("vi-VN"),
-          status: tx.status as TxStatus,
-        })));
-      } else {
-        setTransactions(txs.map(tx => ({
-          id: tx.id,
-          type: mapBackendTxType(tx.type as WalletTransactionType),
-          amount: tx.amount,
-          description: tx.description || WalletTransactionTypeLabels[tx.type as WalletTransactionType],
-          date: new Date(tx.createdAt).toLocaleDateString("vi-VN"),
-          status: (tx.status?.toLowerCase() as TxStatus) || "completed",
-          jobTitle: tx.jobPostTitle,
-        })));
+      if (isInitial) {
+        setBalance(wallet.balance);
+        setEscrow(wallet.escrowBalance || 0);
       }
-    } catch {
-      setBalance(DEMO_WALLET.balance);
-      setEscrow(DEMO_WALLET.escrowBalance || 0);
-      // @ts-ignore
-      setTransactions(DEMO_TRANSACTIONS.map(tx => ({
-        ...tx,
+
+      const currentPage = isInitial ? 1 : page + 1;
+      const res = await walletService.getTransactions(wallet.id, currentPage, 10);
+    
+
+      // Highly robust extraction: handle response.data, response.data.data, or direct array
+      let txList: any[] = [];
+      if (Array.isArray(res)) {
+        txList = res;
+      } else if (res && Array.isArray((res as any).data)) {
+        txList = (res as any).data;
+      } else if (res && (res as any).data && Array.isArray((res as any).data.data)) {
+        txList = (res as any).data.data;
+      }
+      
+      const mappedTxs = txList.map((tx: any) => ({
+        id: tx.id || String(Math.random()),
         type: mapBackendTxType(tx.type as WalletTransactionType),
-        date: new Date(tx.date).toLocaleDateString("vi-VN"),
-        status: tx.status as TxStatus,
-      })));
+        amount: tx.amount || 0,
+        description: tx.description || WalletTransactionTypeLabels[tx.type as WalletTransactionType] || "Giao dịch ví",
+        date: new Date(tx.createdAt || Date.now()).toLocaleDateString("vi-VN"),
+        createdAt: tx.createdAt || new Date().toISOString(),
+        status: (tx.status?.toLowerCase() as TxStatus) || "completed",
+        jobTitle: tx.jobPostTitle || tx.jobPost?.title || null,
+      }));
+
+      if (isInitial) {
+        setTransactions(mappedTxs.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        animateIn();
+      } else {
+        setTransactions(prev => [...prev, ...mappedTxs].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }
+
+      // Using actual pagination metadata
+      if (res && (res as any).pagination) {
+        const p = (res as any).pagination;
+        setHasMore(p.page < p.totalPages);
+      } else {
+        setHasMore(txList.length >= 10);
+      }
+      
+      if (!isInitial) setPage(currentPage);
+
+    } catch (err) {
+      console.log("[WorkerWalletScreen] Fetch error:", err);
+      if (isInitial) {
+        setBalance(0);
+        setTransactions([]);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
-      animateIn();
+      setIsFetchingMore(false);
     }
-  }, [user]);
+  }, [page]);
+
+  const fetchDetail = async (id: string) => {
+    try {
+      setIsDetailLoading(true);
+      setIsModalVisible(true);
+      const detail = await walletService.getTransactionDetail(id);
+      setSelectedTx(detail);
+    } catch (error) {
+      console.log("[fetchDetail] error", error);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -215,7 +255,13 @@ export function WorkerWalletScreen() {
     if (!grouped[tx.date]) grouped[tx.date] = [];
     grouped[tx.date].push(tx);
   });
-  const groupedEntries = Object.entries(grouped);
+  
+  // Sort grouped entries by date descending
+  const groupedEntries = Object.entries(grouped).sort((a, b) => {
+    const dateA = new Date(a[1][0].createdAt || 0).getTime();
+    const dateB = new Date(b[1][0].createdAt || 0).getTime();
+    return dateB - dateA;
+  });
 
   // ── Filter tabs ──
   const FILTERS: { key: "all" | TxType; label: string }[] = [
@@ -364,63 +410,147 @@ export function WorkerWalletScreen() {
                 <History size={36} color="#94a3b8" />
               </View>
               <Text className="text-slate-500 font-semibold text-base">Không có giao dịch</Text>
-              <Text className="text-slate-400 text-sm mt-1">Chưa có giao dịch nào trong danh mục này</Text>
+              <Text className="text-slate-400 text-sm mt-1">Hệ thống chưa ghi nhận giao dịch nào</Text>
             </View>
           ) : (
-            groupedEntries.map(([date, txs]) => (
-              <View key={date} className="mb-5">
-                {/* Date header */}
-                <View className="flex-row items-center gap-2 mb-3">
-                  <CalendarDays size={13} color="#94a3b8" />
-                  <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 }}>{date}</Text>
-                  <View className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
-                </View>
+            <>
+              {groupedEntries.map(([date, txs]) => (
+                <View key={date} className="mb-5">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <CalendarDays size={13} color="#94a3b8" />
+                    <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 }}>{date}</Text>
+                    <View className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
+                  </View>
 
-                {/* Transaction cards */}
-                <View className="rounded-[20px] overflow-hidden" style={{ backgroundColor: "#ffffff", shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 }}>
-                  {txs.map((tx, idx) => {
-                    const cfg = TX_CONFIG[tx.type];
-                    const isLast = idx === txs.length - 1;
-                    const isPositive = cfg.sign === 1;
+                  <View className="rounded-[20px] overflow-hidden" style={{ backgroundColor: "#ffffff", shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 }}>
+                    {txs.map((tx, idx) => {
+                      const cfg = TX_CONFIG[tx.type];
+                      const isLast = idx === txs.length - 1;
+                      const isPositive = cfg.sign === 1;
 
-                    return (
-                      <View key={tx.id}>
-                        <View className="flex-row items-center px-4 py-3.5" style={{ gap: 12 }}>
-                          {/* Icon */}
-                          <View className="w-11 h-11 rounded-2xl justify-center items-center" style={{ backgroundColor: cfg.bg }}>
-                            <TxIcon type={tx.type} status={tx.status} />
-                          </View>
-
-                          {/* Info */}
-                          <View className="flex-1 min-w-0">
-                            <Text className="text-slate-800 font-bold text-[14px]" numberOfLines={1}>
-                              {tx.description}
-                            </Text>
-                            {tx.jobTitle ? (
-                              <Text className="text-slate-400 text-[11px] font-medium mt-0.5" numberOfLines={1}>
-                                📋 {tx.jobTitle}
-                              </Text>
-                            ) : null}
-                            <View className="mt-1">
-                              <StatusChip status={tx.status} />
+                      return (
+                        <TouchableOpacity key={tx.id} activeOpacity={0.7} onPress={() => fetchDetail(tx.id)}>
+                          <View className="flex-row items-center px-4 py-3.5" style={{ gap: 12 }}>
+                            <View className="w-11 h-11 rounded-2xl justify-center items-center" style={{ backgroundColor: cfg.bg }}>
+                              <TxIcon type={tx.type} status={tx.status} />
                             </View>
-                          </View>
 
-                          {/* Amount */}
-                          <Text style={{ color: isPositive ? "#059669" : "#1e40af", fontSize: 15, fontWeight: "800", letterSpacing: -0.5 }}>
-                            {isPositive ? "+" : "-"}{fmtCurrency(tx.amount)}
-                          </Text>
-                        </View>
-                        {!isLast && <View style={{ height: 1, backgroundColor: "#f8fafc", marginHorizontal: 16 }} />}
-                      </View>
-                    );
-                  })}
+                            <View className="flex-1 min-w-0">
+                              <Text className="text-slate-800 font-bold text-[14px]" numberOfLines={1}>
+                                {tx.description}
+                              </Text>
+                              {tx.jobTitle ? (
+                                <Text className="text-slate-400 text-[11px] font-medium mt-0.5" numberOfLines={1}>
+                                  📋 {tx.jobTitle}
+                                </Text>
+                              ) : null}
+                              <View className="mt-1">
+                                <StatusChip status={tx.status} />
+                              </View>
+                            </View>
+
+                            <Text style={{ color: isPositive ? "#059669" : "#1e40af", fontSize: 15, fontWeight: "800", letterSpacing: -0.5 }}>
+                              {isPositive ? "+" : "-"}{fmtCurrency(tx.amount)}
+                            </Text>
+                          </View>
+                          {!isLast && <View style={{ height: 1, backgroundColor: "#f8fafc", marginHorizontal: 16 }} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            ))
+              ))}
+              
+              {hasMore && (
+                <TouchableOpacity 
+                   className="py-4 items-center justify-center bg-white rounded-2xl border border-slate-100 mt-2 mb-6"
+                   onPress={() => fetchData(false)}
+                   disabled={isFetchingMore}
+                >
+                  {isFetchingMore ? <ActivityIndicator size="small" color="#059669" /> : <Text className="text-primary-600 font-bold">Xem thêm giao dịch</Text>}
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
+
+      {/* TRANSACTION DETAIL MODAL */}
+      <Modal
+        visible={isModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <View 
+            className="bg-white rounded-t-[32px] px-6 pt-5 pb-10" 
+            style={{ minHeight: SCREEN_HEIGHT * 0.5 }}
+          >
+            {/* Grabber */}
+            <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-6" />
+            
+            <View className="flex-row items-center justify-between mb-8">
+              <Text className="text-slate-900 text-xl font-black">Chi tiết giao dịch</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} className="w-9 h-9 bg-slate-100 rounded-full items-center justify-center">
+                <XCircle size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {isDetailLoading ? (
+              <View className="flex-1 justify-center items-center py-20">
+                <ActivityIndicator size="large" color="#059669" />
+                <Text className="text-slate-400 mt-4 font-medium">Đang tải chi tiết...</Text>
+              </View>
+            ) : selectedTx ? (
+              <View>
+                {/* Hero Info */}
+                <View className="items-center mb-8">
+                  <View 
+                    className="w-20 h-20 rounded-3xl items-center justify-center mb-4" 
+                    style={{ backgroundColor: TX_CONFIG[mapBackendTxType(selectedTx.type as WalletTransactionType)].bg }}
+                  >
+                    <TxIcon type={mapBackendTxType(selectedTx.type as WalletTransactionType)} status={(selectedTx.status?.toLowerCase() as TxStatus) || "completed"} />
+                  </View>
+                  <Text className="text-slate-900 text-2xl font-black">
+                    {TX_CONFIG[mapBackendTxType(selectedTx.type as WalletTransactionType)].sign === 1 ? "+" : "-"}
+                    {fmtCurrency(selectedTx.amount)}
+                  </Text>
+                  <Text className="text-slate-400 font-semibold mt-1 uppercase tracking-widest text-[10px]">
+                    {WalletTransactionTypeLabels[selectedTx.type as WalletTransactionType]}
+                  </Text>
+                </View>
+
+                {/* Info List */}
+                <View className="bg-slate-50 rounded-3xl p-5 gap-y-4">
+                  <View className="flex-row justify-between">
+                    <Text className="text-slate-400 font-medium">Mã giao dịch</Text>
+                    <Text className="text-slate-800 font-bold text-right flex-1 ml-4" numberOfLines={1}>{selectedTx.id}</Text>
+                  </View>
+                  <View className="flex-row justify-between">
+                    <Text className="text-slate-400 font-medium">Trạng thái</Text>
+                    <StatusChip status={(selectedTx.status?.toLowerCase() as TxStatus) || "completed"} />
+                  </View>
+                  <View className="flex-row justify-between">
+                    <Text className="text-slate-400 font-medium">Thời gian</Text>
+                    <Text className="text-slate-800 font-bold">{new Date(selectedTx.createdAt).toLocaleString("vi-VN")}</Text>
+                  </View>
+                  <View className="flex-row justify-between">
+                    <Text className="text-slate-400 font-medium">Nội dung</Text>
+                    <Text className="text-slate-800 font-bold text-right flex-1 ml-4">{selectedTx.description}</Text>
+                  </View>
+                  {selectedTx.jobPostTitle && (
+                    <View className="flex-row justify-between border-t border-slate-200 pt-4 mt-2">
+                      <Text className="text-slate-400 font-medium">Công việc</Text>
+                      <Text className="text-slate-800 font-bold text-right flex-1 ml-4">{selectedTx.jobPostTitle}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

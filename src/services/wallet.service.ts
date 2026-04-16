@@ -11,7 +11,8 @@ import {
   WalletDTO, 
   WalletTransactionDTO, 
   WithdrawalResponse, 
-  WithdrawalAccountBalanceResponse 
+  WithdrawalAccountBalanceResponse,
+  PaginatedResponse,
 } from "../types/export_type_definitions";
 
 export const walletService = {
@@ -22,11 +23,19 @@ export const walletService = {
     return response.data.data;
   },
 
-  getTransactions: async (walletId: string): Promise<WalletTransactionDTO[]> => {
-    const response = await api.get<ApiResponse<WalletTransactionDTO[]>>(
-      API_ENDPOINTS.WALLET.TRANSACTIONS(walletId)
+  getTransactions: async (walletId: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<WalletTransactionDTO>> => {
+    const response = await api.get<ApiResponse<PaginatedResponse<WalletTransactionDTO>>>(
+      API_ENDPOINTS.WALLET.TRANSACTIONS(walletId),
+      { params: { page, limit } }
     );
-    return Array.isArray(response.data.data) ? response.data.data : [];
+    return response.data.data;
+  },
+
+  getTransactionDetail: async (transactionId: string): Promise<WalletTransactionDTO> => {
+    const response = await api.get<ApiResponse<WalletTransactionDTO>>(
+      API_ENDPOINTS.WALLET.TRANSACTION_DETAIL(transactionId),
+    );
+    return response.data.data;
   },
 
   createWithdrawal: async (data: {

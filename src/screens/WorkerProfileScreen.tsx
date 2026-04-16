@@ -94,7 +94,6 @@ export function WorkerProfileScreen({ navigation }: any) {
     { icon: FileText,  label: "Lịch sử ứng tuyển",  onPress: () => navigation.navigate("Jobs"),         color: "#2563eb" },
     { icon: ShieldAlert,label: "Lịch sử khiếu nại", onPress: () => navigation.navigate("DisputeHistory"), color: "#f43f5e" },
     { icon: CreditCard,label: "Ví & Thanh toán",    onPress: () => navigation.navigate("WorkerWallet"),       color: "#059669" },
-    { icon: Settings,  label: "Cài đặt",            onPress: () => {},                                  color: "#64748b" },
   ];
 
   const stats = [

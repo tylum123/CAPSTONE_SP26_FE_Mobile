@@ -50,6 +50,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     matchScore: matchScore,
     wage: job.wageAmount || 0,
     wageTypeId: job.jobTypeId === 1 ? "Khoán" : "Ngày",
+    wageUnit: job.jobTypeId === 1 ? "" : " /ngày",
     startDateFormatted: formatDateStr(job.startDate),
     endDateFormatted: formatDateStr(job.endDate),
     startDate: formatDateStr(job.startDate),

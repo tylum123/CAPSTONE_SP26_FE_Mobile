@@ -40,9 +40,9 @@ const TYPE_CONFIG: Record<NotificationType, { icon: any; color: string; bg: stri
 
 const INITIAL: Notification[] = [
   { id: 1, type: "job_accepted",     title: "Ứng tuyển được chấp nhận", message: "Nguyễn Văn A đã chấp nhận ứng tuyển của bạn cho công việc 'Thu hoạch lúa'", timestamp: "5 phút trước",  read: false, actionable: true,  jobId: 1 },
-  { id: 2, type: "payment_received", title: "Đã nhận thanh toán 💰",     message: "Bạn đã nhận 250,000 VNĐ cho công việc 'Làm đất trồng rau'",                timestamp: "2 giờ trước",   read: false },
-  { id: 3, type: "reminder",         title: "Nhắc nhở công việc ⏰",      message: "Bạn có công việc 'Chăm sóc vườn cam' bắt đầu vào ngày mai lúc 07:00",      timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 2 },
-  { id: 4, type: "new_job",          title: "Việc mới gần bạn 📍",        message: "Có việc 'Phun thuốc sâu' cách 3km, thù lao 300,000 VNĐ",                       timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 3 },
+  { id: 2, type: "payment_received", title: "Đã nhận thanh toán",     message: "Bạn đã nhận 250,000 VNĐ cho công việc 'Làm đất trồng rau'",                timestamp: "2 giờ trước",   read: false },
+  { id: 3, type: "reminder",         title: "Nhắc nhở công việc",      message: "Bạn có công việc 'Chăm sóc vườn cam' bắt đầu vào ngày mai lúc 07:00",      timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 2 },
+  { id: 4, type: "new_job",          title: "Việc mới gần bạn",        message: "Có việc 'Phun thuốc sâu' cách 3km, thù lao 300,000 VNĐ",                       timestamp: "1 ngày trước",  read: true,  actionable: true,  jobId: 3 },
   { id: 5, type: "job_rejected",     title: "Ứng tuyển không thành công", message: "Trần Thị B đã từ chối ứng tuyển của bạn cho 'Tưới tiêu'",                   timestamp: "2 ngày trước",  read: true },
 ];
 
