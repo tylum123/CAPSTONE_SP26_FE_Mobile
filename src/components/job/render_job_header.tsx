@@ -17,15 +17,28 @@ export function RenderJobHeader({ jobDetail }: { jobDetail: any }) {
   // Status checked: 1=Draft, 2=Published, 3=Closed, 4=InProgress, 5=Completed, 6=Cancelled
   const isInProgressButExpired = isExpired && jobDetail.statusId === 4;
 
+  const getCategoryVariant = (categoryName: string): any => {
+    if (!categoryName) return "secondary";
+    const name = categoryName.toLowerCase();
+    if (name.includes("trồng trọt")) return "success";   // Green
+    if (name.includes("chăn nuôi")) return "warning";   // Yellow/Orange
+    if (name.includes("thủy hải sản")) return "info";   // Blue
+    return "secondary";
+  };
+
+  const categoryVariant = getCategoryVariant(jobDetail.jobType);
+
   return (
     <View className="bg-white rounded-[20px] p-6 mb-4 border border-slate-100" style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-row gap-2">
           {jobDetail.jobType ? (
-            <Badge variant={jobDetail.urgent ? "danger" : "success"}>{jobDetail.urgent ? "🔥 Cần gấp" : jobDetail.jobType}</Badge>
+            <Badge variant={jobDetail.urgent ? "danger" : categoryVariant}>
+              {jobDetail.urgent ? "Cần gấp" : jobDetail.jobType}
+            </Badge>
           ) : null}
           {isInProgressButExpired && (
-            <Badge variant="warning">⚠️ Quá hạn báo cáo</Badge>
+            <Badge variant="warning">Quá hạn báo cáo</Badge>
           )}
           {jobDetail.statusId === 5 && (
             <Badge variant="info">✓ Đã hoàn thành</Badge>

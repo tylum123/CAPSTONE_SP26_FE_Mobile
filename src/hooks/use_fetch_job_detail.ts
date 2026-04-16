@@ -7,7 +7,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { DeviceEventEmitter } from "react-native";
 import { jobService, workerProfileService, dailyReportService, messageService } from "../services/export_services";
-import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE, DEMO_CATEGORIES } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
@@ -31,14 +31,20 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       sourceProfile = DEMO_WORKER_PROFILE;
     } else {
       try {
-        const [data, apps, profile] = await Promise.all([
+        const [data, apps, profile, categories] = await Promise.all([
           jobService.getJobPostDetail(String(jobId)),
           jobService.getApplications(),
-          workerProfileService.getProfile()
+          workerProfileService.getProfile(),
+          jobService.getCategories()
         ]);
         sourceJob = data;
         sourceApps = apps;
         sourceProfile = profile;
+        
+        if (sourceJob?.jobCategoryId && categories) {
+          const cat = categories.find((c: any) => String(c.id) === String(sourceJob.jobCategoryId));
+          if (cat) sourceJob.jobCategoryName = cat.name;
+        }
 
         // NOTE: chat partner resolution is deferred until after reports are fetched,
         // because JobPostDTO does not include farmer.userId — only reports (JobDetailResponseDTO) do.
@@ -52,6 +58,12 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
     }
 
     if (sourceJob) {
+      // Resolve category name for demo mode too
+      if (user?.isDemo || !isAuthenticated) {
+        const cat = DEMO_CATEGORIES.find(c => String(c.id) === String(sourceJob.jobCategoryId));
+        if (cat) sourceJob.jobCategoryName = cat.name;
+      }
+
       const existing = sourceApps.find((a: any) => 
         String(a.jobPostId) === String(jobId) && 
         (a.worker?.id === sourceProfile?.id || (a as any).workerId === sourceProfile?.id)
@@ -162,10 +174,13 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         avatar: reportFarmer.avatarUrl || mappedData.farmer?.avatar,
         rating: reportFarmer.averageRating ?? mappedData.farmer?.rating,
         totalJobs: reportFarmer.totalJobsPosted ?? reportFarmer.totalJobsCompleted ?? mappedData.farmer?.totalJobs,
+        totalJobsPosted: reportFarmer.totalJobsPosted ?? mappedData.farmer?.totalJobsPosted,
+        totalJobsCompleted: reportFarmer.totalJobsCompleted ?? mappedData.farmer?.totalJobsCompleted,
       } : mappedData.farmer;
 
       const mapped = {
         ...mappedData,
+        jobType: sourceJob.jobCategoryName || mappedData.jobType,
         farmer: enrichedFarmer,
         reports: reports.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime()),
         timeSlots

@@ -136,9 +136,9 @@ export function useHomeData(): HomeDataResult {
         // Calculate today's earnings from wallet transactions
         let todayEarnings = 0;
         if (wallet?.id) {
-          const txs = await walletService.getTransactions(wallet.id);
+          const txsResult = await walletService.getTransactions(wallet.id);
           const todayLocal = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
-          todayEarnings = txs
+          todayEarnings = (txsResult?.data || [])
             .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
             .reduce((sum, tx) => sum + tx.amount, 0);
         }

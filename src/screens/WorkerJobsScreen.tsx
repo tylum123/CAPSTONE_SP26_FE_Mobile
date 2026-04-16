@@ -212,9 +212,9 @@ export function WorkerJobsScreen({ navigation, route }: any) {
             </View>
             
             <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-1">
-              <View className="flex-row items-center gap-1.5">
+              <View className="flex-row items-center gap-1.5 flex-1 pr-2">
                 <MapPin size={14} color="#64748b" />
-                <Text className="text-[12px] text-slate-500 font-medium flex-1">{job?.location || "N/A"}</Text>
+                <Text className="text-[12px] text-slate-500 font-medium flex-1" numberOfLines={1}>{job?.location || "N/A"}</Text>
               </View>
               <View className="flex-row items-center gap-1.5">
                 <Calendar size={14} color="#64748b" />
@@ -266,14 +266,14 @@ export function WorkerJobsScreen({ navigation, route }: any) {
           </View>
           
           <View className="flex-row flex-wrap gap-x-4 gap-y-2 mb-4">
-            <View className="flex-row items-center gap-1.5 flex-1">
+            <View className="flex-row items-center gap-1.5 flex-1 pr-2">
               <MapPin size={14} color="#64748b" />
-              <Text className="text-[12px] text-slate-500 font-medium leading-[18px]">{job?.location || "N/A"}</Text>
+              <Text className="text-[12px] text-slate-500 font-medium leading-[18px] flex-1" numberOfLines={1}>{job?.location || "N/A"}</Text>
             </View>
             <View className="flex-row items-center gap-1.5 bg-primary-50 rounded-full px-2 py-0.5">
               <Banknote size={14} color="#059669" />
               <Text className="text-[12px] font-bold text-primary-700">
-                {job.wage.toLocaleString("vi-VN")}đ {job.wageType === "Khoán" ? "/ khoán" : ""}
+                {job.wage.toLocaleString("vi-VN")}đ
               </Text>
             </View>
           </View>
@@ -333,9 +333,9 @@ export function WorkerJobsScreen({ navigation, route }: any) {
           </View>
           
           <View className="flex-row items-center gap-4 mb-1">
-            <View className="flex-row items-center gap-1.5">
+            <View className="flex-row items-center gap-1.5 flex-1 pr-2">
               <MapPin size={14} color="#94a3b8" />
-              <Text className="text-[13px] text-slate-500 font-medium leading-[20px] flex-1">{job?.location || "N/A"}</Text>
+              <Text className="text-[13px] text-slate-500 font-medium leading-[20px] flex-1" numberOfLines={1}>{job?.location || "N/A"}</Text>
             </View>
             <View className="w-1 h-1 bg-slate-200 rounded-full" />
             <View className="flex-row items-center gap-1.5">
