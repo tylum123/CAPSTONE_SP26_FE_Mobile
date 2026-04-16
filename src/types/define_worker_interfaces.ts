@@ -414,6 +414,10 @@ export interface CreateRatingRequest {
 }
 
 export interface UpdateRatingRequest {
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
   ratingScore: number;
   reviewText?: string;
+  typeId?: number;
 }

@@ -80,7 +80,14 @@ export function EditProfileScreen({ navigation, route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [availableSkills, setAvailableSkills] = useState<any[]>([]);
-  const [feedback, setFeedback] = useState({ visible: false, title: "", message: "", variant: "info" as "success" | "error" | "info" });
+  const [feedback, setFeedback] = useState<{ 
+    visible: boolean; 
+    title: string; 
+    message: string; 
+    variant: "success" | "error" | "info"; 
+    onConfirm?: () => void;
+    onClose?: () => void;
+  }>({ visible: false, title: "", message: "", variant: "info" as "success" | "error" | "info" });
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -135,8 +142,12 @@ export function EditProfileScreen({ navigation, route }: any) {
       await workerProfileService.updateProfile(payload);
       DeviceEventEmitter.emit("REFRESH_DATA");
       hapticFeedback.success();
-      setFeedback({ visible: true, title: "Thành công", message: "Hồ sơ đã được cập nhật.", variant: "success" });
-      setTimeout(() => navigation.goBack(), 1500);
+      setFeedback({ 
+        visible: true, 
+        title: "Thành công", 
+        message: "Hồ sơ đã được cập nhật.", 
+        variant: "success" 
+      });
     } catch (err: any) {
       const errorMessage = getErrorMessage(err, "Không thể cập nhật hồ sơ. Vui lòng thử lại.");
       setFeedback({ visible: true, title: "Lỗi cập nhật", message: errorMessage, variant: "error" });
@@ -280,7 +291,26 @@ export function EditProfileScreen({ navigation, route }: any) {
           <Button className="flex-1 h-[52px]" style={{ flex: 1 }} onPress={handleSave} loading={loading}>Lưu hồ sơ</Button>
         </View>
       </View>
-      <FeedbackModal visible={feedback.visible} title={feedback.title} message={feedback.message} variant={feedback.variant} onClose={() => setFeedback({ ...feedback, visible: false })} />
+      <FeedbackModal 
+        visible={feedback.visible} 
+        title={feedback.title} 
+        message={feedback.message} 
+        variant={feedback.variant} 
+        onClose={() => {
+          setFeedback({ ...feedback, visible: false });
+          if (feedback.variant === "success") {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          }
+        }} 
+        onConfirm={() => {
+          setFeedback({ ...feedback, visible: false });
+          if (feedback.variant === "success") {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          }
+        }} 
+      />
       <LocationPicker visible={showLocationPicker} onClose={() => setShowLocationPicker(false)} initialValues={formData} onSelect={loc => setFormData(p => ({ ...p, ...loc }))} />
       <SkillSelectionModal visible={showSkillModal} onClose={() => setShowSkillModal(false)} selectedSkillIds={formData.skillIds} onSave={ids => updateField("skillIds", ids)} />
     </SafeAreaView>

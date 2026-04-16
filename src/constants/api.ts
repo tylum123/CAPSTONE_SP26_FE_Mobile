@@ -92,6 +92,7 @@ export const API_ENDPOINTS = {
     BASE: `${API_PREFIX}/ratings`,
     CREATE: `${API_PREFIX}/ratings`,
     DETAIL: (id: string) => `${API_PREFIX}/ratings/${id}`,
+    DELETE: (id: string) => `${API_PREFIX}/ratings/${id}`,
     USER_SPECIFIC: (userId: string) => `${API_PREFIX}/ratings/user/${userId}`,
     USER_ALL: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/all`,
     USER_AVERAGE: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/average`,

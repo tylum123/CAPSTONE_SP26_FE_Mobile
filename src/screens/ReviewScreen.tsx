@@ -14,16 +14,30 @@ import { jobService } from "../services/job.service";
 import { dailyReportService } from "../services/daily_report.service";
 import { hapticFeedback } from "../utils/haptic";
 import { useAuth } from "../context/AuthContext";
+import { COLORS, SHADOWS } from "../constants/theme";
 
 export function ReviewScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
-  const { jobId, raterId: passedRaterId, rateeId: passedRateeId } = route.params || {};
+  const { jobId, raterId: passedRaterId, rateeId: passedRateeId, ratingId, existingRating } = route.params || {};
   const { user, isAuthenticated } = useAuth();
   
-  const [rating, setRating]           = useState(0);
+  const [rating, setRating]           = useState(existingRating?.ratingScore || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [review, setReview]           = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (existingRating?.reviewText) {
+      const match = existingRating.reviewText.match(/^\[(.*?)\]\s*(.*)$/);
+      if (match) {
+        const tags = match[1].split(", ").map((t: string) => t.trim());
+        setSelectedTags(tags);
+        setReview(match[2]);
+      } else {
+        setReview(existingRating.reviewText);
+      }
+    }
+  }, [existingRating]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [jobInfo, setJobInfo] = useState<any>(null);
@@ -40,13 +54,35 @@ export function ReviewScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant: "success" | "error" | "info"; 
-    onConfirm?: () => void 
+    onConfirm?: () => void;
+    onClose?: () => void;
   }>({ 
     visible: false, 
     title: "", 
     message: "", 
     variant: "info" 
   });
+
+  const showFeedback = (params: { 
+    title: string; 
+    message: string; 
+    variant?: "success" | "error" | "info"; 
+    onConfirm?: () => void;
+    onClose?: () => void;
+  }) => setFeedback({ 
+    visible: true, 
+    title: params.title, 
+    message: params.message, 
+    variant: params.variant || "info", 
+    onConfirm: params.onConfirm,
+    onClose: params.onClose
+  });
+
+  const closeFeedback = () => { 
+    const cb = feedback.onClose || feedback.onConfirm; 
+    setFeedback((p) => ({ ...p, visible: false })); 
+    cb?.(); 
+  };
 
   useEffect(() => {
     const fetchJobDetail = async () => {
@@ -97,25 +133,6 @@ export function ReviewScreen({ navigation, route }: any) {
     fetchJobDetail();
   }, [jobId, isAuthenticated, user?.isDemo, passedRateeId]);
 
-  const showFeedback = (params: { 
-    title: string; 
-    message: string; 
-    variant?: "success" | "error" | "info"; 
-    onConfirm?: () => void 
-  }) => setFeedback({ 
-    visible: true, 
-    title: params.title, 
-    message: params.message, 
-    variant: params.variant || "info", 
-    onConfirm: params.onConfirm 
-  });
-
-  const closeFeedback = () => { 
-    const cb = feedback.onConfirm; 
-    setFeedback((p) => ({ ...p, visible: false })); 
-    cb?.(); 
-  };
-
   const handleRatingPress = (star: number) => {
     hapticFeedback.medium();
     setRating(star);
@@ -133,23 +150,40 @@ export function ReviewScreen({ navigation, route }: any) {
       // Backend REQUIRES User ID, not Profile ID for ratee
       const actualRateeId = passedRateeId || jobInfo?.farmerUserId || "00000000-0000-0000-0000-000000000000";
 
-      await ratingService.createRating({
-        jobPostId: jobId,
-        raterId: actualRaterId,
-        rateeId: actualRateeId,
-        ratingScore: rating,
-        typeId: 2, // 2 = WorkerToFarmer
-        reviewText: selectedTags.length > 0 
-          ? `[${selectedTags.join(", ")}] ${review}` 
-          : review,
-      });
+      if (ratingId) {
+        await ratingService.updateRating(ratingId, {
+          jobPostId: jobId,
+          raterId: actualRaterId,
+          rateeId: actualRateeId,
+          ratingScore: rating,
+          typeId: 2, 
+          reviewText: selectedTags.length > 0 
+            ? `[${selectedTags.join(", ")}] ${review}` 
+            : review,
+        });
+      } else {
+        await ratingService.createRating({
+          jobPostId: jobId,
+          raterId: actualRaterId,
+          rateeId: actualRateeId,
+          ratingScore: rating,
+          typeId: 2, // 2 = WorkerToFarmer
+          reviewText: selectedTags.length > 0 
+            ? `[${selectedTags.join(", ")}] ${review}` 
+            : review,
+        });
+      }
       
       hapticFeedback.success();
       showFeedback({ 
         title: "Thành công", 
-        message: "Cảm ơn bạn đã đóng góp ý kiến để xây dựng cộng đồng nông nghiệp tốt hơn!", 
+        message: ratingId ? "Cập nhật đánh giá thành công!" : "Cảm ơn bạn đã đóng góp ý kiến để xây dựng cộng đồng nông nghiệp tốt hơn!", 
         variant: "success",
         onConfirm: () => {
+          DeviceEventEmitter.emit("REFRESH_DATA");
+          navigation.goBack();
+        },
+        onClose: () => {
           DeviceEventEmitter.emit("REFRESH_DATA");
           navigation.goBack();
         }
@@ -165,6 +199,39 @@ export function ReviewScreen({ navigation, route }: any) {
       setIsSubmitting(false);
     }
   };
+  const handleDelete = async () => {
+    if (!ratingId) return;
+    
+    showFeedback({
+      title: "Xác nhận xóa",
+      message: "Bạn có chắc chắn muốn xóa đánh giá này không?",
+      variant: "info",
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        try {
+          await ratingService.deleteRating(ratingId);
+          hapticFeedback.success();
+          DeviceEventEmitter.emit("REFRESH_DATA");
+          showFeedback({
+            title: "Đã xóa",
+            message: "Đánh giá của bạn đã được xóa thành công.",
+            variant: "success",
+            onConfirm: () => navigation.goBack(),
+            onClose: () => navigation.goBack()
+          });
+        } catch (error: any) {
+          hapticFeedback.error();
+          showFeedback({ 
+            title: "Lỗi", 
+            message: error.message || "Không thể xóa đánh giá lúc này.", 
+            variant: "error" 
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    });
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
@@ -172,16 +239,29 @@ export function ReviewScreen({ navigation, route }: any) {
         {/* Header */}
         <View className="px-6 pt-10 pb-6 bg-white shadow-sm">
           <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-[28px] font-black text-slate-900 leading-tight">Đánh giá</Text>
+            <View className="flex-1">
+              <Text className="text-[28px] font-black text-slate-900 leading-tight">
+                {ratingId ? "Sửa đánh giá" : "Đánh giá"}
+              </Text>
               <Text className="text-[14px] text-slate-500 font-medium">Chia sẻ trải nghiệm làm việc của bạn</Text>
             </View>
-            <TouchableOpacity 
-              className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center" 
-              onPress={() => navigation.goBack()}
-            >
-              <X size={20} color="#64748b" />
-            </TouchableOpacity>
+            <View className="flex-row gap-2">
+              {ratingId && (
+                <TouchableOpacity 
+                  className="w-10 h-10 rounded-full bg-rose-50 items-center justify-center border border-rose-100" 
+                  onPress={handleDelete}
+                  disabled={isSubmitting}
+                >
+                  <X size={20} color="#f43f5e" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center" 
+                onPress={() => navigation.goBack()}
+              >
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -256,10 +336,22 @@ export function ReviewScreen({ navigation, route }: any) {
                   return (
                     <TouchableOpacity
                       key={tag}
-                      className={["px-5 py-2.5 rounded-2xl border transition-all", isSelected ? "bg-primary-600 border-primary-600 shadow-md" : "bg-white border-slate-100"].join(" ")}
+                      style={{
+                        paddingHorizontal: 20,
+                        paddingVertical: 10,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        backgroundColor: isSelected ? COLORS.primary[600] : COLORS.white,
+                        borderColor: isSelected ? COLORS.primary[600] : COLORS.slate[100],
+                        ...(isSelected ? SHADOWS.sm : {})
+                      }}
                       onPress={() => handleTagToggle(tag)}
                     >
-                      <Text className={["text-[13px] font-black", isSelected ? "text-white" : "text-slate-600"].join(" ")}>{tag}</Text>
+                      <Text style={{
+                        fontSize: 13,
+                        fontWeight: "900",
+                        color: isSelected ? COLORS.white : COLORS.slate[600]
+                      }}>{tag}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -304,7 +396,9 @@ export function ReviewScreen({ navigation, route }: any) {
             {isSubmitting ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text className="text-[16px] font-black text-white uppercase tracking-widest">Gửi đánh giá ngay</Text>
+              <Text className="text-[16px] font-black text-white uppercase tracking-widest">
+                {ratingId ? "Cập nhật đánh giá" : "Gửi đánh giá ngay"}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
