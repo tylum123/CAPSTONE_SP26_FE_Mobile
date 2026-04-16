@@ -5,7 +5,7 @@
  * Dependencies: Wallet service, Auth context. */
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, Image, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, Image, KeyboardAvoidingView, Platform, DeviceEventEmitter } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, Info, Landmark, DollarSign, Wallet, ShieldCheck, Check, Search, X } from "lucide-react-native";
@@ -167,7 +167,13 @@ export function WithdrawalScreen() {
         description: `Rut tien AgroTemp ${Date.now().toString().slice(-4)}`
       });
       Alert.alert("Thành công", "Yêu cầu rút tiền đã được gửi và đang chờ xử lý.", [
-        { text: "OK", onPress: () => navigation.goBack() }
+        { 
+          text: "OK", 
+          onPress: () => {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          } 
+        }
       ]);
     } catch (error: any) {
       Alert.alert("Lỗi", error?.response?.data?.message || "Không thể thực hiện yêu cầu rút tiền.");

@@ -40,6 +40,13 @@ export const ratingService = {
   },
 
   /**
+   * Delete a rating
+   */
+  deleteRating: async (id: string): Promise<void> => {
+    await api.delete(API_ENDPOINTS.RATING.DELETE(id));
+  },
+
+  /**
    * Get ratings for a specific user (farmer or worker)
    */
   getUserRatings: async (userId: string): Promise<RatingDTO[]> => {

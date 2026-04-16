@@ -31,7 +31,8 @@ export function SubmitReportScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant: "success" | "error" | "info"; 
-    onConfirm?: () => void 
+    onConfirm?: () => void;
+    onClose?: () => void;
   }>({ 
     visible: false, 
     title: "", 
@@ -43,17 +44,19 @@ export function SubmitReportScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant?: "success" | "error" | "info"; 
-    onConfirm?: () => void 
+    onConfirm?: () => void;
+    onClose?: () => void;
   }) => setFeedback({ 
     visible: true, 
     title: params.title, 
     message: params.message, 
     variant: params.variant || "info", 
-    onConfirm: params.onConfirm 
+    onConfirm: params.onConfirm,
+    onClose: params.onClose
   });
 
   const closeFeedback = () => { 
-    const cb = feedback.onConfirm; 
+    const cb = feedback.onClose || feedback.onConfirm; 
     setFeedback((p) => ({ ...p, visible: false })); 
     cb?.(); 
   };

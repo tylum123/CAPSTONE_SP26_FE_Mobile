@@ -8,7 +8,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent, Badge, Avatar, PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
-import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare, Quote } from "lucide-react-native";
+import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare, Quote, Edit2, Edit } from "lucide-react-native";
 import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
 import { ratingService } from "../services/rating.service";
 import { useAuth } from "../context/AuthContext";
@@ -160,6 +160,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         paidAmount: jobStatusId === 5 ? (jobInfo?.wageAmount || 0) : 0,
         review: ratingForJob?.reviewText || null,
         rating: ratingForJob?.ratingScore || null,
+        ratingId: ratingForJob?.id || null,
         startDate: mappedData.date,
         endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : mappedData.date,
         isReportedToday,
@@ -360,7 +361,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
                     </View>
                   </View>
                   <Text className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Đánh giá của bạn</Text>
-               </View>
+                </View>
                {job.review && (
                  <View className="flex-row gap-3 items-start">
                     <View className="mt-1">
@@ -371,6 +372,23 @@ export function WorkerJobsScreen({ navigation, route }: any) {
                     </Text>
                  </View>
                )}
+               
+               <TouchableOpacity 
+                 onPress={() => navigation.navigate("Review", { 
+                   jobId: job.jobPostId, 
+                   rateeId: job.farmerUserId, 
+                   ratingId: job.ratingId,
+                   existingRating: {
+                     ratingScore: job.rating,
+                     reviewText: job.review
+                   }
+                 })}
+                 className="flex-row items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 self-end mt-2"
+                 activeOpacity={0.7}
+               >
+                 <Edit size={14} color="#64748b" />
+                 <Text className="text-[11px] text-slate-500 font-bold uppercase tracking-widest">Chỉnh sửa</Text>
+               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity 
