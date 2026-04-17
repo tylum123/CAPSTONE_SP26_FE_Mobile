@@ -11,16 +11,8 @@ import { ArrowLeft, Send } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";
 import { messageService } from "../services/message.service";
 import { useAuth } from "../context/AuthContext";
-import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
-import { CONFIG } from "../config/export_configurations";
-import { authTokenService } from "../services/auth-token.service";
 import { MessageDTO } from "../types/export_type_definitions";
-
-interface HubConnectionStats {
-  totalConnections: number;
-  uniqueUsers: number;
-  myConnections: number;
-}
+import { signalRService } from "../services/signalr.service";
 
 function normalizeIncomingMessage(raw: any): MessageDTO | null {
   const payload = raw?.data ?? raw?.message ?? raw;
@@ -156,7 +148,6 @@ export function ChatScreen({ navigation, route }: any) {
 
   useEffect(() => {
     let isSubscribed = true;
-    let connection: HubConnection | null = null;
 
     if (!farmerId) {
       fetchMessages();
@@ -164,80 +155,47 @@ export function ChatScreen({ navigation, route }: any) {
     }
 
     const realtimeEvents = ["NewMessage", "ReceiveMessage", "newMessage", "receiveMessage", "MessageReceived"] as const;
+    let onRealtimeMessage: ((raw: any) => void) | null = null;
 
-    const connectSignalR = async () => {
-      try {
-        let baseUrl = CONFIG.API_BASE_URL;
-        if (baseUrl.endsWith("/api/v1")) {
-          baseUrl = baseUrl.replace("/api/v1", "");
-        } else if (baseUrl.endsWith("/api")) {
-          baseUrl = baseUrl.replace("/api", "");
-        }
+    const setupSignalR = async () => {
+      await signalRService.startConnection();
 
-        connection = new HubConnectionBuilder()
-          .withUrl(`${baseUrl}/hubs/chat`, {
-            accessTokenFactory: async () => (await authTokenService.getToken()) ?? "",
-          })
-          .configureLogging(LogLevel.Information)
-          .withAutomaticReconnect()
-          .build();
+      onRealtimeMessage = (raw: any) => {
+        const message = normalizeIncomingMessage(raw);
+        if (!message) return;
+        if (!isSubscribed) return;
 
-        const onRealtimeMessage = (raw: any) => {
-          const message = normalizeIncomingMessage(raw);
-          if (!message) return;
-          if (!isSubscribed) return;
-
-          if (
-            message.senderId.toLowerCase() === farmerId?.toLowerCase() ||
-            message.receiverId.toLowerCase() === farmerId?.toLowerCase()
-          ) {
-            setMessages((prev) => {
-              const exists = prev.find((m) => m.id === message.id);
-              if (exists) return prev;
-              const filtered = prev.filter(
-                (m) =>
-                  !m.id.toString().startsWith("temp-") ||
-                  m.content !== message.content
-              );
-              return [...filtered, message].sort(
-                (a, b) =>
-                  new Date(a.createdAt).getTime() -
-                  new Date(b.createdAt).getTime()
-              );
-            });
-            if (message.senderId.toLowerCase() === farmerId?.toLowerCase()) {
-              messageService.markAsRead({ senderId: farmerId }).catch(() => {});
-            }
+        if (
+          message.senderId.toLowerCase() === farmerId?.toLowerCase() ||
+          message.receiverId.toLowerCase() === farmerId?.toLowerCase()
+        ) {
+          setMessages((prev) => {
+            const exists = prev.find((m) => m.id === message.id);
+            if (exists) return prev;
+            const filtered = prev.filter(
+              (m) =>
+                !m.id.toString().startsWith("temp-") ||
+                m.content !== message.content
+            );
+            return [...filtered, message].sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            );
+          });
+          if (message.senderId.toLowerCase() === farmerId?.toLowerCase()) {
+            messageService.markAsRead({ senderId: farmerId }).catch(() => {});
           }
-        };
-
-        for (const eventName of realtimeEvents) {
-          connection.on(eventName, onRealtimeMessage);
         }
+      };
 
-        connection.onreconnected(async () => {
-          try {
-            const stats = await connection?.invoke<HubConnectionStats>("GetConnectionStats");
-            console.log("ChatScreen: SignalR Reconnected", stats);
-          } catch (err) {
-            console.log("ChatScreen: SignalR Reconnect Stats Error", err);
-          }
-        });
-
-        await connection.start();
-        try {
-          const stats = await connection.invoke<HubConnectionStats>("GetConnectionStats");
-          console.log("ChatScreen: SignalR Connected", stats);
-        } catch (err) {
-          console.log("ChatScreen: SignalR Connected (stats unavailable)", err);
-        }
-      } catch (err) {
-        console.log("ChatScreen: SignalR Connection Error", err);
+      for (const eventName of realtimeEvents) {
+        signalRService.addListener(eventName, onRealtimeMessage);
       }
     };
 
     fetchMessages().then(() => {
-      connectSignalR();
+      setupSignalR();
     });
 
     // Fallback polling format if socket drops for any reason but hasn't closed technically
@@ -246,8 +204,10 @@ export function ChatScreen({ navigation, route }: any) {
     return () => {
       isSubscribed = false;
       clearInterval(backupInterval);
-      if (connection) {
-        connection.stop();
+      if (onRealtimeMessage) {
+        for (const eventName of realtimeEvents) {
+          signalRService.removeListener(eventName, onRealtimeMessage);
+        }
       }
     };
   }, [fetchMessages, farmerId]);
