@@ -44,7 +44,7 @@ export function JobDetailScreen({ navigation, route }: any) {
       { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location?.address, hint: jobDetail.location?.distance ? `Cách bạn ${jobDetail.location.distance} km` : "" },
       { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
       { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.appliedWorkers || 0}/${jobDetail.requiredWorkers || 0} người` },
-      { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
+      { Icon: Wrench,    label: "Kỹ năng khuyến nghị", value: jobDetail.requiredSkills || "Không yêu cầu" },
       { Icon: Banknote,  label: "Loại Hình", value: jobDetail.wageTypeId || "N/A" },
     ];
   }, [jobDetail]);

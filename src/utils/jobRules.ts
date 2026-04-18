@@ -58,7 +58,15 @@ export function getReportButtonStatus(
     }
   }
 
-  // Status checked: 2=Published, 4=InProgress
+  // Status checked: 2=Published, 4=InProgress, 5=Completed
+  if (statusId === 5) {
+    return {
+      enabled: false,
+      label: "Hoàn thành",
+      variant: "disabled"
+    };
+  }
+
   // Only allow reporting for active jobs
   const isActive = statusId === 2 || statusId === 4;
   if (!isActive) {

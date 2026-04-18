@@ -6,8 +6,10 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Clock, Calendar, Banknote, MessageCircle } from "lucide-react-native";
+import { Clock, Calendar, Banknote, MessageCircle, AlertCircle } from "lucide-react-native";
 import { Badge } from "../ui/Badge";
+import { canSubmitDispute } from "../../utils/disputeRules";
+import { useNavigation } from "@react-navigation/native";
 
 type Props = {
   jobDetail: any;
@@ -18,6 +20,7 @@ type Props = {
 };
 
 export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selectedTimeSlots, isApplied, toggleTimeSlot }: Props) {
+  const navigation = useNavigation<any>();
   if (!jobDetail) return null;
 
   return (
@@ -70,6 +73,27 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                       <MessageCircle size={14} color="#d97706" />
                       <Text className="flex-1 text-[11px] text-amber-800 leading-4 italic">"{report.farmerFeedback}"</Text>
                     </View>
+                  )}
+
+                  {/* Dispute Action Shortcut */}
+                  {canSubmitDispute({ 
+                    ...report, 
+                    statusId: report.farmerApprovedPercent !== undefined ? 3 : 2, 
+                    jobPost: jobDetail 
+                  }) && (
+                    <TouchableOpacity 
+                      className="mt-3 flex-row items-center justify-center bg-rose-50 py-2.5 rounded-xl border border-rose-100 gap-2"
+                      onPress={() => navigation.navigate("SubmitDispute", {
+                        jobPostId: jobDetail.id,
+                        reportId: report.id,
+                        farmerName: jobDetail.farmer?.name,
+                        jobTitle: jobDetail.title,
+                        isKhoán: jobDetail.jobTypeId === 1
+                      })}
+                    >
+                      <AlertCircle size={14} color="#e11d48" />
+                      <Text className="text-xs font-bold text-rose-600">Khiếu nại báo cáo này</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               ))

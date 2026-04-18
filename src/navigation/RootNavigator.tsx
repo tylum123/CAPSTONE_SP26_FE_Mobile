@@ -29,6 +29,7 @@ import { WithdrawalScreen } from "../screens/WithdrawalScreen";
 import { WorkerWalletScreen } from "../screens/WorkerWalletScreen";
 import { DisputeHistoryScreen } from "../screens/DisputeHistoryScreen";
 import { SubmitDisputeScreen } from "../screens/SubmitDisputeScreen";
+import { DisputeDetailScreen } from "../screens/DisputeDetailScreen";
 
 const Stack = createStackNavigator();
 
@@ -121,6 +122,7 @@ export function RootNavigator() {
           <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
           <Stack.Screen name="DisputeHistory" component={DisputeHistoryScreen} />
           <Stack.Screen name="SubmitDispute" component={SubmitDisputeScreen} />
+          <Stack.Screen name="DisputeDetail" component={DisputeDetailScreen} />
         </>
       )}
     </Stack.Navigator>

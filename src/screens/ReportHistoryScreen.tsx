@@ -7,16 +7,14 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ClipboardCheck, Calendar } from "lucide-react-native";
+import { ChevronLeft, ClipboardCheck } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
-import { Badge } from "../components/ui/Badge";
 import { JobDetailDTO } from "../types/export_type_definitions";
 import { dailyReportService } from "../services/daily_report.service";
 import { useAuth } from "../context/AuthContext";
 import { PillTabs } from "../components/ui/PillTabs";
-import { Clock, Filter, AlertCircle } from "lucide-react-native";
-import { canSubmitDispute } from "../utils/disputeRules";
-import { JobStatus } from "../constants/enums";
+import { Clock, Filter } from "lucide-react-native";
+import { ReportHistoryCard } from "../components/report/ReportHistoryCard";
 
 export function ReportHistoryScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -105,68 +103,18 @@ export function ReportHistoryScreen({ navigation }: any) {
   const filteredReports = getFilteredReports();
 
   const renderItem = ({ item }: { item: JobDetailDTO }) => {
-    const isApproved = item.statusId === JobStatus.Completed; // Completed
-    const isPending = item.statusId === JobStatus.Reported;  // Reported
-    const isInProgress = item.statusId === JobStatus.InProgress; // InProgress
-
     return (
-      <TouchableOpacity 
-        className="mb-3 bg-white border border-slate-100 rounded-xl overflow-hidden"
-        style={{ elevation: 2, shadowColor: "#0f172a", shadowOffset: { height: 2, width: 0 }, shadowOpacity: 0.05, shadowRadius: 8 }}
+      <ReportHistoryCard
+        item={item}
         onPress={() => navigation.navigate("ReportDetail", { reportId: item.id, report: item })}
-        activeOpacity={0.8}
-      >
-        <View className="p-4">
-          <View className="flex-row items-center justify-between mb-2">
-            <View className="flex-row items-center gap-2">
-              <Calendar size={14} color="#64748b" />
-              <Text className="text-xs font-semibold text-slate-500">
-                {new Date(item.workDate).toLocaleDateString("vi-VN")}
-              </Text>
-            </View>
-            <Badge variant={isApproved ? "success" : isPending ? "secondary" : isInProgress ? "info" : "warning"}>
-              {isApproved ? "Đã duyệt" : isPending ? "Chờ duyệt" : isInProgress ? "Đang làm" : "Khiếu nại"}
-            </Badge>
-          </View>
-          
-          <Text className="text-[15px] font-bold text-slate-800 mb-1">
-            {item.jobPost?.title || "Báo cáo công việc"}
-          </Text>
-          <Text className="text-xs text-slate-500 mb-3" numberOfLines={1}>
-            {item.jobPost?.contactName || "Nông trại"}
-          </Text>
-          
-          <Text className="text-[14px] text-slate-600 mb-3" numberOfLines={2}>
-            {item.workerDescription}
-          </Text>
-
-          <View className="flex-row items-center justify-between">
-            {isApproved && item.farmerApprovedPercent !== undefined && (
-              <View className="bg-primary-50 px-3 py-1.5 rounded-lg flex-row items-center gap-2 border border-primary-100 flex-1 mr-2">
-                <Text className="text-[12px] text-primary-800 font-medium">Tiến độ:</Text>
-                <Text className="text-[13px] font-bold text-primary-700">{item.farmerApprovedPercent}%</Text>
-              </View>
-            )}
-
-            {/* Dispute Button: Shown based on centralized rules */}
-            {canSubmitDispute(item) && (
-              <TouchableOpacity
-                className="bg-rose-50 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 border border-rose-100"
-                onPress={() => navigation.navigate("SubmitDispute", {
-                  jobPostId: item.jobPostId,
-                  reportId: item.id,
-                  farmerName: item.jobPost?.contactName,
-                  jobTitle: item.jobPost?.title,
-                  isKhoán: item.jobPost?.jobTypeId === 1
-                })}
-              >
-                <AlertCircle size={14} color="#e11d48" />
-                <Text className="text-[12px] font-bold text-rose-600">Khiếu nại</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
+        onDispute={() => navigation.navigate("SubmitDispute", {
+          jobPostId: item.jobPostId,
+          reportId: item.id,
+          farmerName: item.jobPost?.contactName,
+          jobTitle: item.jobPost?.title,
+          isKhoán: item.jobPost?.jobTypeId === 1
+        })}
+      />
     );
   };
 
@@ -207,10 +155,9 @@ export function ReportHistoryScreen({ navigation }: any) {
 
         <PillTabs
           items={[
-            { key: "all", label: "Tất cả" },
-            { key: "1", label: "Đang làm"   }, // InProgress
+            { key: "all", label: "Tất cả trạng thái" },
             { key: "2", label: "Chờ duyệt" }, // Reported
-            { key: "3", label: "Đã duyệt"  }, // Completed
+            { key: "3", label: "Đã duyệt" },  // Completed
           ]}
           activeKey={statusFilter}
           onChange={setStatusFilter}
