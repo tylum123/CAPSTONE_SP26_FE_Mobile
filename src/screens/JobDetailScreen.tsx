@@ -43,12 +43,9 @@ export function JobDetailScreen({ navigation, route }: any) {
     return [
       { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location?.address, hint: jobDetail.location?.distance ? `Cách bạn ${jobDetail.location.distance} km` : "" },
       { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
-      { Icon: Briefcase, label: "Khối lượng",       value: (jobDetail as any).workload || "N/A" },
-      { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.appliedWorkers || 0}/${jobDetail.requiredWorkers || 0} người` },
-      { Icon: Wrench,    label: "Kỹ năng yêu cầu",  value: jobDetail.requiredSkills || "Không yêu cầu" },
-      { Icon: Users,     label: "Giới tính",         value: jobDetail.genderPreference || "Không yêu cầu" },
-      { Icon: Calendar,  label: "Độ tuổi",           value: jobDetail.ageRequirement || "Không yêu cầu" },
-      { Icon: Banknote,  label: "Hình thức thù lao", value: jobDetail.wageTypeId || "N/A" },
+      { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.requiredWorkers || 0} người` },
+      { Icon: Wrench,    label: "Kỹ năng khuyến nghị", value: jobDetail.requiredSkills || "Không yêu cầu" },
+      { Icon: Banknote,  label: "Loại Hình", value: jobDetail.wageTypeId || "N/A" },
     ];
   }, [jobDetail]);
 
@@ -65,7 +62,9 @@ export function JobDetailScreen({ navigation, route }: any) {
         <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 justify-center items-center" onPress={() => navigation.goBack()}>
           <ArrowLeft size={20} color="#334155" />
         </TouchableOpacity>
-        <Text className="text-base font-bold text-slate-800">Chi tiết công việc</Text>
+        <Text className="text-base font-bold text-slate-800" numberOfLines={1}>
+          {jobDetail?.jobType || "Chi tiết công việc"}
+        </Text>
         <View className="w-10" />
       </View>
 

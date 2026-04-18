@@ -110,24 +110,15 @@ export function OnboardingProfileScreen({ navigation }: any) {
       return;
     }
 
-    const dateParts = dateOfBirth.split("/");
-    if (dateParts.length !== 3) {
-      setFeedback({ visible: true, title: "Lỗi định dạng", message: "Ngày sinh không đúng định dạng DD/MM/YYYY", variant: "error" });
-      return;
-    }
-    const [dd, mm, yyyy] = dateParts;
-    const formattedDOB = `${yyyy}-${mm}-${dd}`; // Matches EditProfileScreen format
-
     setLoading(true);
     hapticFeedback.medium();
     
     try {
       await workerProfileService.updateProfile({ 
         fullName, 
-        dateOfBirth: formattedDOB, 
+        dateOfBirth, // Use DD/MM/YYYY as shown in successful test (matches EditProfileScreen)
         primaryLocation, 
-        address: primaryLocation, // PENDING #7: BE Worker entity requires address (NOT NULL)
-        travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined, 
+        travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : 0, 
         experienceLevelId, 
         availabilitySchedule, 
         avatarUrl: avatarUrl || "",
