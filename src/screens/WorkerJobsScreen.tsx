@@ -268,7 +268,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
                   </Text>
                 </View>
               </View>
-              <Badge variant="success" className="px-3 py-1">Đã chốt</Badge>
+              <Badge variant="success" className="px-3 py-1">Đang làm</Badge>
             </View>
             
             <View className="flex-row flex-wrap gap-x-4 gap-y-2 mb-4">

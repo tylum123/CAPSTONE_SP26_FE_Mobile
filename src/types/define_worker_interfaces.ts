@@ -86,6 +86,11 @@ export interface JobPostDTO {
   workload?: string;       // Optional custom field for FE/Demo
 }
 
+export interface WorkerCountPerDay {
+  date: string;
+  acceptedWorkerCount: number;
+}
+
 export interface JobDiscoveryDTO extends JobPostDTO {
   jobTypeName: string;
   distanceKm: number;

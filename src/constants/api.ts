@@ -62,6 +62,7 @@ export const API_ENDPOINTS = {
     BY_WAGE: `${API_PREFIX}/job/post/by-wage`,
     URGENT: `${API_PREFIX}/job/post/urgent`,
     BY_TYPE: `${API_PREFIX}/job/post/by-type`,
+    WORKER_BY_DAY: (id: string) => `${API_PREFIX}/job/post/${id}/workers-per-day`,
     APPLICATION: `${API_PREFIX}/job/application`,
     APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,

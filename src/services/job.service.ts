@@ -15,8 +15,7 @@ import {
   JobSearchFilterRequest,
   PaginatedJobDiscoveryResponse,
   JobDiscoveryDTO,
-  WorkerApplicationStatsDTO
-} from "../types/export_type_definitions";
+  WorkerCountPerDay} from "../types/export_type_definitions";
 
 export const jobService = {
   getCategories: async (): Promise<JobCategoryDTO[]> => {
@@ -132,6 +131,11 @@ export const jobService = {
       data,
     );
     return response.data.data;
+  },
+
+  getCountWorkerPerDay: async (id: string): Promise<WorkerCountPerDay[]> => {
+    const response = await api.get<ApiResponse<WorkerCountPerDay[]>>(API_ENDPOINTS.JOB.WORKER_BY_DAY(id));
+    return Array.isArray(response.data.data) ? response.data.data : [];
   },
 
   getApplications: async (): Promise<JobApplicationDTO[]> => {

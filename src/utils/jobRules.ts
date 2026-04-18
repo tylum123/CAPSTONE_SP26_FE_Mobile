@@ -1,4 +1,4 @@
-import { isPastDate, isFutureDate, isPastEndDateWithGrace, isTodayInList } from "./provide_formatting_helpers";
+import { isFutureDate, isPastEndDateWithGrace, isTodayInList } from "./provide_formatting_helpers";
 
 export type ReportButtonStatus = {
   enabled: boolean;
