@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
+  FlatList,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -242,32 +243,43 @@ export function WorkerWalletScreen() {
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
   // ── Derived stats ──
-  const totalIncome   = transactions.filter(t => TX_CONFIG[t.type].sign ===  1).reduce((s, t) => s + t.amount, 0);
+  const totalIncome   = transactions.filter(t => TX_CONFIG[t.type as TxType].sign ===  1).reduce((s, t) => s + t.amount, 0);
   const totalWithdraw = transactions.filter(t => t.type === "withdraw").reduce((s, t) => s + t.amount, 0);
 
   // ── Filtered list ──
   const filtered = filter === "all" ? transactions : transactions.filter(t => t.type === filter);
 
   // Group by date
-  const grouped: Record<string, Transaction[]> = {};
-  filtered.forEach(tx => {
-    if (!grouped[tx.date]) grouped[tx.date] = [];
-    grouped[tx.date].push(tx);
-  });
-  
-  // Sort grouped entries by date descending
-  const groupedEntries = Object.entries(grouped).sort((a, b) => {
-    const dateA = new Date(a[1][0].createdAt || 0).getTime();
-    const dateB = new Date(b[1][0].createdAt || 0).getTime();
-    return dateB - dateA;
-  });
+  const groupedEntries = React.useMemo(() => {
+    const grouped: Record<string, Transaction[]> = {};
+    filtered.forEach(tx => {
+      if (!grouped[tx.date]) grouped[tx.date] = [];
+      grouped[tx.date].push(tx);
+    });
+    
+    return Object.entries(grouped).sort((a, b) => {
+      const dateA = new Date(a[1][0].createdAt || 0).getTime();
+      const dateB = new Date(b[1][0].createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [filtered]);
+
+  // Flatten grouped transactions for FlatList
+  const flattenedTransactions = React.useMemo(() => {
+    const data: any[] = [];
+    groupedEntries.forEach(([date, txs]) => {
+      data.push({ kind: "header", date });
+      txs.forEach(tx => data.push({ kind: "transaction", data: tx }));
+    });
+    return data;
+  }, [groupedEntries]);
 
   // ── Filter tabs ──
   const FILTERS: { key: "all" | TxType; label: string }[] = [
     { key: "all",      label: "Tất cả"  },
     { key: "income",   label: "Thu nhập" },
     { key: "withdraw", label: "Rút tiền" },
-    { key: "refund",   label: "Hoàn tiền"},
+    { key: "refund",   label: "Hoàn tiền" },
   ];
 
   if (loading && !refreshing) {
@@ -279,16 +291,59 @@ export function WorkerWalletScreen() {
     );
   }
 
-  const translateY = balanceAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+  // ── Render Helpers ──
+  const renderTxItem = ({ item }: { item: any }) => {
+    if (item.kind === "header") {
+      return (
+        <View className="flex-row items-center gap-2 mb-3 mt-4 px-4">
+          <CalendarDays size={13} color="#94a3b8" />
+          <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 }}>{item.date}</Text>
+          <View className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
+        </View>
+      );
+    }
 
-  return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f0fdf4" }} edges={["top"]}>
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
+    const tx = item.data;
+    const cfg = TX_CONFIG[tx.type as TxType];
+    const isPositive = cfg.sign === 1;
+
+    return (
+      <TouchableOpacity 
+        activeOpacity={0.7} 
+        onPress={() => fetchDetail(tx.id)}
+        className="mb-2 px-4"
       >
+        <View className="flex-row items-center px-4 py-3.5 bg-white rounded-2xl shadow-sm border border-slate-50" style={{ gap: 12 }}>
+          <View className="w-11 h-11 rounded-2xl justify-center items-center" style={{ backgroundColor: cfg.bg }}>
+            <TxIcon type={tx.type} status={tx.status} />
+          </View>
+
+          <View className="flex-1 min-w-0">
+            <Text className="text-slate-800 font-bold text-[14px]" numberOfLines={1}>
+              {tx.description}
+            </Text>
+            {tx.jobTitle ? (
+              <Text className="text-slate-400 text-[11px] font-medium mt-0.5" numberOfLines={1}>
+                📋 {tx.jobTitle}
+              </Text>
+            ) : null}
+            <View className="mt-1">
+              <StatusChip status={tx.status} />
+            </View>
+          </View>
+
+          <Text style={{ color: isPositive ? "#059669" : "#1e40af", fontSize: 15, fontWeight: "800", letterSpacing: -0.5 }}>
+            {isPositive ? "+" : "-"}{fmtCurrency(tx.amount)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const ListHeader = () => {
+    const translateY = balanceAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+    return (
+      <>
         {/* ── HERO CARD ────────────────────────────────────── */}
         <LinearGradient
           colors={["#047857", "#059669", "#10b981"]}
@@ -296,22 +351,18 @@ export function WorkerWalletScreen() {
           end={{ x: 1, y: 1 }}
           style={{ borderBottomLeftRadius: 36, borderBottomRightRadius: 36, overflow: "hidden", paddingBottom: 28 }}
         >
-          {/* Decorative blobs */}
           <View style={{ position: "absolute", width: 240, height: 240, borderRadius: 120, top: -80, right: -60, backgroundColor: "rgba(255,255,255,0.07)" }} />
           <View style={{ position: "absolute", width: 140, height: 140, borderRadius: 70,  bottom: 20, left: -40, backgroundColor: "rgba(16,185,129,0.3)" }} />
           <View style={{ position: "absolute", width: 80,  height: 80,  borderRadius: 40,  top: 40, right: 100, backgroundColor: "rgba(255,255,255,0.05)" }} />
 
-          {/* Top bar */}
           <View className="flex-row items-center justify-between px-5 pt-5 pb-4">
             <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 rounded-full justify-center items-center" style={{ backgroundColor: "rgba(255,255,255,0.18)" }}>
               <ChevronLeft size={22} color="#ffffff" />
             </TouchableOpacity>
             <Text className="text-white text-[17px] font-bold">Ví của tôi</Text>
-            {/* Spacer to keep title centered */}
             <View className="w-10" />
           </View>
 
-          {/* Balance */}
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }], paddingHorizontal: 24, marginBottom: 20, alignItems: "center" }}>
             <Text style={{ color: "rgba(167,243,208,0.9)", fontSize: 13, fontWeight: "600", marginBottom: 6,letterSpacing: 0.5 }}>
               SỐ DƯ KHẢ DỤNG
@@ -329,7 +380,6 @@ export function WorkerWalletScreen() {
             )}
           </Animated.View>
 
-          {/* Quick stats inside hero */}
           <View className="flex-row mx-5 gap-3">
             {[
               { label: "Tổng thu nhập", value: fmtCompact(totalIncome),   color: "#a7f3d0", Icon: TrendingUp },
@@ -344,7 +394,6 @@ export function WorkerWalletScreen() {
             ))}
           </View>
 
-          {/* ── RÚT TIỀN CTA ── */}
           <TouchableOpacity
             onPress={() => navigation.navigate("Withdrawal")}
             activeOpacity={0.88}
@@ -400,79 +449,51 @@ export function WorkerWalletScreen() {
             );
           })}
         </ScrollView>
+      </>
+    );
+  };
 
-        {/* ── TRANSACTION TIMELINE ────────────────────────── */}
-        <View className="px-4">
-          {groupedEntries.length === 0 ? (
-            <View className="items-center py-16">
-              <View className="w-20 h-20 rounded-full justify-center items-center mb-4" style={{ backgroundColor: "#e2e8f0" }}>
-                <History size={36} color="#94a3b8" />
-              </View>
-              <Text className="text-slate-500 font-semibold text-base">Không có giao dịch</Text>
-              <Text className="text-slate-400 text-sm mt-1">Hệ thống chưa ghi nhận giao dịch nào</Text>
+  return (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f0fdf4" }} edges={["top"]}>
+      <FlatList
+        data={flattenedTransactions}
+        renderItem={renderTxItem}
+        keyExtractor={(item, index) => item.kind === "header" ? `h-${item.date}-${index}` : item.data.id}
+        ListHeaderComponent={ListHeader}
+        ListHeaderComponentStyle={{ marginBottom: 10 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#059669"]} />}
+        onEndReached={() => {
+          if (hasMore && !isFetchingMore) {
+            fetchData(false);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() => (
+          isFetchingMore ? (
+            <View className="py-6 items-center">
+              <ActivityIndicator size="small" color="#059669" />
+              <Text className="text-slate-400 text-[11px] font-bold mt-2 uppercase tracking-tight">Đang tải thêm giao dịch...</Text>
             </View>
-          ) : (
-            <>
-              {groupedEntries.map(([date, txs]) => (
-                <View key={date} className="mb-5">
-                  <View className="flex-row items-center gap-2 mb-3">
-                    <CalendarDays size={13} color="#94a3b8" />
-                    <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700", letterSpacing: 0.3 }}>{date}</Text>
-                    <View className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
-                  </View>
-
-                  <View className="rounded-[20px] overflow-hidden" style={{ backgroundColor: "#ffffff", shadowColor: "#0f172a", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 }}>
-                    {txs.map((tx, idx) => {
-                      const cfg = TX_CONFIG[tx.type];
-                      const isLast = idx === txs.length - 1;
-                      const isPositive = cfg.sign === 1;
-
-                      return (
-                        <TouchableOpacity key={tx.id} activeOpacity={0.7} onPress={() => fetchDetail(tx.id)}>
-                          <View className="flex-row items-center px-4 py-3.5" style={{ gap: 12 }}>
-                            <View className="w-11 h-11 rounded-2xl justify-center items-center" style={{ backgroundColor: cfg.bg }}>
-                              <TxIcon type={tx.type} status={tx.status} />
-                            </View>
-
-                            <View className="flex-1 min-w-0">
-                              <Text className="text-slate-800 font-bold text-[14px]" numberOfLines={1}>
-                                {tx.description}
-                              </Text>
-                              {tx.jobTitle ? (
-                                <Text className="text-slate-400 text-[11px] font-medium mt-0.5" numberOfLines={1}>
-                                  📋 {tx.jobTitle}
-                                </Text>
-                              ) : null}
-                              <View className="mt-1">
-                                <StatusChip status={tx.status} />
-                              </View>
-                            </View>
-
-                            <Text style={{ color: isPositive ? "#059669" : "#1e40af", fontSize: 15, fontWeight: "800", letterSpacing: -0.5 }}>
-                              {isPositive ? "+" : "-"}{fmtCurrency(tx.amount)}
-                            </Text>
-                          </View>
-                          {!isLast && <View style={{ height: 1, backgroundColor: "#f8fafc", marginHorizontal: 16 }} />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
-              
-              {hasMore && (
-                <TouchableOpacity 
-                   className="py-4 items-center justify-center bg-white rounded-2xl border border-slate-100 mt-2 mb-6"
-                   onPress={() => fetchData(false)}
-                   disabled={isFetchingMore}
-                >
-                  {isFetchingMore ? <ActivityIndicator size="small" color="#059669" /> : <Text className="text-primary-600 font-bold">Xem thêm giao dịch</Text>}
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      </ScrollView>
+          ) : !hasMore && flattenedTransactions.length > 0 ? (
+            <View className="py-8 items-center">
+              <View className="w-1.5 h-1.5 rounded-full bg-slate-200 mb-2" />
+              <Text className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">Đã hiển thị tất cả giao dịch</Text>
+            </View>
+          ) : null
+        )}
+        ListEmptyComponent={() => !loading ? (
+          <View className="items-center py-16 px-10">
+            <View className="w-20 h-20 rounded-full justify-center items-center mb-4" style={{ backgroundColor: "#e2e8f0" }}>
+              <History size={36} color="#94a3b8" />
+            </View>
+            <Text className="text-slate-500 font-semibold text-base text-center">Không có giao dịch</Text>
+            <Text className="text-slate-400 text-sm mt-1 text-center">Hệ thống chưa ghi nhận giao dịch nào trong mục này</Text>
+          </View>
+        ) : null}
+        className="px-0" // FlatList padding handled in header and items
+      />
 
       {/* TRANSACTION DETAIL MODAL */}
       <Modal
