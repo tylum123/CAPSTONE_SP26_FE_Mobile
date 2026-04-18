@@ -13,9 +13,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { messageService } from "../services/message.service";
 import { ConversationDTO } from "../types/export_type_definitions";
 import { useAuth } from "../context/AuthContext";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
-import { CONFIG } from "../config/export_configurations";
-import { authTokenService } from "../services/auth-token.service";
+import { signalRService } from "../services/signalr.service";
 
 export function ConversationListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -45,50 +43,33 @@ export function ConversationListScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       let isSubscribed = true;
-      let connection: any = null;
 
-      const connectSignalR = async () => {
-        try {
-          const token = await authTokenService.getToken();
-          if (!token) return;
-
-          let baseUrl = CONFIG.API_BASE_URL;
-          if (baseUrl.endsWith("/api/v1")) {
-            baseUrl = baseUrl.replace("/api/v1", "");
-          } else if (baseUrl.endsWith("/api")) {
-            baseUrl = baseUrl.replace("/api", "");
-          }
-
-          connection = new HubConnectionBuilder()
-            .withUrl(`${baseUrl}/hubs/chat`, {
-              accessTokenFactory: () => token,
-            })
-            .configureLogging(LogLevel.Information)
-            .withAutomaticReconnect()
-            .build();
-
-          connection.on("NewMessage", () => {
-            if (isSubscribed) {
-              fetchConversations();
-            }
-          });
-
-          await connection.start();
-          console.log("ConversationListScreen: SignalR Connected");
-        } catch (err) {
-          console.log("ConversationListScreen: SignalR Error", err);
+      const handleNewMessage = () => {
+        if (isSubscribed) {
+          fetchConversations();
         }
       };
 
+      const setupSignalR = async () => {
+        await signalRService.startConnection();
+        signalRService.addListener("NewMessage", handleNewMessage);
+        signalRService.addListener("ReceiveMessage", handleNewMessage);
+        signalRService.addListener("newMessage", handleNewMessage);
+        signalRService.addListener("receiveMessage", handleNewMessage);
+        signalRService.addListener("MessageReceived", handleNewMessage);
+      };
+
       fetchConversations().then(() => {
-        connectSignalR();
+        setupSignalR();
       });
 
       return () => {
         isSubscribed = false;
-        if (connection) {
-          connection.stop();
-        }
+        signalRService.removeListener("NewMessage", handleNewMessage);
+        signalRService.removeListener("ReceiveMessage", handleNewMessage);
+        signalRService.removeListener("newMessage", handleNewMessage);
+        signalRService.removeListener("receiveMessage", handleNewMessage);
+        signalRService.removeListener("MessageReceived", handleNewMessage);
       };
     }, [fetchConversations])
   );
