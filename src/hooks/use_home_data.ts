@@ -116,12 +116,12 @@ export function useHomeData(): HomeDataResult {
       });
     } else {
       try {
-        const [jobs, apps, profile, wallet, workerStats] = await Promise.all([
+        const [jobs, apps, profile, wallet, dashboard] = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
           walletService.getWallet(),
-          jobService.getWorkerStats().catch(() => null),
+          workerProfileService.getDashboardData().catch(() => null),
         ]);
 
         sourceJobs    = jobs;
@@ -144,8 +144,8 @@ export function useHomeData(): HomeDataResult {
         }
 
         setProfileData({
-          rating: workerStats?.averageRating ?? profile?.averageRating ?? null,
-          totalJobsCompleted: workerStats?.completedJobs ?? profile?.totalJobsCompleted ?? null,
+          rating: dashboard?.averageRating ?? profile?.averageRating ?? null,
+          totalJobsCompleted: dashboard?.completedJobs ?? profile?.totalJobsCompleted ?? null,
           avatarUrl: profile?.avatarUrl || null,
           todayEarnings,
         });

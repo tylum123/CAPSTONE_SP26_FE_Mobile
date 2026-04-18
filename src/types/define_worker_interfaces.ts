@@ -373,11 +373,10 @@ export interface WorkerApplicationStatsDTO {
   averageRating?: number;
 }
 
-export interface WorkerDashboardResponseDTO {
-  stats: WorkerApplicationStatsDTO;
-  recentApplications: JobApplicationDTO[];
-  recommendedJobs: JobDiscoveryDTO[];
-  totalEarnings: number;
+// Matches backend §4.11 WorkerDashboardResponseDTO — GET /worker/dashboard
+export interface WorkerDashboardResponseDTO extends WorkerApplicationStatsDTO {
+  recentApplications?: JobApplicationDTO[];
+  recommendedJobs?: JobDiscoveryDTO[];
 }
 
 export interface CreateMessageRequest {

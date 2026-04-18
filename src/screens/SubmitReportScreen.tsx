@@ -4,7 +4,7 @@
  * Outputs: Multipart form data API request.
  * Dependencies: Report service, Media service, Expo Image Picker. */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
@@ -12,8 +12,11 @@ import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { dailyReportService } from "../services/daily_report.service";
 import { mediaService } from "../services/media.service";
+import { jobService } from "../services/job.service";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
+import { getReportButtonStatus } from "../utils/jobRules";
+import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function SubmitReportScreen({ navigation, route }: any) {
   const { jobApplicationId } = route.params || {};
@@ -39,6 +42,64 @@ export function SubmitReportScreen({ navigation, route }: any) {
     message: "", 
     variant: "info" 
   });
+
+  const [isValidating, setIsValidating] = useState(true);
+
+  // Entry validation
+  useEffect(() => {
+    const validateEligibility = async () => {
+      if (!jobApplicationId) {
+        showFeedback({
+          title: "Lỗi dữ liệu",
+          message: "Không tìm thấy thông tin ứng tuyển.",
+          variant: "error",
+          onConfirm: () => navigation.goBack()
+        });
+        return;
+      }
+
+      setIsValidating(true);
+      try {
+        const appDetail = await jobService.getApplicationDetail(jobApplicationId);
+        const jobDetail = await jobService.getJobPostDetail(String(appDetail.jobPostId));
+        
+        // Enrich job detail with reports to check isReportedToday
+        const reports = await dailyReportService.getWorkerReports(appDetail.worker?.id || "");
+        const todayStr = new Date().toISOString().substring(0, 10);
+        const isReportedToday = reports.some(r => 
+          String(r.jobApplicationId) === String(jobApplicationId) && 
+          r.workDate?.substring(0, 10) === todayStr
+        );
+
+        // Map to UI format to get correct date strings
+        const uiJob = mapJobPostToUI(jobDetail);
+        
+        const btnStatus = getReportButtonStatus(
+          uiJob.startDate,
+          uiJob.endDate,
+          jobDetail.statusId || 2,
+          isReportedToday,
+          appDetail.workDates
+        );
+
+        if (!btnStatus.enabled) {
+          showFeedback({
+            title: "Không thể báo cáo",
+            message: `Lý do: ${btnStatus.label}`,
+            variant: "error",
+            onConfirm: () => navigation.goBack()
+          });
+        }
+      } catch (error) {
+        console.error("Validation error:", error);
+        // Fallback: allow if we can't verify, but log it
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    validateEligibility();
+  }, [jobApplicationId]);
 
   const showFeedback = (params: { 
     title: string; 
@@ -167,7 +228,13 @@ export function SubmitReportScreen({ navigation, route }: any) {
         </Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
+      {isValidating ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#059669" />
+          <Text className="text-slate-500 font-medium mt-4">Đang kiểm tra tính hợp lệ...</Text>
+        </View>
+      ) : (
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
         <Text className="text-sm font-semibold text-slate-700 mb-2 pl-1">Mô tả công việc hôm nay <Text className="text-red-500">*</Text></Text>
         <View className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 min-h-[160px] shadow-sm shadow-slate-200/50">
           <TextInput
@@ -246,6 +313,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
           </Button>
         </View>
       </ScrollView>
+      )}
 
       <Modal visible={showSuccess} transparent animationType="none">
         <View className="flex-1 bg-black/60 items-center justify-center px-8">

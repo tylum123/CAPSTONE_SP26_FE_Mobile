@@ -8,13 +8,13 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent, Badge, Avatar, PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
-import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare, Quote, Edit } from "lucide-react-native";
+import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, FileText, MessageSquare, Quote, Edit } from "lucide-react-native";
 import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
 import { ratingService } from "../services/rating.service";
 import { useAuth } from "../context/AuthContext";
-import { isPastDate } from "../utils/provide_formatting_helpers";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapApplicationToUI } from "../utils/mapperUtils";
+import { getReportButtonStatus } from "../utils/jobRules";
 
 type TabType = "applied" | "upcoming" | "completed";
 
@@ -164,6 +164,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
         startDate: mappedData.date,
         endDate: jobInfo?.endDate && !jobInfo.endDate.startsWith("0001") ? new Date(jobInfo.endDate).toLocaleDateString("vi-VN") : mappedData.date,
         isReportedToday,
+        jobStatusId, // Keep original status ID for logic
         farmerUserId: resolvedFarmerUserId // Definitive ID for chat/review
       };
     });
@@ -250,61 +251,73 @@ export function WorkerJobsScreen({ navigation, route }: any) {
     );
     if (activeTab === "upcoming") return (
       <View className="mb-4 bg-white rounded-[24px] overflow-hidden border border-slate-100 shadow-sm" style={{ elevation: 2 }}>
-        <View className="w-1.5 bg-primary-600 h-full absolute left-0 top-0" />
-        <View className="flex-1 p-5">
-          <View className="flex-row items-center gap-3 mb-4">
-            <Avatar source={job?.farmerAvatar ? { uri: job?.farmerAvatar } : undefined} fallback={job?.farmer?.[0] || "?"} size={48} />
-            <View className="flex-1">
-              <Text className="text-[16px] font-bold text-slate-800 mb-0.5">{job.title}</Text>
-              <View className="flex-row items-center gap-1.5">
-                <Calendar size={12} color="#059669" />
-                <Text className="text-[12px] text-primary-700 font-bold">
-                  {job.startDate} {job.endDate !== job.startDate ? `- ${job.endDate}` : ""}
+        <TouchableOpacity 
+          activeOpacity={0.9} 
+          onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}
+        >
+          <View className="w-1.5 bg-primary-600 h-full absolute left-0 top-0" />
+          <View className="flex-1 p-5 pb-0">
+            <View className="flex-row items-center gap-3 mb-4">
+              <Avatar source={job?.farmerAvatar ? { uri: job?.farmerAvatar } : undefined} fallback={job?.farmer?.[0] || "?"} size={48} />
+              <View className="flex-1">
+                <Text className="text-[16px] font-bold text-slate-800 mb-0.5" numberOfLines={1}>{job.title}</Text>
+                <View className="flex-row items-center gap-1.5">
+                  <Calendar size={12} color="#059669" />
+                  <Text className="text-[12px] text-primary-700 font-bold">
+                    {job.startDate} {job.endDate !== job.startDate ? `- ${job.endDate}` : ""}
+                  </Text>
+                </View>
+              </View>
+              <Badge variant="success" className="px-3 py-1">Đã chốt</Badge>
+            </View>
+            
+            <View className="flex-row flex-wrap gap-x-4 gap-y-2 mb-4">
+              <View className="flex-row items-center gap-1.5 flex-1 pr-2">
+                <MapPin size={14} color="#64748b" />
+                <Text className="text-[12px] text-slate-500 font-medium leading-[18px] flex-1" numberOfLines={1}>{job?.location || "N/A"}</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5 bg-primary-50 rounded-full px-2 py-0.5">
+                <Banknote size={14} color="#059669" />
+                <Text className="text-[12px] font-bold text-primary-700">
+                  {job.wage.toLocaleString("vi-VN")}đ
                 </Text>
               </View>
             </View>
-            <Badge variant="success" className="px-3 py-1">Đã chốt</Badge>
           </View>
-          
-          <View className="flex-row flex-wrap gap-x-4 gap-y-2 mb-4">
-            <View className="flex-row items-center gap-1.5 flex-1 pr-2">
-              <MapPin size={14} color="#64748b" />
-              <Text className="text-[12px] text-slate-500 font-medium leading-[18px] flex-1" numberOfLines={1}>{job?.location || "N/A"}</Text>
-            </View>
-            <View className="flex-row items-center gap-1.5 bg-primary-50 rounded-full px-2 py-0.5">
-              <Banknote size={14} color="#059669" />
-              <Text className="text-[12px] font-bold text-primary-700">
-                {job.wage.toLocaleString("vi-VN")}đ
-              </Text>
-            </View>
-          </View>
+        </TouchableOpacity>
 
-          <View className="flex-row gap-2 mt-2">
-            <TouchableOpacity 
-              className={["flex-1 flex-row items-center justify-center rounded-[14px] py-3 gap-2 shadow-sm", (job.isReportedToday || isPastDate(job.endDate || job.startDate)) ? "bg-slate-100 border border-slate-200" : "bg-primary-600"].join(" ")}
-              onPress={() => navigation.navigate("SubmitReport", { jobApplicationId: String(job.id) })}
-              disabled={job.isReportedToday || isPastDate(job.endDate || job.startDate)}
-            >
-              <FileText size={16} color={job.isReportedToday || isPastDate(job.endDate || job.startDate) ? "#94a3b8" : "#ffffff"} />
-              <Text className={["text-[13px] font-bold", (job.isReportedToday || isPastDate(job.endDate || job.startDate)) ? "text-slate-400" : "text-white"].join(" ")}>
-                {job.isReportedToday ? "Đã báo cáo" : "Báo cáo"}
-              </Text>
-            </TouchableOpacity>
+        <View className="px-5 pb-5">
+          <View className="flex-row gap-3">
+            {(() => {
+              const btnStatus = getReportButtonStatus(job.startDate, job.endDate, job.jobStatusId, job.isReportedToday, job.workDates);
+              return (
+                <TouchableOpacity 
+                  className={[
+                    "flex-1 flex-row items-center justify-center rounded-[14px] py-3 gap-2 shadow-sm", 
+                    btnStatus.enabled ? "bg-primary-600" : "bg-slate-100 border border-slate-200"
+                  ].join(" ")}
+                  onPress={() => navigation.navigate("SubmitReport", { jobApplicationId: String(job.id) })}
+                  disabled={!btnStatus.enabled}
+                >
+                  <FileText size={16} color={btnStatus.enabled ? "#ffffff" : "#94a3b8"} />
+                  <Text 
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    className={["text-[13px] font-bold px-1", btnStatus.enabled ? "text-white" : "text-slate-400"].join(" ")}
+                  >
+                    {btnStatus.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
 
             <TouchableOpacity 
-              className="flex-1 flex-row items-center justify-center bg-white border border-slate-200 rounded-[14px] py-3 gap-1.5 shadow-sm"
+              className="flex-2 flex-row items-center justify-center bg-white border border-slate-200 rounded-[14px] py-3 gap-1.5 shadow-sm"
               onPress={() => navigation.navigate("Chat", { farmerId: job.farmerUserId, farmerName: job.farmer, farmerAvatar: job.farmerAvatar })}
+              style={{ flex: 1.2 }}
             >
               <MessageSquare size={16} color="#475569" />
               <Text className="text-[13px] font-bold text-slate-600">Nhắn tin</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              className="flex-1 flex-row items-center justify-center bg-white border border-slate-200 rounded-[14px] py-3 gap-1.5 shadow-sm"
-              onPress={() => navigation.navigate("JobDetail", { jobId: job.jobPostId })}
-            >
-              <Info size={16} color="#475569" />
-              <Text className="text-[13px] font-bold text-slate-600">Chi tiết</Text>
             </TouchableOpacity>
           </View>
         </View>

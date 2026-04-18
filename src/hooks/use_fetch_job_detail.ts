@@ -13,7 +13,12 @@ import { mapJobPostToUI } from "../utils/mapperUtils";
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isApplied, setIsApplied] = useState(false);
-  const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number; responseMessage?: string | null }>({});
+  const [applicationInfo, setApplicationInfo] = useState<{ 
+    id?: string; 
+    statusId?: number; 
+    responseMessage?: string | null;
+    workDates?: string[];
+  }>({});
   const [lastMessage, setLastMessage] = useState<any>(null);
   const [jobDetail, setJobDetail] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,7 +79,8 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         setApplicationInfo({ 
           id: existing.id, 
           statusId: existing.statusId, 
-          responseMessage: existing.responseMessage 
+          responseMessage: existing.responseMessage,
+          workDates: existing.workDates
         });
         // Pre-populate selected slots from existing application
         if (existing.workDates && existing.workDates.length > 0) {

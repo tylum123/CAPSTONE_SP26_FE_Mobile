@@ -153,11 +153,4 @@ export const jobService = {
       API_ENDPOINTS.JOB.CANCEL_APPLICATION(id),
     );
   },
-
-  getWorkerStats: async (): Promise<WorkerApplicationStatsDTO> => {
-    const response = await api.get<ApiResponse<WorkerApplicationStatsDTO>>(
-      API_ENDPOINTS.JOB.APPLICATION_STATS,
-    );
-    return response.data.data;
-  },
 };

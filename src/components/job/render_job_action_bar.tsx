@@ -8,7 +8,7 @@ import React from "react";
 import { View, Text } from "react-native";
 import { CheckCircle } from "lucide-react-native";
 import { Button } from "../ui/Button";
-import { isPastEndDateWithGrace } from "../../utils/provide_formatting_helpers";
+import { getReportButtonStatus } from "../../utils/jobRules";
 
 type Props = {
   jobDetail: any;
@@ -24,12 +24,17 @@ type Props = {
 export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, applicationInfo, insets, isSubmitting, onReportPress, onApplyPress }: Props) {
   if (!jobDetail) return null;
 
-  const isExpired = isPastEndDateWithGrace(jobDetail.endDate || jobDetail.startDate);
-  // Status checked: 1=Draft, 2=Published, 3=Closed, 4=InProgress, 5=Completed, 6=Cancelled
-  const isActive = jobDetail.statusId === 2 || jobDetail.statusId === 4;
-
   const todayStr = new Date().toISOString().split('T')[0];
   const isReportedToday = jobDetail.reports?.some((r: any) => r.workDate?.startsWith(todayStr));
+
+  // Use centralized logic
+  const btnStatus = getReportButtonStatus(
+    jobDetail.startDate, 
+    jobDetail.endDate, 
+    jobDetail.statusId, 
+    isReportedToday,
+    applicationInfo.workDates
+  );
 
   return (
     <View className="flex-row items-center gap-4 px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 8, shadowColor: "#0f172a", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 8 }}>
@@ -45,31 +50,53 @@ export function RenderJobActionBar({ jobDetail, selectedTimeSlots, isApplied, ap
         )}
       </View>
       
-      {(applicationInfo.statusId === 2 && !isReportedToday) ? (
-        <Button 
-          onPress={onReportPress}
-          size="lg"
-          variant="default"
-          disabled={isExpired || !isActive}
-        >
-          <View className="flex-row items-center gap-2">
-            <CheckCircle size={18} color="white" />
-            <Text className="text-white font-bold">{isExpired ? "Hết hạn báo cáo" : "Nộp Báo Cáo"}</Text>
+      {applicationInfo.statusId === 2 ? (
+        btnStatus.enabled ? (
+          <Button 
+            onPress={onReportPress}
+            size="lg"
+            variant="default"
+            disabled={!btnStatus.enabled}
+            className={btnStatus.variant === "reported" ? "bg-primary-50 border border-primary-100" : ""}
+          >
+            <View className="flex-row items-center gap-2">
+              <CheckCircle size={18} color="white" />
+              <Text 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                className="font-bold text-white px-1"
+              >
+                {btnStatus.label}
+              </Text>
+            </View>
+          </Button>
+        ) : (
+          <View className="bg-slate-100 border border-slate-200 px-6 py-4 rounded-[20px] items-center justify-center flex-row gap-2">
+             <CheckCircle size={18} color="#94a3b8" />
+             <Text 
+               numberOfLines={1}
+               adjustsFontSizeToFit
+               className="text-slate-500 font-bold px-1"
+             >
+               {btnStatus.label}
+             </Text>
           </View>
-        </Button>
-      ) : (applicationInfo.statusId === 2 && isReportedToday) ? (
-        <View className="bg-primary-50 px-4 py-2.5 rounded-xl border border-primary-100 flex-row items-center gap-2">
-          <CheckCircle size={16} color="#059669" />
-          <Text className="text-primary-700 font-bold text-center">Đã báo cáo hôm nay</Text>
-        </View>
+        )
       ) : (
         <Button 
           onPress={onApplyPress} 
           disabled={isApplied || isSubmitting || (jobDetail.wageTypeId !== "Khoán" && selectedTimeSlots.length === 0)} 
           size="lg"
           variant={isApplied ? "ghost" : "default"}
+          className={isApplied ? "border border-primary-100" : ""}
         >
-          {isSubmitting ? "Đang gửi..." : isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+          <Text 
+            numberOfLines={1} 
+            adjustsFontSizeToFit 
+            className={["font-bold", isApplied ? "text-primary-700" : "text-white"].join(" ")}
+          >
+            {isSubmitting ? "Đang gửi..." : isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
+          </Text>
         </Button>
       )}
     </View>
