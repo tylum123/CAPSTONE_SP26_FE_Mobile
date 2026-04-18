@@ -9,7 +9,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, DeviceEventEmitter, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, Card, CardContent, ListItem, SectionHeader, Badge } from "../components/ui/export_ui_components";
-import { Heart, CreditCard, Users, Settings, LogOut, Edit2, Phone, Mail, Wallet, Briefcase, Star, Bell, FileText, ChevronRight, MapPin, Clock, ShieldAlert, X, Tractor, Package, Tag, MousePointer2, Calendar, Navigation, Zap } from "lucide-react-native";
+import { CreditCard, Users, LogOut, Edit2, Phone, Mail, Wallet, Briefcase, Star, Bell, FileText, ChevronRight, MapPin, Clock, ShieldAlert, X, Tractor, Package, Tag, MousePointer2, Calendar, Navigation } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
 import { workerProfileService, walletService, jobService } from "../services/export_services";
 import { WorkerProfileDTO } from "../types/define_worker_interfaces";

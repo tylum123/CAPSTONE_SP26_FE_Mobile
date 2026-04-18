@@ -18,7 +18,7 @@ import {
   Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Calendar, Briefcase } from "lucide-react-native";
+import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Briefcase } from "lucide-react-native";
 import { useDebounce } from "../hooks/use_debounce";
 import { EmptyState } from "../components/ui/export_ui_components";
 import { useAuth } from "../context/AuthContext";

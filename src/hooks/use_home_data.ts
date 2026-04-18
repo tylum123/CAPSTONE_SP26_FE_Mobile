@@ -28,7 +28,7 @@ import {
 import { mapApplicationToUI, mapJobPostToUI } from '../utils/mapperUtils';
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from '../constants/demoData';
 import type { Job } from '../types/export_type_definitions';
-import type { WorkerApplicationStatsDTO } from '../types/define_worker_interfaces';
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ interface HomeDataResult {
   pendingApplications: MappedApplication[];
   activeApplications: MappedApplication[];
   profileData: ProfileData;
-  stats: WorkerApplicationStatsDTO | null;
+
   userLocation: UserLocation | null;
   radiusKm: number;
   isLoading: boolean;
@@ -86,7 +86,7 @@ export function useHomeData(): HomeDataResult {
     avatarUrl: null,
     todayEarnings: null,
   });
-  const [stats, setStats]                         = useState<WorkerApplicationStatsDTO | null>(null);
+
   const [userLocation, setUserLocation]           = useState<UserLocation | null>(null);
   const [radiusKm, setRadiusKm]                   = useState<number>(10);
   const [isLoading, setIsLoading]                 = useState(true);
@@ -128,7 +128,7 @@ export function useHomeData(): HomeDataResult {
         sourceApps    = apps;
         sourceProfile = profile;
 
-        if (workerStats) setStats(workerStats);
+
 
         const prefRadius = profile?.travelRadiusKmPreference || 10;
         setRadiusKm(prefRadius);
@@ -198,7 +198,8 @@ export function useHomeData(): HomeDataResult {
 
     // Fallback: show all jobs if no nearby found
     if (finalizedNearby.length === 0 && sourceJobs.length > 0) {
-      finalizedNearby = sourceJobs;
+      // Only show Published jobs (statusId === 2) when falling back
+      finalizedNearby = sourceJobs.filter((j: any) => j.statusId === 2);
     }
 
     // ── 3. Map jobs ─────────────────────────────────────────────────────────
@@ -227,6 +228,7 @@ export function useHomeData(): HomeDataResult {
           duration: m.duration,
           rating: m.farmer.rating,
           urgent: m.urgent,
+          wageUnit: m.wageUnit
         };
       })
     );
@@ -252,7 +254,7 @@ export function useHomeData(): HomeDataResult {
     };
 
     setPendingApplications(
-      myApps.filter(a => a.statusId === 1 || a.statusId === 3).slice(0, 3).map(mapApp)
+      myApps.filter(a => a.statusId === 1 || a.statusId === 3).map(mapApp)
     );
 
     setActiveApplications(
@@ -263,7 +265,6 @@ export function useHomeData(): HomeDataResult {
           const statusId = (job as any)?.statusId ?? 2;
           return statusId !== 5 && statusId !== 6; // exclude Completed/Cancelled jobs
         })
-        .slice(0, 3)
         .map(mapApp)
     );
 
@@ -287,7 +288,7 @@ export function useHomeData(): HomeDataResult {
     pendingApplications,
     activeApplications,
     profileData,
-    stats,
+
     userLocation,
     radiusKm,
     isLoading,

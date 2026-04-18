@@ -8,7 +8,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, CardContent, Badge, Avatar, PillTabs, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
-import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare, Quote, Edit2, Edit } from "lucide-react-native";
+import { MapPin, Banknote, Calendar, CheckCircle2, Star, ClipboardCheck, Briefcase, Info, FileText, MessageSquare, Quote, Edit } from "lucide-react-native";
 import { jobService, workerProfileService, dailyReportService } from "../services/export_services";
 import { ratingService } from "../services/rating.service";
 import { useAuth } from "../context/AuthContext";
