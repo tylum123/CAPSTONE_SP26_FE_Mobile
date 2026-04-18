@@ -41,15 +41,16 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
           <View className="items-end">
             <Text className="text-[17px] font-extrabold text-primary-600">
               {(job.wageAmount || 0).toLocaleString("vi-VN")}₫
+              {job.jobTypeId !== 1 && <Text className="text-[11px] text-slate-400 font-medium"> /ngày</Text>}
             </Text>
             {job.isUrgent && <Badge variant="danger">Cần gấp</Badge>}
           </View>
         </View>
 
         <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
-          <View className="flex-row items-center gap-1.5">
+          <View className="flex-row items-center gap-1.5 flex-1 pr-2">
             <MapPin size={14} color="#64748b" />
-            <Text className="text-xs text-slate-600 font-medium" numberOfLines={1}>
+            <Text className="text-xs text-slate-600 font-medium" numberOfLines={1} ellipsizeMode="tail">
               {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
             </Text>
           </View>

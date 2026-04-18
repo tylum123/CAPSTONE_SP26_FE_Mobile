@@ -40,6 +40,12 @@ export enum DisputeStatus {
   Rejected = 4,
 }
 
+export enum DisputeType {
+  JobQuality = 1,
+  Payment = 2,
+  Other = 3,
+}
+
 export enum WalletTransactionType {
   Deposit = 1,
   Withdraw = 2,
@@ -86,10 +92,16 @@ export const ExperienceLevelLabels: Record<ExperienceLevel, string> = {
 };
 
 export const DisputeStatusLabels: Record<DisputeStatus, string> = {
-  [DisputeStatus.Pending]: 'Đang chờ',
-  [DisputeStatus.UnderReview]: 'Đang xử lý',
-  [DisputeStatus.Resolved]: 'Đã giải quyết',
-  [DisputeStatus.Rejected]: 'Bị từ chối',
+  [DisputeStatus.Pending]: 'Đang chờ xử lý',
+  [DisputeStatus.UnderReview]: 'Đang xem xét',
+  [DisputeStatus.Resolved]: 'Giải quyết thành công',
+  [DisputeStatus.Rejected]: 'Đã bị từ chối/bác bỏ',
+};
+
+export const DisputeTypeLabels: Record<DisputeType, string> = {
+  [DisputeType.JobQuality]: 'Chất lượng công việc',
+  [DisputeType.Payment]: 'Vấn đề thanh toán',
+  [DisputeType.Other]: 'Lý do khác',
 };
 
 export const WalletTransactionTypeLabels: Record<WalletTransactionType, string> = {

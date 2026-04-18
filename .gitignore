@@ -45,3 +45,4 @@ yarn-error.*
 # Exclude web version folder
 mobile đẹp/
 firebase-service-account.json
+.gitnexus

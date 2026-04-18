@@ -13,6 +13,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { messageService } from "../services/message.service";
 import { ConversationDTO } from "../types/export_type_definitions";
 import { useAuth } from "../context/AuthContext";
+import { signalRService } from "../services/signalr.service";
 
 export function ConversationListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -41,7 +42,35 @@ export function ConversationListScreen({ navigation }: any) {
 
   useFocusEffect(
     useCallback(() => {
-      fetchConversations();
+      let isSubscribed = true;
+
+      const handleNewMessage = () => {
+        if (isSubscribed) {
+          fetchConversations();
+        }
+      };
+
+      const setupSignalR = async () => {
+        await signalRService.startConnection();
+        signalRService.addListener("NewMessage", handleNewMessage);
+        signalRService.addListener("ReceiveMessage", handleNewMessage);
+        signalRService.addListener("newMessage", handleNewMessage);
+        signalRService.addListener("receiveMessage", handleNewMessage);
+        signalRService.addListener("MessageReceived", handleNewMessage);
+      };
+
+      fetchConversations().then(() => {
+        setupSignalR();
+      });
+
+      return () => {
+        isSubscribed = false;
+        signalRService.removeListener("NewMessage", handleNewMessage);
+        signalRService.removeListener("ReceiveMessage", handleNewMessage);
+        signalRService.removeListener("newMessage", handleNewMessage);
+        signalRService.removeListener("receiveMessage", handleNewMessage);
+        signalRService.removeListener("MessageReceived", handleNewMessage);
+      };
     }, [fetchConversations])
   );
 

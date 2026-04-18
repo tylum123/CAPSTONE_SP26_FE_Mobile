@@ -15,8 +15,7 @@ import {
   JobSearchFilterRequest,
   PaginatedJobDiscoveryResponse,
   JobDiscoveryDTO,
-  WorkerApplicationStatsDTO
-} from "../types/export_type_definitions";
+  WorkerCountPerDay} from "../types/export_type_definitions";
 
 export const jobService = {
   getCategories: async (): Promise<JobCategoryDTO[]> => {
@@ -134,6 +133,11 @@ export const jobService = {
     return response.data.data;
   },
 
+  getCountWorkerPerDay: async (id: string): Promise<WorkerCountPerDay[]> => {
+    const response = await api.get<ApiResponse<WorkerCountPerDay[]>>(API_ENDPOINTS.JOB.WORKER_BY_DAY(id));
+    return Array.isArray(response.data.data) ? response.data.data : [];
+  },
+
   getApplications: async (): Promise<JobApplicationDTO[]> => {
     const response = await api.get<ApiResponse<JobApplicationDTO[]>>(
       API_ENDPOINTS.JOB.APPLICATION_WORKER,
@@ -151,20 +155,6 @@ export const jobService = {
   cancelApplication: async (id: string): Promise<void> => {
     await api.put(
       API_ENDPOINTS.JOB.CANCEL_APPLICATION(id),
-    );
-  },
-
-  getWorkerStats: async (): Promise<WorkerApplicationStatsDTO> => {
-    const response = await api.get<ApiResponse<WorkerApplicationStatsDTO>>(
-      API_ENDPOINTS.JOB.APPLICATION_STATS,
-    );
-    return response.data.data;
-  },
-
-  autoAcceptUrgentApplications: async (data: { jobPostId: string; workerProfileId: string }): Promise<void> => {
-    await api.post(
-      API_ENDPOINTS.JOB.APPLICATION_AUTO_ACCEPT,
-      data,
     );
   },
 };

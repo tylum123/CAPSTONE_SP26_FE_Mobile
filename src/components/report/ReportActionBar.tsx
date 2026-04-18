@@ -11,6 +11,7 @@ interface Props {
   isPending: boolean;
   isApproved: boolean;
   approvedPercent: number;
+  showDisputeButton?: boolean;
   isAppealing: boolean;
   onAppeal: () => void;
 }
@@ -19,6 +20,7 @@ export function ReportActionBar({
   isPending,
   isApproved,
   approvedPercent,
+  showDisputeButton,
   isAppealing,
   onAppeal,
 }: Props) {
@@ -50,7 +52,7 @@ export function ReportActionBar({
     );
   }
 
-  if (isApproved && approvedPercent < 100) {
+  if (showDisputeButton) {
     return (
       <View
         style={{

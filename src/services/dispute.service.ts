@@ -22,5 +22,24 @@ export const disputeService = {
       API_ENDPOINTS.DISPUTE.MY
     );
     return response.data.data || [];
+  },
+
+  getDisputeById: async (id: string): Promise<DisputeReportDTO> => {
+    const response = await api.get<ApiResponse<DisputeReportDTO>>(
+      API_ENDPOINTS.DISPUTE.DETAIL(id)
+    );
+    return response.data.data;
+  },
+
+  updateDispute: async (id: string, data: Partial<CreateDisputeReportRequest>): Promise<DisputeReportDTO> => {
+    const response = await api.put<ApiResponse<DisputeReportDTO>>(
+      API_ENDPOINTS.DISPUTE.DETAIL(id),
+      data
+    );
+    return response.data.data;
+  },
+
+  deleteDispute: async (id: string): Promise<void> => {
+    await api.delete(API_ENDPOINTS.DISPUTE.DETAIL(id));
   }
 };

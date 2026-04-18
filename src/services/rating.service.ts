@@ -40,6 +40,13 @@ export const ratingService = {
   },
 
   /**
+   * Delete a rating
+   */
+  deleteRating: async (id: string): Promise<void> => {
+    await api.delete(API_ENDPOINTS.RATING.DELETE(id));
+  },
+
+  /**
    * Get ratings for a specific user (farmer or worker)
    */
   getUserRatings: async (userId: string): Promise<RatingDTO[]> => {
@@ -63,10 +70,16 @@ export const ratingService = {
    * Get all ratings given by the current user
    */
   getGivenRatingsByUser: async (): Promise<RatingDTO[]> => {
-    const response = await api.get<ApiResponse<RatingDTO[]>>(
-      API_ENDPOINTS.RATING.USER_GIVEN
-    );
-    return response.data.data || [];
+    try {
+      const response = await api.get<ApiResponse<RatingDTO[]>>(
+        API_ENDPOINTS.RATING.USER_GIVEN
+      );
+      return response.data.data || [];
+    } catch (error) {
+      // Silence errors if no ratings are found (or any other issue)
+      console.log("RatingService: Handled expected error for given ratings (likely none found)");
+      return [];
+    }
   },
 
   /**

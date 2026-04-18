@@ -8,11 +8,13 @@ import { View, Text, Image, TouchableOpacity, Dimensions } from "react-native";
 import {
   Briefcase,
   Calendar,
-  CheckCircle,
-  DollarSign,
+  CheckCircle2,
+  Coins,
   FileText,
   ImageIcon,
-  MapPin,
+  MapPinned,
+  Sprout,
+  Users,
 } from "lucide-react-native";
 import { JobDetailDTO } from "../../types/export_type_definitions";
 import { formatCurrency, formatDate, getStatusConfig } from "./report_helpers";
@@ -52,38 +54,36 @@ export function ReportSummaryCard({ data, evidenceUrls, onImagePress }: Props) {
             {statusConfig.label}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <Calendar size={13} color={statusConfig.color} />
-          <Text style={{ fontSize: 12, color: statusConfig.color }}>
-            {formatDate(data.workDate)}
-          </Text>
-        </View>
+        <Text style={{ fontSize: 12, color: statusConfig.color }}>
+          {formatDate(data.workDate)}
+        </Text>
       </View>
 
       {/* ── Job Info Card ── */}
       <SectionCard>
-        <SectionHeader icon={<Briefcase size={17} color="#059669" />} title="Thông tin công việc" />
+        <SectionHeader icon={<Sprout size={18} color="#059669" />} title="Thông tin công việc" />
         <Text style={{ fontSize: 18, fontWeight: "800", color: "#0f172a", marginBottom: 4 }}>
           {data.jobPost?.title || "Công việc chung"}
         </Text>
-        {(data.jobPost?.contactName || data.jobPostId) ? (
+        {(data.farmer?.contactName || data.jobPost?.contactName || data.jobPostId) ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8 }}>
+            <Users size={13} color="#94a3b8" />
             <Text style={{ fontSize: 14, color: "#64748b" }}>Đối tác: </Text>
             <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155" }}>
-              {data.jobPost?.contactName || `ID: ${data.jobPostId.substring(0, 8)}...`}
+              {data.farmer?.contactName || data.jobPost?.contactName || (data.jobPostId ? `ID: ${data.jobPostId.substring(0, 8)}...` : "N/A")}
             </Text>
           </View>
         ) : null}
         {data.jobPost?.address ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <MapPin size={13} color="#94a3b8" />
+            <MapPinned size={14} color="#94a3b8" />
             <Text style={{ fontSize: 13, color: "#64748b", flex: 1 }} numberOfLines={1}>
               {data.jobPost.address}
             </Text>
           </View>
         ) : (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <MapPin size={13} color="#94a3b8" />
+            <MapPinned size={14} color="#94a3b8" />
             <Text style={{ fontSize: 13, color: "#94a3b8", fontStyle: "italic" }}>
               Địa chỉ chưa cập nhật
             </Text>
@@ -99,13 +99,13 @@ export function ReportSummaryCard({ data, evidenceUrls, onImagePress }: Props) {
           <InfoRow
             label="Hoàn thành lúc"
             value={formatDate(data.completedAt)}
-            icon={<CheckCircle size={14} color="#94a3b8" />}
+            icon={<CheckCircle2 size={14} color="#059669" />}
           />
         ) : null}
         <InfoRow
           label="Đơn giá"
           value={formatCurrency(data.jobPrice)}
-          icon={<DollarSign size={14} color="#94a3b8" />}
+          icon={<Coins size={14} color="#94a3b8" />}
         />
       </SectionCard>
 
