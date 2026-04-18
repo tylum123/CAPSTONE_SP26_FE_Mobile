@@ -7,31 +7,38 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Info, Camera, Send, AlertTriangle, CheckCircle2, X } from "lucide-react-native";
+import { ChevronLeft, Info, Camera, Send, AlertTriangle, CheckCircle2, X, ClipboardList, WalletCards, MoreHorizontal } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/Card";
 import { disputeService } from "../services/dispute.service";
 import { mediaService } from "../services/media.service";
 import { dailyReportService } from "../services/daily_report.service";
+import { jobService } from "../services/job.service";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
 import { DeviceEventEmitter } from "react-native";
 import { canSubmitDispute } from "../utils/disputeRules";
 
 const DISPUTE_TYPES = [
-  { id: 1, label: "Số lượng / Chất lượng công việc", icon: "clipboard" },
-  { id: 2, label: "Vấn đề thanh toán / Thù lao", icon: "dollar-sign" },
-  { id: 3, label: "Lý do khác", icon: "more-horizontal" },
+  { id: 1, label: "Công việc", Icon: ClipboardList },
+  { id: 2, label: "Thanh toán", Icon: WalletCards },
+  { id: 3, label: "Lý do khác", Icon: MoreHorizontal },
 ];
 
 export function SubmitDisputeScreen({ navigation, route }: any) {
-  const { jobPostId, reportId, farmerName, jobTitle, isKhoán } = route.params || {};
+  const { jobPostId, reportId, dispute } = route.params || {};
+  const isEditMode = !!dispute;
+  const [jobTitle, setJobTitle] = useState(route.params?.jobTitle || "");
+  const [farmerName, setFarmerName] = useState(route.params?.farmerName || "");
+  const [isPerJob, setIsPerJob] = useState(!!(route.params?.isPerJob || route.params?.isKhoán));
 
-  const [disputeTypeId, setDisputeTypeId] = useState<number>(1);
-  const [reason, setReason] = useState("");
-  const [description, setDescription] = useState("");
-  const [image, setImage] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [disputeTypeId, setDisputeTypeId] = useState<number>(dispute?.disputeTypeId || 1);
+  const [reason, setReason] = useState(dispute?.reason || "");
+  const [description, setDescription] = useState(dispute?.description || "");
+  const [image, setImage] = useState<{ uri: string; name: string; type: string } | null>(
+    dispute?.evidenceUrl ? { uri: dispute.evidenceUrl, name: "evidence.jpg", type: "image/jpeg" } : null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
 
@@ -50,9 +57,37 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
 
   const [isValidating, setIsValidating] = useState(true);
 
+  // Reset feedback state and sync params when entering or params change
+  useEffect(() => {
+    setFeedback(p => ({ ...p, visible: false }));
+    setIsSubmitting(false);
+    setUploadProgress(false);
+
+    if (dispute) {
+      setDisputeTypeId(dispute.disputeTypeId || 1);
+      setReason(dispute.reason || "");
+      setDescription(dispute.description || "");
+      if (dispute.evidenceUrl) {
+        setImage({ uri: dispute.evidenceUrl, name: "evidence.jpg", type: "image/jpeg" });
+      }
+    }
+    
+    if (route.params?.jobTitle) setJobTitle(route.params.jobTitle);
+    if (route.params?.farmerName) setFarmerName(route.params.farmerName);
+    if (route.params?.isPerJob !== undefined || route.params?.isKhoán !== undefined) {
+      setIsPerJob(!!(route.params?.isPerJob || route.params?.isKhoán));
+    }
+  }, [route.params]);
+
   // Item 5: Quick validation on entry
   useEffect(() => {
     const validateReport = async () => {
+      // Skip report validation if we are editing an existing dispute
+      if (isEditMode) {
+        setIsValidating(false);
+        return;
+      }
+
       if (!reportId) {
         showFeedback({
           title: "Lỗi dữ liệu",
@@ -63,9 +98,37 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         return;
       }
 
-      setIsValidating(true);
+      // Optimization: If we already have the essential info from route params,
+      // don't block the UI with a full-screen spinner.
+      if (jobTitle && farmerName) {
+        setIsValidating(false);
+      }
+
       try {
         const reportData = await dailyReportService.getReportById(reportId);
+        
+        // Data recovery: if params were missing, populate from fetched report
+        let updatedJobTitle = jobTitle || reportData.jobPost?.title || "";
+        let updatedFarmerName = farmerName || reportData.farmer?.contactName || reportData.jobPost?.contactName || "";
+        
+        // Robust fallback: if jobPost is still missing, fetch it manually
+        if (!updatedJobTitle && reportData.jobPostId) {
+          try {
+            const jobDetail = await jobService.getJobPostDetail(reportData.jobPostId);
+            updatedJobTitle = jobDetail.title;
+            updatedFarmerName = jobDetail.contactName;
+          } catch (e) {
+            console.log("Fallback fetch failed", e);
+          }
+        }
+
+        setJobTitle(updatedJobTitle);
+        setFarmerName(updatedFarmerName);
+
+        if (route.params?.isPerJob === undefined && route.params?.isKhoán === undefined) {
+          setIsPerJob(reportData.jobPost?.jobTypeId === 1);
+        }
+
         if (!canSubmitDispute(reportData)) {
           showFeedback({
             title: "Không thể khiếu nại",
@@ -77,8 +140,7 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         }
       } catch (error) {
         // If fetch fails, we still allow proceeding if params were passed, 
-        // but it's safer to warn if we have no fallback
-        if (!jobPostId) {
+        if (!jobPostId && !jobTitle) {
           showFeedback({
             title: "Lỗi kết nối",
             message: "Không thể xác thực trạng thái báo cáo. Vui lòng thử lại sau.",
@@ -144,21 +206,44 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         setUploadProgress(false);
       }
 
-      await disputeService.createDispute({
-        jobPostId: jobPostId,
-        disputeTypeId: disputeTypeId,
-        reason: reason,
-        description: description,
-        evidenceUrl: evidenceUrl,
-      });
+      if (isEditMode) {
+        await disputeService.updateDispute(dispute.id, {
+          disputeTypeId: disputeTypeId,
+          reason: reason,
+          description: description,
+          evidenceUrl: evidenceUrl,
+        });
 
-      hapticFeedback.success();
-      showFeedback({
-        onConfirm: () => {
-          DeviceEventEmitter.emit("REFRESH_DATA");
-          navigation.navigate("DisputeHistory");
-        },
-      });
+        hapticFeedback.success();
+        showFeedback({
+          title: "Cập nhật thành công",
+          message: "Khiếu nại của bạn đã được cập nhật thông tin mới nhất.",
+          variant: "success",
+          onConfirm: () => {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          },
+        });
+      } else {
+        await disputeService.createDispute({
+          jobPostId: jobPostId,
+          disputeTypeId: disputeTypeId,
+          reason: reason,
+          description: description,
+          evidenceUrl: evidenceUrl,
+        });
+
+        hapticFeedback.success();
+        showFeedback({
+          title: "Gửi khiếu nại thành công",
+          message: "Khiếu nại của bạn đã được ghi nhận. Chúng tôi sẽ xem xét và phản hồi trong thời gian sớm nhất.",
+          variant: "success",
+          onConfirm: () => {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.navigate("DisputeHistory");
+          },
+        });
+      }
     } catch (error: any) {
       setUploadProgress(false);
       hapticFeedback.error();
@@ -180,7 +265,7 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
           <ChevronLeft size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-lg font-bold text-slate-900 mr-8">
-          Gửi khiếu nại
+          {isEditMode ? "Chỉnh sửa khiếu nại" : "Gửi khiếu nại"}
         </Text>
       </View>
 
@@ -199,8 +284,13 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
               <Text className="text-sm font-bold text-rose-700">Lưu ý quan trọng</Text>
             </View>
             <Text className="text-[13px] text-slate-600 leading-5">
-              Bạn đang khiếu nại về công việc <Text className="font-bold text-slate-800">"{jobTitle || "N/A"}"</Text> của Farmer <Text className="font-bold text-slate-800">{farmerName || "N/A"}</Text>. 
-              {isKhoán && (
+              Bạn đang khiếu nại về công việc <Text className="font-bold text-slate-800">"{jobTitle || "..."}"</Text> của Farmer <Text className="font-bold text-slate-800">{farmerName || "..."}</Text>. 
+              {(!jobTitle || !farmerName) && (
+                <Text className="text-[11px] text-primary-600 italic font-medium">
+                  {"\n"}(Đang tải thêm thông tin...)
+                </Text>
+              )}
+              {isPerJob && (
                 <Text className="text-amber-700 font-medium">
                   {"\n"}• Vì đây là hình thức khoán, khiếu nại này sẽ là cơ sở quan trọng để đối soát thù lao vào cuối kỳ.
                 </Text>
@@ -218,12 +308,13 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
                 <TouchableOpacity
                   key={type.id}
                   onPress={() => setDisputeTypeId(type.id)}
-                  className={`px-4 py-2.5 rounded-xl border ${
+                  className={`px-3 py-2.5 rounded-xl border flex-row items-center gap-2 ${
                     disputeTypeId === type.id 
                       ? "bg-primary-50 border-primary-200" 
                       : "bg-slate-50 border-slate-100"
                   }`}
                 >
+                  <type.Icon size={16} color={disputeTypeId === type.id ? "#059669" : "#94a3b8"} />
                   <Text className={`text-[13px] font-bold ${
                     disputeTypeId === type.id ? "text-primary-700" : "text-slate-500"
                   }`}>
@@ -297,7 +388,9 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
             ) : (
               <View className="flex-row items-center gap-2">
                 <Send size={18} color="white" />
-                <Text className="text-white font-bold text-lg">Gửi Khiếu Nại</Text>
+                <Text className="text-white font-bold text-lg">
+                  {isEditMode ? "Cập Nhật Khiếu Nại" : "Gửi Khiếu Nại"}
+                </Text>
               </View>
             )}
           </Button>

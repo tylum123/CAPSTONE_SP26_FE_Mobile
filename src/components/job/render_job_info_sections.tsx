@@ -6,8 +6,7 @@
 
 import React from "react";
 import { View, Text } from "react-native";
-import { CheckCircle, Wrench } from "lucide-react-native";
-import { Badge } from "../ui/Badge";
+import { CheckCircle, Wrench, Star } from "lucide-react-native";
 
 export function RenderJobInfoSections({ jobDetail, infoRows }: { jobDetail: any, infoRows: any[] }) {
   if (!jobDetail) return null;
@@ -30,12 +29,23 @@ export function RenderJobInfoSections({ jobDetail, infoRows }: { jobDetail: any,
               </View>
               <View className="flex-1">
                 <Text className="text-[11px] text-slate-400 font-semibold uppercase mb-0.5" style={{ letterSpacing: 0.4 }}>{row.label}</Text>
-                {row.label === "Kỹ năng yêu cầu" && row.value !== "Không yêu cầu" ? (
-                  <View className="flex-row flex-wrap gap-1.5 mt-1">
+                {row.label === "Kỹ năng khuyến nghị" && row.value !== "Không yêu cầu" ? (
+                  <View className="flex-row flex-wrap gap-2 mt-2">
                     {row.value.split(",").map((skill: string, idx: number) => (
-                      <Badge key={idx} variant="secondary" className="px-2 py-0.5">
-                        {skill.trim()}
-                      </Badge>
+                      <View 
+                        key={idx} 
+                        className="flex-row items-center bg-primary-50 px-3 py-1.5 rounded-xl border border-primary-100"
+                        style={{ maxWidth: 160 }}
+                      >
+                     
+                        <Text 
+                          numberOfLines={1} 
+                          ellipsizeMode="tail"
+                          className="text-[12px] font-bold text-primary-700"
+                        >
+                          {skill.trim()}
+                        </Text>
+                      </View>
                     ))}
                   </View>
                 ) : (

@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, Image, KeyboardAvoidingView, Platform, DeviceEventEmitter } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { ChevronLeft, Info, Landmark, DollarSign, Wallet, ShieldCheck, Check, Search, X } from "lucide-react-native";
+import { ChevronLeft, Info, Landmark, Wallet, ShieldCheck, Check, Search, X } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { Button } from "../components/ui/Button";

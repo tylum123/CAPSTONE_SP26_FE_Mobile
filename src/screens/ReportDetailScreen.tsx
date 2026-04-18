@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft } from "lucide-react-native";
 import { JobDetailDTO } from "../types/export_type_definitions";
 import { dailyReportService } from "../services/daily_report.service";
+import { jobService } from "../services/job.service";
 import { ReportSummaryCard } from "../components/report/ReportSummaryCard";
 import { ReportFeedbackCard } from "../components/report/ReportFeedbackCard";
 import { ReportActionBar } from "../components/report/ReportActionBar";
@@ -41,7 +42,18 @@ export function ReportDetailScreen({ navigation, route }: any) {
     try {
       if (!reportId) return;
       const res = await dailyReportService.getReportById(reportId);
-      if (res) setData(res);
+      if (res) {
+        // If backend didn't join jobPost, fetch it manually to show title/address
+        if (!res.jobPost && res.jobPostId) {
+          try {
+            const jobPostData = await jobService.getJobPostDetail(res.jobPostId);
+            res.jobPost = jobPostData;
+          } catch (jobErr) {
+            console.log("[ReportDetail] Could not fetch jobPost fallback:", jobErr);
+          }
+        }
+        setData(res);
+      }
     } catch {
       // Keep existing data silently
     } finally {
@@ -51,11 +63,10 @@ export function ReportDetailScreen({ navigation, route }: any) {
   }, [reportId]);
 
   useEffect(() => {
-    if (!report) loadData();
-    else setLoading(false);
+    loadData();
     const sub = DeviceEventEmitter.addListener("REFRESH_DATA", loadData);
     return () => sub.remove();
-  }, [loadData, report]);
+  }, [loadData]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -67,9 +78,9 @@ export function ReportDetailScreen({ navigation, route }: any) {
     navigation.navigate("SubmitDispute", {
       jobPostId: data.jobPostId,
       reportId: data.id,
-      farmerName: data.farmer?.contactName || data.jobPost?.contactName,
-      jobTitle: data.jobPost?.title,
-      isKhoán: data.jobPost?.jobTypeId === 1,
+      farmerName: data.farmer?.contactName || data.jobPost?.contactName || "Farmer",
+      jobTitle: data.jobPost?.title || "Công việc",
+      isPerJob: data.jobPost?.jobTypeId === 1,
     });
   };
 

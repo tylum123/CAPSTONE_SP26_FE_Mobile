@@ -5,7 +5,7 @@
 
 import React from "react";
 import { View, Text } from "react-native";
-import { MessageSquare, DollarSign, Percent, TrendingUp } from "lucide-react-native";
+import { MessageSquareQuote, Coins, Percent, ReceiptText, Undo2 } from "lucide-react-native";
 import { JobDetailDTO } from "../../types/export_type_definitions";
 import { formatCurrency } from "./report_helpers";
 import { SectionCard, SectionHeader, InfoRow, ApprovalProgressBar } from "./ReportPrimitives";
@@ -24,7 +24,7 @@ export function ReportFeedbackCard({ data, approvedPercent }: Props) {
       {/* ── Farmer Feedback ── */}
       <SectionCard style={{ borderColor: "#6ee7b7", backgroundColor: "#f0fdf4" }}>
         <SectionHeader
-          icon={<MessageSquare size={17} color="#059669" />}
+          icon={<MessageSquareQuote size={18} color="#059669" />}
           title="Đánh giá từ chủ nông trại"
           color="#065f46"
         />
@@ -54,17 +54,17 @@ export function ReportFeedbackCard({ data, approvedPercent }: Props) {
       {/* ── Payment Summary ── */}
       <SectionCard style={{ borderColor: "#bae6fd", backgroundColor: "#f0f9ff" }}>
         <SectionHeader
-          icon={<TrendingUp size={17} color="#0284c7" />}
+          icon={<ReceiptText size={18} color="#0284c7" />}
           title="Tổng kết thanh toán"
           color="#0c4a6e"
         />
         <InfoRow
           label="Đơn giá ban đầu"
           value={formatCurrency(data.jobPrice)}
-          icon={<DollarSign size={14} color="#94a3b8" />}
+          icon={<Coins size={14} color="#94a3b8" />}
         />
         <InfoRow
-          label="% Phê duyệt"
+          label="Phê duyệt"
           value={`${approvedPercent}%`}
           icon={<Percent size={14} color="#94a3b8" />}
         />
@@ -72,7 +72,7 @@ export function ReportFeedbackCard({ data, approvedPercent }: Props) {
           <InfoRow
             label="Hoàn tiền"
             value={formatCurrency(data.refundAmount)}
-            icon={<DollarSign size={14} color="#f59e0b" />}
+            icon={<Undo2 size={14} color="#f59e0b" />}
           />
         )}
         <View
