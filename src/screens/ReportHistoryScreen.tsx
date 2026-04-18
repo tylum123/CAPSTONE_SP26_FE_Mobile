@@ -4,17 +4,19 @@
  * Outputs: Aggregated list of report summaries.
  * Dependencies: Job service, Report service. */
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, ClipboardCheck, Calendar, Info } from "lucide-react-native";
+import { ChevronLeft, ClipboardCheck, Calendar } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { JobDetailDTO } from "../types/export_type_definitions";
 import { dailyReportService } from "../services/daily_report.service";
 import { useAuth } from "../context/AuthContext";
 import { PillTabs } from "../components/ui/PillTabs";
-import { AlertTriangle, Clock, Filter, AlertCircle } from "lucide-react-native";
+import { Clock, Filter, AlertCircle } from "lucide-react-native";
+import { canSubmitDispute } from "../utils/disputeRules";
+import { JobStatus } from "../constants/enums";
 
 export function ReportHistoryScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -103,9 +105,9 @@ export function ReportHistoryScreen({ navigation }: any) {
   const filteredReports = getFilteredReports();
 
   const renderItem = ({ item }: { item: JobDetailDTO }) => {
-    const isApproved = item.statusId === 3; // Completed
-    const isPending = item.statusId === 2;  // Reported
-    const isInProgress = item.statusId === 1; // InProgress
+    const isApproved = item.statusId === JobStatus.Completed; // Completed
+    const isPending = item.statusId === JobStatus.Reported;  // Reported
+    const isInProgress = item.statusId === JobStatus.InProgress; // InProgress
 
     return (
       <TouchableOpacity 
@@ -146,8 +148,8 @@ export function ReportHistoryScreen({ navigation }: any) {
               </View>
             )}
 
-            {/* Dispute Button: Shown if approved but percent < 95% */}
-            {isApproved && (item.farmerApprovedPercent ?? 100) < 95 && (
+            {/* Dispute Button: Shown based on centralized rules */}
+            {canSubmitDispute(item) && (
               <TouchableOpacity
                 className="bg-rose-50 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 border border-rose-100"
                 onPress={() => navigation.navigate("SubmitDispute", {
