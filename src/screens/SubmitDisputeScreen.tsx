@@ -4,7 +4,7 @@
  * Outputs: POST request to Dispute API via disputeService.
  * Dependencies: disputeService, mediaService, expo-image-picker. */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Info, Camera, Send, AlertTriangle, CheckCircle2, X } from "lucide-react-native";
@@ -13,8 +13,11 @@ import { Button } from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/Card";
 import { disputeService } from "../services/dispute.service";
 import { mediaService } from "../services/media.service";
+import { dailyReportService } from "../services/daily_report.service";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
+import { DeviceEventEmitter } from "react-native";
+import { canSubmitDispute } from "../utils/disputeRules";
 
 const DISPUTE_TYPES = [
   { id: 1, label: "Số lượng / Chất lượng công việc", icon: "clipboard" },
@@ -44,6 +47,53 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
     message: "",
     variant: "info",
   });
+
+  const [isValidating, setIsValidating] = useState(true);
+
+  // Item 5: Quick validation on entry
+  useEffect(() => {
+    const validateReport = async () => {
+      if (!reportId) {
+        showFeedback({
+          title: "Lỗi dữ liệu",
+          message: "Không tìm thấy thông tin báo cáo để khiếu nại.",
+          variant: "error",
+          onConfirm: () => navigation.goBack(),
+        });
+        return;
+      }
+
+      setIsValidating(true);
+      try {
+        const reportData = await dailyReportService.getReportById(reportId);
+        if (!canSubmitDispute(reportData)) {
+          showFeedback({
+            title: "Không thể khiếu nại",
+            message: "Báo cáo này hiện không ở trạng thái được phép khiếu nại hoặc đã được xử lý.",
+            variant: "error",
+            onConfirm: () => navigation.goBack(),
+          });
+          return;
+        }
+      } catch (error) {
+        // If fetch fails, we still allow proceeding if params were passed, 
+        // but it's safer to warn if we have no fallback
+        if (!jobPostId) {
+          showFeedback({
+            title: "Lỗi kết nối",
+            message: "Không thể xác thực trạng thái báo cáo. Vui lòng thử lại sau.",
+            variant: "error",
+            onConfirm: () => navigation.goBack(),
+          });
+          return;
+        }
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    validateReport();
+  }, [reportId]);
 
   const showFeedback = (config: any) => setFeedback({ ...config, visible: true });
   const closeFeedback = () => {
@@ -104,10 +154,10 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
 
       hapticFeedback.success();
       showFeedback({
-        title: "Gửi khiếu nại thành công",
-        message: "Yêu cầu của bạn đã được ghi nhận. Ban quản trị sẽ sớm liên hệ để giải quyết.",
-        variant: "success",
-        onConfirm: () => navigation.navigate("DisputeHistory"),
+        onConfirm: () => {
+          DeviceEventEmitter.emit("REFRESH_DATA");
+          navigation.navigate("DisputeHistory");
+        },
       });
     } catch (error: any) {
       setUploadProgress(false);
@@ -134,7 +184,13 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         </Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
+      {isValidating ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#059669" />
+          <Text className="text-slate-500 font-medium mt-4">Đang kiểm tra trạng thái...</Text>
+        </View>
+      ) : (
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
         {/* Info Card */}
         <Card variant="tinted" className="mb-6">
           <CardContent className="p-4">
@@ -209,6 +265,7 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
                 <TouchableOpacity
                   className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5"
                   onPress={() => setImage(null)}
+                  disabled={isSubmitting}
                 >
                   <X size={14} color="white" />
                 </TouchableOpacity>
@@ -216,6 +273,7 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
             ) : (
               <TouchableOpacity
                 onPress={pickImage}
+                disabled={isSubmitting}
                 className="w-40 aspect-square border-2 border-dashed border-slate-200 bg-slate-50 rounded-2xl items-center justify-center"
               >
                 <Camera size={32} color="#94a3b8" />
@@ -251,6 +309,7 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
           </Text>
         </View>
       </ScrollView>
+      )}
 
       <FeedbackModal
         visible={feedback.visible}

@@ -63,7 +63,6 @@ export const API_ENDPOINTS = {
     URGENT: `${API_PREFIX}/job/post/urgent`,
     BY_TYPE: `${API_PREFIX}/job/post/by-type`,
     APPLICATION: `${API_PREFIX}/job/application`,
-    APPLICATION_AUTO_ACCEPT: `${API_PREFIX}/job/application/auto-accept`,
     APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
     CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,

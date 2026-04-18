@@ -160,11 +160,4 @@ export const jobService = {
     );
     return response.data.data;
   },
-
-  autoAcceptUrgentApplications: async (data: { jobPostId: string; workerProfileId: string }): Promise<void> => {
-    await api.post(
-      API_ENDPOINTS.JOB.APPLICATION_AUTO_ACCEPT,
-      data,
-    );
-  },
 };
