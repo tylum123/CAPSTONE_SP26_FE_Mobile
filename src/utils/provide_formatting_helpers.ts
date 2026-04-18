@@ -53,6 +53,66 @@ export function isPastDate(dateStr: string): boolean {
 }
 
 /**
+ * Checks if a date (DD/MM/YYYY) is in the future (after today).
+ */
+export function isFutureDate(dateStr: string): boolean {
+  if (!dateStr || dateStr === "N/A" || dateStr === "Chưa rõ") return false;
+  
+  let targetDate: Date;
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    targetDate = new Date(year, month, day);
+  } else {
+    targetDate = new Date(dateStr);
+  }
+
+  if (isNaN(targetDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  return targetDate.getTime() > today.getTime();
+}
+
+/**
+ * Checks if a date string matches today's date.
+ * Supports DD/MM/YYYY and ISO formats.
+ */
+export function isToday(dateStr: string): boolean {
+  if (!dateStr || dateStr === "N/A" || dateStr === "Chưa rõ") return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let targetDate: Date;
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const year = parseInt(parts[2], 10);
+    targetDate = new Date(year, month, day);
+  } else {
+    targetDate = new Date(dateStr);
+  }
+
+  if (isNaN(targetDate.getTime())) return false;
+  targetDate.setHours(0, 0, 0, 0);
+
+  return targetDate.getTime() === today.getTime();
+}
+
+/**
+ * Checks if today is present in a list of work dates.
+ */
+export function isTodayInList(dateList: string[]): boolean {
+  if (!dateList || dateList.length === 0) return false;
+  return dateList.some(dateStr => isToday(dateStr));
+}
+
+/**
  * Checks if the current date is past the end date + a grace period.
  * Example: endDate = March 29. Grace = 1 day. 
  * Remains valid until end of March 30 (23:59).

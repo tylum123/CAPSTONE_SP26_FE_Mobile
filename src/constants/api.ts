@@ -66,7 +66,6 @@ export const API_ENDPOINTS = {
     APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
     CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
-    APPLICATION_STATS: `${API_PREFIX}/job/application/worker/stats`,
   },
   // Job Detail (Daily Report replacement for Attendance)
   JOB_DETAIL: {
