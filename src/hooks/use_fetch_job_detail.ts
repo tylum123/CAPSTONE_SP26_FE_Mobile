@@ -132,14 +132,11 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         }
       }
 
-      // Fetch latest message from farmer — only when we have a confirmed userId
-      // reportFarmer.userId is the User table ID (correct for Messages API)
-      // sourceJob.farmerProfileId is the Farmer table ID (WRONG for Messages API — skip)
+      // Fetch latest message from farmer
       const farmerUserId = reportFarmer?.userId || sourceJob?.farmerProfile?.userId || sourceJob?.farmer?.userId || null;
       if (farmerUserId && isAuthenticated && !user?.isDemo) {
         try {
           const messages = await messageService.getMessages(farmerUserId, 1, 1);
-          // Normalize paginated vs array response
           const msgList = Array.isArray(messages) ? messages : (messages?.data || messages?.items || []);
           if (msgList.length > 0) {
             setLastMessage(msgList[0]);
@@ -149,26 +146,55 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         }
       }
 
+      // Fetch enrollment counts per day
+      let dayCounts: any[] = [];
+      if (isAuthenticated && !user?.isDemo) {
+        try {
+          dayCounts = await jobService.getCountWorkerPerDay(String(jobId));
+        } catch (err) {
+          console.error("Fetch day counts error", err);
+        }
+      } else if (user?.isDemo || !isAuthenticated) {
+        // Mock counts for demo
+        dayCounts = (sourceJob.selectedDays || []).map((d: string, i: number) => ({
+          date: d,
+          acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0)
+        }));
+      }
+
       const mappedData = mapJobPostToUI(sourceJob);
       const timeSlots = (sourceJob.jobTypeId === 1) ? [] : (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
         const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+        const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
+        const acceptedCount = countData?.acceptedWorkerCount || 0;
+        const neededCount = sourceJob.workersNeeded || 0;
+        const isFull = acceptedCount >= neededCount;
+
         return {
           id: index + 1,
           date: formattedSlotDate,
           rawDate: dateStr.substring(0, 10),
-          available: true,
-          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate
+          available: !isFull,
+          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
+          acceptedCount,
+          neededCount
         };
       });
 
       // Special case for backward compatibility or if selectedDays is empty for Daily jobs
       if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
+        const firstDayCount = dayCounts.find(c => c.date?.substring(0, 10) === sourceJob.startDate?.substring(0, 10));
+        const accepted = firstDayCount?.acceptedWorkerCount || 0;
+        const needed = sourceJob.workersNeeded || 0;
+
         timeSlots.push({
           id: 1,
           date: mappedData.startDateFormatted,
           rawDate: sourceJob.startDate,
-          available: true,
-          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate
+          available: accepted < needed,
+          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate,
+          acceptedCount: accepted,
+          neededCount: needed
         });
       }
 

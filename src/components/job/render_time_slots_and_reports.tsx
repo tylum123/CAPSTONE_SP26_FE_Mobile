@@ -6,7 +6,7 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Clock, Calendar, Banknote, MessageCircle, AlertCircle } from "lucide-react-native";
+import { Clock, Calendar, Banknote, MessageCircle, AlertCircle, Users } from "lucide-react-native";
 import { Badge } from "../ui/Badge";
 import { canSubmitDispute } from "../../utils/disputeRules";
 import { useNavigation } from "@react-navigation/native";
@@ -121,53 +121,135 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
             {jobDetail.timeSlots.map((slot: any) => {
               const key = String(slot.rawDate || slot.date).substring(0, 10);
               const selected = selectedTimeSlots.some(s => s.substring(0, 10) === key);
+              const isApproved = Number(applicationInfo.statusId) === 2;
+              const isPending = Number(applicationInfo.statusId) === 1;
+              const isSelectedAndApproved = isApproved && selected;
               const isSelectedAndApplied = isApplied && selected;
 
               return (
                 <TouchableOpacity
                   key={slot.id}
                   className={[
-                    "flex-row items-center gap-2 p-4 rounded-2xl border-2", 
-                    !slot.available ? "bg-slate-50 border-slate-100" : 
-                    isSelectedAndApplied ? "bg-green-50 border-green-200" :
-                    selected ? "bg-primary-600 border-primary-700" : 
-                    "bg-white border-slate-200"
+                    "flex-row items-center justify-between p-4 rounded-2xl border-2 min-h-[72px] mb-2.5",
+                    isSelectedAndApproved ? "bg-emerald-50/80 border-emerald-200" : 
+                    selected ? "bg-sky-50 border-transparent" : 
+                    !slot.available ? "bg-rose-50/50 border-rose-100 opacity-90" : 
+                    "bg-white border-slate-100"
                   ].join(" ")}
                   onPress={() => toggleTimeSlot(slot.id)}
                   disabled={!slot.available || isApplied}
                   activeOpacity={0.85}
                 >
-                  <Calendar size={18} color={isSelectedAndApplied ? "#059669" : selected ? "#ffffff" : slot.available ? "#059669" : "#cbd5e1"} />
-                  <Text className={[
-                    "text-[15px] font-bold", 
-                    isSelectedAndApplied ? "text-green-700" :
-                    selected ? "text-white" : 
-                    !slot.available ? "text-slate-300" : 
-                    "text-slate-800"
-                  ].join(" ")}>{slot.date}</Text>
-                  
-                  {!slot.available && <Badge variant="secondary">Đã đủ</Badge>}
-                  {isSelectedAndApplied && !slot.reportedAt && applicationInfo.statusId !== 2 && (
-                    <View className="ml-auto bg-green-100 px-2 py-1 rounded-lg border border-green-200">
-                      <Text className="text-[10px] font-bold text-green-700 uppercase">✓ Đã ứng tuyển</Text>
-                    </View>
-                  )}
+                  <View className="flex-row items-center gap-3 pr-4" style={{ flex: 1 }}>
+                    <Calendar 
+                      size={20} 
+                      color={isSelectedAndApproved ? "#057a55" : selected ? "#0284c7" : slot.available ? "#0ea5e9" : "#94a3b8"} 
+                    />
+                    <Text 
+                      numberOfLines={1}
+                      className={[
+                        "text-[16px] font-bold", 
+                        isSelectedAndApproved ? "text-emerald-900" : 
+                        selected ? "text-sky-700" : 
+                        !slot.available ? "text-rose-400" : 
+                        "text-slate-700"
+                      ].join(" ")}
+                      style={selected && !isApplied ? { color: 'white' } : {}}
+                    >
+                      {slot.date}
+                    </Text>
+                  </View>
 
-                  {slot.reportedAt && (
-                    <View className="ml-auto bg-primary-100 px-2 py-1 rounded-lg border border-primary-200">
-                      <Text className="text-[10px] font-bold text-primary-700 uppercase">✓ Đã báo cáo</Text>
-                    </View>
-                  )}
+                  {/* Right Indicators Group */}
+                  <View className="flex-row items-center gap-1.5">
+                    {/* Recruitment Capacity Pill */}
+                    {slot.neededCount > 0 && (
+                      <View 
+                        className={[
+                          "flex-row items-center gap-1 px-2.5 py-1.5 rounded-full border min-w-[55px] justify-center",
+                          selected && !isApproved ? "bg-sky-100 border-sky-200" :
+                          !slot.available ? "bg-rose-50 border-rose-100" :
+                          slot.acceptedCount > 0 ? "bg-emerald-50 border-emerald-100" :
+                          "bg-slate-50 border-slate-100"
+                        ].join(" ")}
+                      >
+                        <Users 
+                          size={12} 
+                          color={
+                            selected && !isApproved ? "#0284c7" :
+                            !slot.available ? "#e11d48" :
+                            slot.acceptedCount > 0 ? "#059669" :
+                            "#64748b"
+                          } 
+                        />
+                        <Text className={[
+                          "text-[11px] font-extrabold",
+                          selected && !isApproved ? "text-sky-700" :
+                          !slot.available ? "text-rose-600" :
+                          slot.acceptedCount > 0 ? "text-emerald-700" :
+                          "text-slate-500"
+                        ].join(" ")}>
+                          {slot.acceptedCount}/{slot.neededCount}
+                        </Text>
+                      </View>
+                    )}
+
+                    {!slot.available && !isSelectedAndApplied && (
+                      <Badge variant="secondary" className="px-2 h-7">Hết chỗ</Badge>
+                    )}
+                    
+                    {/* ONLY show report status if user is officially accepted for THIS specific day */}
+                    {isSelectedAndApproved && (() => {
+                      const now = new Date();
+                      // Compare only the date part to avoid premature "overdue" on the same day
+                      const slotDate = new Date(slot.rawDate);
+                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      const isPast = slotDate < today;
+
+                      let statusLabel = "Chờ báo cáo";
+                      let containerStyle = "bg-emerald-100 border-emerald-200";
+                      let textStyle = "text-emerald-700";
+
+                      if (slot.reportedAt) {
+                        statusLabel = "Đã báo cáo";
+                        containerStyle = "bg-primary-100 border-primary-200";
+                        textStyle = "text-primary-700";
+                      } else if (isPast) {
+                        statusLabel = "Quá hạn";
+                        containerStyle = "bg-rose-100 border-rose-200";
+                        textStyle = "text-rose-700";
+                      }
+
+                      return (
+                        <View className={["px-2.5 py-1.5 rounded-lg border", containerStyle].join(" ")}>
+                          <Text className={["text-[10px] font-extrabold uppercase", textStyle].join(" ")}>
+                            {statusLabel}
+                          </Text>
+                        </View>
+                      );
+                    })()}
+
+                    {isPending && selected && (
+                      <Badge variant="warning" className="px-2 h-7">Đợi duyệt</Badge>
+                    )}
+                    
+                    {selected && !isApproved && (
+                      <View className="w-6 h-6 rounded-full bg-sky-200/50 justify-center items-center ml-1">
+                        <Text className="text-sm font-extrabold text-sky-700">✓</Text>
+                      </View>
+                    )}
+                  </View>
                   
-                  {applicationInfo.statusId === 2 && !slot.reportedAt && (
-                    <View className="ml-auto bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
-                      <Text className="text-[10px] font-bold text-slate-500 uppercase">Chưa báo cáo</Text>
-                    </View>
-                  )}
-                  
-                  {selected && !isApplied && (
-                    <View className="ml-auto w-6 h-6 rounded-full bg-white justify-center items-center">
-                      <Text className="text-sm font-extrabold text-primary-600">✓</Text>
+                  {/* Progress Strip at Bottom */}
+                  {slot.neededCount > 0 && (
+                    <View className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-100/30 rounded-b-2xl overflow-hidden">
+                      <View 
+                        className={[
+                          "h-full",
+                          !slot.available ? "bg-rose-500" : "bg-emerald-500"
+                        ].join(" ")} 
+                        style={{ width: `${Math.min((slot.acceptedCount / slot.neededCount) * 100, 100)}%` }} 
+                      />
                     </View>
                   )}
                 </TouchableOpacity>
