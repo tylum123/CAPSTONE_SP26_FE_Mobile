@@ -4,241 +4,53 @@
  * Outputs: Rendered dashboard UI with quick links.
  * Dependencies: Job service, Wallet service, Auth context. */
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, DeviceEventEmitter, ActivityIndicator, ScrollView } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Banknote, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, Flame, Calendar, CheckCircle2, Wallet, CloudSun, MessageSquare } from "lucide-react-native";
+import { MapPin, Star, Briefcase, TrendingUp, Bell, Search, Clock, ChevronRight, CheckCircle2, Wallet } from "lucide-react-native";
 import { Card, CardContent } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
 import { WeatherWidget } from "../components/home/WeatherWidget";
-import { SectionHeader, EmptyState, SkeletonCard } from "../components/ui/export_ui_components";
+import { SectionHeader, EmptyState } from "../components/ui/export_ui_components";
 import { Job } from "../types/export_type_definitions";
-import { jobService, workerProfileService, nominatimService, dailyReportService, walletService } from "../services/export_services";
 import { useAuth } from "../context/AuthContext";
+import { useUnreadCounts } from "../hooks/use_unread_counts";
+import { useHomeData } from "../hooks/use_home_data";
 import { useLocalWeather } from "../hooks/use_local_weather";
 import { JobMap } from "../components/ui/JobMap";
-import { useUnreadCounts } from "../hooks/use_unread_counts";
-import { mapApplicationToUI, mapJobPostToUI } from "../utils/mapperUtils";
-import { WorkerApplicationStatsDTO } from "../types/export_type_definitions";
-import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
-import { WelcomeModal } from "../components/ui/WelcomeModal";
+
 
 export function WorkerHomeScreen({ navigation }: any) {
-  const { user, isAuthenticated } = useAuth();
-  const [nearbyJobs, setNearbyJobs]             = useState<Job[]>([]);
-  const [pendingApplications, setPendingApplications] = useState<any[]>([]);
-  const [activeApplications, setActiveApplications]   = useState<any[]>([]);
-  const [profileRating, setProfileRating]       = useState<number | null>(null);
-  const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
-  const [profileAvatar, setProfileAvatar]       = useState<string | null>(null);
-  const [todayEarnings, setTodayEarnings]       = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const {
+    nearbyJobs,
+    pendingApplications,
+    activeApplications,
+    profileData: {
+      rating: profileRating,
+      totalJobsCompleted,
+      avatarUrl: profileAvatar,
+      todayEarnings
+    },
+    userLocation,
+    radiusKm,
+    isLoading,
+    refreshing,
+    onRefresh: onRefreshData
+  } = useHomeData();
+
   const { weatherData, isLoading: isWeatherLoading, locationStatus, refetch: refetchWeather } = useLocalWeather();
-  const [refreshing, setRefreshing] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [radiusKm, setRadiusKm] = useState<number>(10);
-  const [pendingIndex, setPendingIndex] = useState(0);
-  const [activeIndex, setActiveIndex] = useState(0);
   const { unreadNotifications } = useUnreadCounts();
 
+  const [pendingIndex, setPendingIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  const loadData = useCallback(async () => {
-    if (!isAuthenticated) return; // Không fetch nếu đã logout
-    let sourceJobs: any[] = [];
-    let sourceApps: any[] = [];
-    let sourceProfile: any = null;
-    let sourceWallet: any = null;
-
-    if (user?.isDemo) { 
-      sourceJobs = DEMO_JOB_POSTS;
-      sourceApps = DEMO_APPLICATIONS;
-      sourceProfile = DEMO_WORKER_PROFILE;
-      sourceWallet = { id: "demo-wallet-123", balance: 1250000 };
-      setTodayEarnings(450000); // 450k hôm nay
-    } else {
-      try {
-        const [jobs, apps, profile, wallet, stats] = await Promise.all([
-          jobService.getJobPosts(),
-          jobService.getApplications(),
-          workerProfileService.getProfile(),
-          walletService.getWallet(),
-          jobService.getWorkerStats().catch(() => null)
-        ]);
-        sourceJobs = jobs;
-        sourceApps = apps;
-        sourceProfile = profile;
-        sourceWallet = wallet;
-
-        if (stats) {
-          setProfileRating(stats.averageRating ?? sourceProfile?.averageRating ?? 0);
-          setTotalJobsCompleted(stats.completedJobs ?? 0);
-          // todayEarnings will still be calculated from transactions for real-time accuracy, 
-          // or we can use totalEarnings if it's meant to be "Today's" in the future.
-        }
-
-        if (wallet?.id) {
-            const txsResult = await walletService.getTransactions(wallet.id);
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const todayLocal = `${year}-${month}-${day}`;
-
-            const earnedToday = (txsResult?.data || [])
-                .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
-                .reduce((sum, tx) => sum + tx.amount, 0);
-            setTodayEarnings(earnedToday);
-        }
-      } catch (err: any) {
-        if (isAuthenticated) {
-          console.error("Home screen load error", err?.message);
-        }
-      }
-    }
-
-    // Handle profile-specific data with optional chaining
-    setProfileRating(sourceProfile?.averageRating ?? 0);
-    setTotalJobsCompleted(sourceProfile?.totalJobsCompleted ?? 0);
-    setProfileAvatar(sourceProfile?.avatarUrl || null);
-    
-    const prefRadius = sourceProfile?.travelRadiusKmPreference || 10;
-    setRadiusKm(prefRadius);
-    
-    // Default location (e.g., Cần Thơ)
-    let lat = 10.762622;
-    let lon = 106.660172;
-
-    // Try to geocode if profile has location, otherwise use default
-    if (sourceProfile?.primaryLocation && sourceProfile.id !== "demo-worker-123") {
-      try {
-        const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
-        if (loc) {
-          setUserLocation(loc);
-          lat = loc.latitude;
-          lon = loc.longitude;
-        }
-      } catch (e) {
-        console.log('Geocode error', e);
-        setUserLocation({ latitude: lat, longitude: lon });
-      }
-    } else {
-      setUserLocation({ latitude: lat, longitude: lon });
-    }
-
-    // Always fetch nearby/available jobs
-    let finalizedNearby: any[] = [];
-    let todayReports: any[] = [];
-    try {
-      if (user?.isDemo) {
-        finalizedNearby = sourceJobs; 
-        todayReports = [{ jobApplicationId: "app-456", workDate: new Date().toISOString() }];
-      } else {
-        const fetchReportsPromise = sourceProfile?.id 
-          ? dailyReportService.getWorkerReports(sourceProfile.id)
-          : Promise.resolve([]);
-
-        const [nearby, reports] = await Promise.all([
-          jobService.getNearbyJobs({ latitude: lat, longitude: lon, maxDistanceKm: prefRadius })
-            .catch(e => { 
-                console.error("Nearby jobs error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
-                return []; 
-            }),
-          fetchReportsPromise
-            .catch(e => { 
-                console.error("Fetch reports error:", e?.response?.status === 404 ? "Endpoint not found (404)" : e.message); 
-                return []; 
-            })
-        ]);
-        finalizedNearby = nearby;
-        todayReports = reports;
-      }
-    } catch (e: any) {
-      if (isAuthenticated) {
-        console.error("Home screen load error:", e.message);
-      }
-      finalizedNearby = sourceJobs;
-    }
-
-    // FALLBACK: If nearby is empty but we have sourceJobs (global), show them
-    if (finalizedNearby.length === 0 && sourceJobs.length > 0) {
-      // Only show Published jobs (statusId === 2) when falling back
-      finalizedNearby = sourceJobs.filter((j: any) => j.statusId === 2);
-    }
-
-    const myProfileId = sourceProfile?.id;
-    const myAppliedJobIds = new Set(
-      sourceApps
-        .filter(a => (a.worker?.id || (a as any).workerId) === myProfileId)
-        .map(a => String(a.jobPostId))
-    );
-    
-    const availableJobs = finalizedNearby.filter(j => !myAppliedJobIds.has(String(j.id)));
-
-    setNearbyJobs(availableJobs.map((j: any): Job => {
-      const mapped = mapJobPostToUI(j);
-      return {
-        id: j.id,
-        title: mapped.title,
-        farmer: mapped.farmer.name,
-        location: mapped.location.address,
-        distanceKm: mapped.location.distance || 0,
-        matchScore: mapped.matchScore ?? undefined,
-        wage: mapped.wage.toLocaleString("vi-VN"),
-        wageAmount: mapped.wage,
-        duration: mapped.duration,
-        rating: mapped.farmer.rating,
-        urgent: mapped.urgent,
-        wageUnit: mapped.wageUnit
-      };
-    }));
-
-    const myAppsMap = new Map();
-    sourceApps.forEach(a => {
-      const workerId = a.worker?.id || (a as any).workerId;
-      if (workerId === myProfileId) {
-        myAppsMap.set(String(a.jobPostId), a);
-      }
-    });
-    
-    const myApps = Array.from(myAppsMap.values());
-    const iterApps = [...myApps].reverse();
-    
-    const pendingApps = iterApps.filter(a => a.statusId === 1 || a.statusId === 3);
-    const activeAppsUntrimmed = iterApps.filter(a => a.statusId === 2);
-    
-    const activeApps = activeAppsUntrimmed.filter(app => {
-      const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
-      const jobStatusId = (job as any)?.statusId || 2;
-      return jobStatusId !== 5 && jobStatusId !== 6; 
-    });
-
-    const mapApp = (app: any) => {
-      const job = sourceJobs.find(j => String(j.id) === String(app.jobPostId));
-      const uiApp = mapApplicationToUI(app, job);
-      const reportedToday = todayReports.some(r => String(r.jobApplicationId) === String(app.id));
-      return { ...uiApp, reportedToday };
-    };
-
-    setPendingApplications(pendingApps.map(mapApp));
-    setActiveApplications(activeApps.map(mapApp));
-
-    setIsLoading(false);
-    setRefreshing(false);
-  }, [isAuthenticated, user]);
-
-  useEffect(() => {
-    loadData();
-    const sub = DeviceEventEmitter.addListener("REFRESH_DATA", loadData);
-    return () => sub.remove();
-  }, [loadData]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+  const onRefresh = useCallback(() => {
+    onRefreshData();
     refetchWeather();
-  };
+  }, [onRefreshData, refetchWeather]);
 
   const formatCompact = (val: number) => {
     if (val === 0) return "0";

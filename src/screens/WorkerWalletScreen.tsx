@@ -34,7 +34,6 @@ import {
   Send,
   History,
 } from "lucide-react-native";
-import { Badge } from "../components/ui/Badge";
 import { walletService } from "../services/wallet.service";
 import { useAuth } from "../context/AuthContext";
 import { WalletTransactionType, WalletTransactionTypeLabels } from "../constants/enums";
