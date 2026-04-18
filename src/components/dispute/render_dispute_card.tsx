@@ -6,8 +6,9 @@
  * Dependencies: DisputeReportDTO, Lucide Icon, View, Text. */
 
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { AlertCircle, Clock, CheckCircle2, XCircle, Calendar } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Badge } from "../ui/Badge";
 import { Card, CardContent } from "../ui/Card";
 import { DisputeReportDTO } from "../../types/export_type_definitions";
@@ -25,6 +26,7 @@ const STATUS_MAP: Record<number, {
 };
 
 export function RenderDisputeCard({ dispute }: { dispute: DisputeReportDTO }) {
+  const navigation = useNavigation<any>();
   const meta = STATUS_MAP[dispute.statusId] || { 
     label: "Không xác định", 
     variant: "secondary", 
@@ -34,7 +36,11 @@ export function RenderDisputeCard({ dispute }: { dispute: DisputeReportDTO }) {
   const StatusIcon = meta.Icon;
 
   return (
-    <Card variant="elevated" className="mb-3 border border-slate-100 overflow-hidden">
+    <TouchableOpacity 
+      activeOpacity={0.7} 
+      onPress={() => navigation.navigate("DisputeDetail", { dispute })}
+    >
+      <Card variant="elevated" className="mb-3 border border-slate-100 overflow-hidden">
       <View className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: meta.color }} />
       <CardContent className="pl-5 pb-4">
         {/* Header */}
@@ -83,5 +89,6 @@ export function RenderDisputeCard({ dispute }: { dispute: DisputeReportDTO }) {
         </View>
       </CardContent>
     </Card>
+    </TouchableOpacity>
   );
 }

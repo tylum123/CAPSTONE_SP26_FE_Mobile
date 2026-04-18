@@ -11,10 +11,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, Info, HelpCircle, AlertCircle } from "lucide-react-native";
 import { useFetchMyDisputes } from "../hooks/use_fetch_my_disputes";
 import { RenderDisputeCard } from "../components/dispute/render_dispute_card";
-import { EmptyState } from "../components/ui/export_ui_components";
+import { EmptyState, PillTabs } from "../components/ui/export_ui_components";
+import { DisputeStatus, DisputeType, DisputeStatusLabels, DisputeTypeLabels } from "../constants/enums";
+import { Filter, Tag } from "lucide-react-native";
 
 export function DisputeHistoryScreen({ navigation }: any) {
   const { disputes, isLoading, error, refetch } = useFetchMyDisputes();
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [typeFilter, setTypeFilter] = React.useState("all");
+
+  const filteredDisputes = disputes.filter(d => {
+    if (statusFilter !== "all" && d.statusId !== parseInt(statusFilter)) return false;
+    if (typeFilter !== "all" && d.disputeTypeId !== parseInt(typeFilter)) return false;
+    return true;
+  });
 
   const renderHeader = () => (
     <View className="flex-row items-center px-4 py-3 bg-white border-b border-slate-100">
@@ -70,8 +80,45 @@ export function DisputeHistoryScreen({ navigation }: any) {
         </View>
       )}
 
+      {/* Filters Section */}
+      <View className="bg-white px-4 pt-2 pb-3 border-b border-slate-100 shadow-sm shadow-slate-200/50">
+        <View className="flex-row items-center bg-slate-50/80 rounded-xl px-3 py-2 mb-3">
+          <Tag size={14} color="#64748b" />
+          <View className="flex-row ml-2 gap-2 flex-1 items-center">
+            {[
+              { id: "all", label: "Tất cả loại" },
+              { id: "1", label: "Chất lượng" },
+              { id: "2", label: "Thanh toán" },
+              { id: "3", label: "Khác" },
+            ].map((t) => (
+              <TouchableOpacity 
+                key={t.id} 
+                onPress={() => setTypeFilter(t.id)}
+                className={`px-3 py-1 rounded-full ${typeFilter === t.id ? "bg-slate-200" : ""}`}
+              >
+                <Text className={`text-[11px] font-bold ${typeFilter === t.id ? "text-slate-800" : "text-slate-400"}`}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <PillTabs
+          items={[
+            { key: "all", label: "Tất cả trạng thái" },
+            { key: "1", label: "Đang chờ" },
+            { key: "2", label: "Xem xét" },
+            { key: "3", label: "Đã duyệt" },
+            { key: "4", label: "Từ chối" },
+          ]}
+          activeKey={statusFilter}
+          onChange={setStatusFilter}
+        />
+      </View>
+
       <FlatList
-        data={disputes}
+        data={filteredDisputes}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}

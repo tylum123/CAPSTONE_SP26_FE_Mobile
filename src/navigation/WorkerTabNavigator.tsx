@@ -15,6 +15,7 @@ import { WorkerSearchScreen } from "../screens/WorkerSearchScreen";
 import { WorkerJobsScreen } from "../screens/WorkerJobsScreen";
 import { WorkerProfileScreen } from "../screens/WorkerProfileScreen";
 import { ConversationListScreen } from "../screens/ConversationListScreen";
+import { useUnreadCounts } from "../hooks/use_unread_counts";
 
 const Tab = createBottomTabNavigator();
 
@@ -29,6 +30,7 @@ const TABS = [
 function CustomTabBar({ state, navigation }: any) {
   const insets = useSafeAreaInsets();
   const focusedName = state.routes[state.index]?.name;
+  const { unreadMessages } = useUnreadCounts();
 
   const handlePress = (routeName: string) => {
     const event = navigation.emit({ type: "tabPress", target: routeName, canPreventDefault: true });
@@ -77,6 +79,12 @@ function CustomTabBar({ state, navigation }: any) {
               <View className="items-center justify-end">
                 <View className={["w-[34px] h-[34px] rounded-full items-center justify-center mb-1", focused ? "bg-primary-50" : ""].join(" ")}>
                   <Icon size={22} color={focused ? "#059669" : "#94a3b8"} strokeWidth={focused ? 2.5 : 1.8} />
+                  {name === "Messages" && unreadMessages > 0 && (
+                    <View 
+                      className="absolute top-0 right-0 w-[10px] h-[10px] rounded-full bg-rose-500 border-2 border-white" 
+                      style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1, elevation: 1 }} 
+                    />
+                  )}
                 </View>
                 <Text className={["text-[10px] font-semibold text-center", focused ? "text-primary-600" : "text-slate-400"].join(" ")}>
                   {label}

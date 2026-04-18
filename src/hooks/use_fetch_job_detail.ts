@@ -7,13 +7,18 @@
 import { useState, useCallback, useEffect } from "react";
 import { DeviceEventEmitter } from "react-native";
 import { jobService, workerProfileService, dailyReportService, messageService } from "../services/export_services";
-import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
+import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE, DEMO_CATEGORIES } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [isApplied, setIsApplied] = useState(false);
-  const [applicationInfo, setApplicationInfo] = useState<{ id?: string; statusId?: number; responseMessage?: string | null }>({});
+  const [applicationInfo, setApplicationInfo] = useState<{ 
+    id?: string; 
+    statusId?: number; 
+    responseMessage?: string | null;
+    workDates?: string[];
+  }>({});
   const [lastMessage, setLastMessage] = useState<any>(null);
   const [jobDetail, setJobDetail] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,14 +36,20 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       sourceProfile = DEMO_WORKER_PROFILE;
     } else {
       try {
-        const [data, apps, profile] = await Promise.all([
+        const [data, apps, profile, categories] = await Promise.all([
           jobService.getJobPostDetail(String(jobId)),
           jobService.getApplications(),
-          workerProfileService.getProfile()
+          workerProfileService.getProfile(),
+          jobService.getCategories()
         ]);
         sourceJob = data;
         sourceApps = apps;
         sourceProfile = profile;
+        
+        if (sourceJob?.jobCategoryId && categories) {
+          const cat = categories.find((c: any) => String(c.id) === String(sourceJob.jobCategoryId));
+          if (cat) sourceJob.jobCategoryName = cat.name;
+        }
 
         // NOTE: chat partner resolution is deferred until after reports are fetched,
         // because JobPostDTO does not include farmer.userId — only reports (JobDetailResponseDTO) do.
@@ -52,6 +63,12 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
     }
 
     if (sourceJob) {
+      // Resolve category name for demo mode too
+      if (user?.isDemo || !isAuthenticated) {
+        const cat = DEMO_CATEGORIES.find(c => String(c.id) === String(sourceJob.jobCategoryId));
+        if (cat) sourceJob.jobCategoryName = cat.name;
+      }
+
       const existing = sourceApps.find((a: any) => 
         String(a.jobPostId) === String(jobId) && 
         (a.worker?.id === sourceProfile?.id || (a as any).workerId === sourceProfile?.id)
@@ -62,7 +79,8 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         setApplicationInfo({ 
           id: existing.id, 
           statusId: existing.statusId, 
-          responseMessage: existing.responseMessage 
+          responseMessage: existing.responseMessage,
+          workDates: existing.workDates
         });
         // Pre-populate selected slots from existing application
         if (existing.workDates && existing.workDates.length > 0) {
@@ -114,14 +132,11 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         }
       }
 
-      // Fetch latest message from farmer — only when we have a confirmed userId
-      // reportFarmer.userId is the User table ID (correct for Messages API)
-      // sourceJob.farmerProfileId is the Farmer table ID (WRONG for Messages API — skip)
+      // Fetch latest message from farmer
       const farmerUserId = reportFarmer?.userId || sourceJob?.farmerProfile?.userId || sourceJob?.farmer?.userId || null;
       if (farmerUserId && isAuthenticated && !user?.isDemo) {
         try {
           const messages = await messageService.getMessages(farmerUserId, 1, 1);
-          // Normalize paginated vs array response
           const msgList = Array.isArray(messages) ? messages : (messages?.data || messages?.items || []);
           if (msgList.length > 0) {
             setLastMessage(msgList[0]);
@@ -131,26 +146,55 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         }
       }
 
+      // Fetch enrollment counts per day
+      let dayCounts: any[] = [];
+      if (isAuthenticated && !user?.isDemo) {
+        try {
+          dayCounts = await jobService.getCountWorkerPerDay(String(jobId));
+        } catch (err) {
+          console.error("Fetch day counts error", err);
+        }
+      } else if (user?.isDemo || !isAuthenticated) {
+        // Mock counts for demo
+        dayCounts = (sourceJob.selectedDays || []).map((d: string, i: number) => ({
+          date: d,
+          acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0)
+        }));
+      }
+
       const mappedData = mapJobPostToUI(sourceJob);
       const timeSlots = (sourceJob.jobTypeId === 1) ? [] : (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
         const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+        const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
+        const acceptedCount = countData?.acceptedWorkerCount || 0;
+        const neededCount = sourceJob.workersNeeded || 0;
+        const isFull = acceptedCount >= neededCount;
+
         return {
           id: index + 1,
           date: formattedSlotDate,
           rawDate: dateStr.substring(0, 10),
-          available: true,
-          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate
+          available: !isFull,
+          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
+          acceptedCount,
+          neededCount
         };
       });
 
       // Special case for backward compatibility or if selectedDays is empty for Daily jobs
       if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
+        const firstDayCount = dayCounts.find(c => c.date?.substring(0, 10) === sourceJob.startDate?.substring(0, 10));
+        const accepted = firstDayCount?.acceptedWorkerCount || 0;
+        const needed = sourceJob.workersNeeded || 0;
+
         timeSlots.push({
           id: 1,
           date: mappedData.startDateFormatted,
           rawDate: sourceJob.startDate,
-          available: true,
-          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate
+          available: accepted < needed,
+          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate,
+          acceptedCount: accepted,
+          neededCount: needed
         });
       }
 
@@ -162,10 +206,13 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         avatar: reportFarmer.avatarUrl || mappedData.farmer?.avatar,
         rating: reportFarmer.averageRating ?? mappedData.farmer?.rating,
         totalJobs: reportFarmer.totalJobsPosted ?? reportFarmer.totalJobsCompleted ?? mappedData.farmer?.totalJobs,
+        totalJobsPosted: reportFarmer.totalJobsPosted ?? mappedData.farmer?.totalJobsPosted,
+        totalJobsCompleted: reportFarmer.totalJobsCompleted ?? mappedData.farmer?.totalJobsCompleted,
       } : mappedData.farmer;
 
       const mapped = {
         ...mappedData,
+        jobType: sourceJob.jobCategoryName || mappedData.jobType,
         farmer: enrichedFarmer,
         reports: reports.sort((a, b) => new Date(b.workDate).getTime() - new Date(a.workDate).getTime()),
         timeSlots

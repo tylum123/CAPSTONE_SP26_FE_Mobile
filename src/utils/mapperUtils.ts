@@ -41,7 +41,9 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
       name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
       avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
       rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
-      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0 
+      totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0,
+      totalJobsPosted: fProfile?.totalJobsPosted || 0,
+      totalJobsCompleted: fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0
     },
     location: { 
       address: job.address || "Chưa cập nhật địa chỉ", 
@@ -50,6 +52,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     matchScore: matchScore,
     wage: job.wageAmount || 0,
     wageTypeId: job.jobTypeId === 1 ? "Khoán" : "Ngày",
+    wageUnit: job.jobTypeId === 1 ? "" : " /ngày",
     startDateFormatted: formatDateStr(job.startDate),
     endDateFormatted: formatDateStr(job.endDate),
     startDate: formatDateStr(job.startDate),
@@ -77,12 +80,15 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     ? new Date(startDate).toLocaleDateString("vi-VN") 
     : "Chưa rõ";
 
+  const fProfile = job?.farmerProfile || job?.farmer;
+
   return {
     ...app,
     title: job?.title || "Công việc",
-    farmer: job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại",
+    farmer: fProfile?.contactName || (job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"),
     farmerId: job?.farmerProfileId,
-    farmerAvatar: "https://i.pravatar.cc/150?img=1",
+    farmerUserId: fProfile?.userId || (job as any)?.farmerUserId || null,
+    farmerAvatar: fProfile?.avatarUrl || "https://i.pravatar.cc/150?img=1",
     date: formattedDate,
     time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
     status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"

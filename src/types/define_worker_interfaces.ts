@@ -34,7 +34,6 @@ export interface UpdateWorkerProfileRequest {
   fullName: string;
   dateOfBirth: string;
   primaryLocation: string;
-  address: string;           // PENDING #7: NOT NULL in DB, use primaryLocation as fallback
   travelRadiusKmPreference?: number | null;
   experienceLevelId: number; // Required, range 1-3
   availabilitySchedule: string;
@@ -85,6 +84,11 @@ export interface JobPostDTO {
   statusId: number;
   estimatedHours?: number; // Optional calculated field for FE
   workload?: string;       // Optional custom field for FE/Demo
+}
+
+export interface WorkerCountPerDay {
+  date: string;
+  acceptedWorkerCount: number;
 }
 
 export interface JobDiscoveryDTO extends JobPostDTO {
@@ -374,11 +378,10 @@ export interface WorkerApplicationStatsDTO {
   averageRating?: number;
 }
 
-export interface WorkerDashboardResponseDTO {
-  stats: WorkerApplicationStatsDTO;
-  recentApplications: JobApplicationDTO[];
-  recommendedJobs: JobDiscoveryDTO[];
-  totalEarnings: number;
+// Matches backend §4.11 WorkerDashboardResponseDTO — GET /worker/dashboard
+export interface WorkerDashboardResponseDTO extends WorkerApplicationStatsDTO {
+  recentApplications?: JobApplicationDTO[];
+  recommendedJobs?: JobDiscoveryDTO[];
 }
 
 export interface CreateMessageRequest {
@@ -415,6 +418,10 @@ export interface CreateRatingRequest {
 }
 
 export interface UpdateRatingRequest {
+  raterId: string;
+  rateeId: string;
+  jobPostId: string;
   ratingScore: number;
   reviewText?: string;
+  typeId?: number;
 }

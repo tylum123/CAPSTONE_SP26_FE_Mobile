@@ -4,16 +4,19 @@
  * Outputs: Multipart form data API request.
  * Dependencies: Report service, Media service, Expo Image Picker. */
 
-import React, { useState, useRef } from "react";
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Camera, Upload, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
+import { ChevronLeft, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { dailyReportService } from "../services/daily_report.service";
 import { mediaService } from "../services/media.service";
+import { jobService } from "../services/job.service";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
+import { getReportButtonStatus } from "../utils/jobRules";
+import { mapJobPostToUI } from "../utils/mapperUtils";
 
 export function SubmitReportScreen({ navigation, route }: any) {
   const { jobApplicationId } = route.params || {};
@@ -31,7 +34,8 @@ export function SubmitReportScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant: "success" | "error" | "info"; 
-    onConfirm?: () => void 
+    onConfirm?: () => void;
+    onClose?: () => void;
   }>({ 
     visible: false, 
     title: "", 
@@ -39,21 +43,81 @@ export function SubmitReportScreen({ navigation, route }: any) {
     variant: "info" 
   });
 
+  const [isValidating, setIsValidating] = useState(true);
+
+  // Entry validation
+  useEffect(() => {
+    const validateEligibility = async () => {
+      if (!jobApplicationId) {
+        showFeedback({
+          title: "Lỗi dữ liệu",
+          message: "Không tìm thấy thông tin ứng tuyển.",
+          variant: "error",
+          onConfirm: () => navigation.goBack()
+        });
+        return;
+      }
+
+      setIsValidating(true);
+      try {
+        const appDetail = await jobService.getApplicationDetail(jobApplicationId);
+        const jobDetail = await jobService.getJobPostDetail(String(appDetail.jobPostId));
+        
+        // Enrich job detail with reports to check isReportedToday
+        const reports = await dailyReportService.getWorkerReports(appDetail.worker?.id || "");
+        const todayStr = new Date().toISOString().substring(0, 10);
+        const isReportedToday = reports.some(r => 
+          String(r.jobApplicationId) === String(jobApplicationId) && 
+          r.workDate?.substring(0, 10) === todayStr
+        );
+
+        // Map to UI format to get correct date strings
+        const uiJob = mapJobPostToUI(jobDetail);
+        
+        const btnStatus = getReportButtonStatus(
+          uiJob.startDate,
+          uiJob.endDate,
+          jobDetail.statusId || 2,
+          isReportedToday,
+          appDetail.workDates
+        );
+
+        if (!btnStatus.enabled) {
+          showFeedback({
+            title: "Không thể báo cáo",
+            message: `Lý do: ${btnStatus.label}`,
+            variant: "error",
+            onConfirm: () => navigation.goBack()
+          });
+        }
+      } catch (error) {
+        console.error("Validation error:", error);
+        // Fallback: allow if we can't verify, but log it
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    validateEligibility();
+  }, [jobApplicationId]);
+
   const showFeedback = (params: { 
     title: string; 
     message: string; 
     variant?: "success" | "error" | "info"; 
-    onConfirm?: () => void 
+    onConfirm?: () => void;
+    onClose?: () => void;
   }) => setFeedback({ 
     visible: true, 
     title: params.title, 
     message: params.message, 
     variant: params.variant || "info", 
-    onConfirm: params.onConfirm 
+    onConfirm: params.onConfirm,
+    onClose: params.onClose
   });
 
   const closeFeedback = () => { 
-    const cb = feedback.onConfirm; 
+    const cb = feedback.onClose || feedback.onConfirm; 
     setFeedback((p) => ({ ...p, visible: false })); 
     cb?.(); 
   };
@@ -164,7 +228,13 @@ export function SubmitReportScreen({ navigation, route }: any) {
         </Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
+      {isValidating ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#059669" />
+          <Text className="text-slate-500 font-medium mt-4">Đang kiểm tra tính hợp lệ...</Text>
+        </View>
+      ) : (
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 20 }}>
         <Text className="text-sm font-semibold text-slate-700 mb-2 pl-1">Mô tả công việc hôm nay <Text className="text-red-500">*</Text></Text>
         <View className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-6 min-h-[160px] shadow-sm shadow-slate-200/50">
           <TextInput
@@ -243,6 +313,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
           </Button>
         </View>
       </ScrollView>
+      )}
 
       <Modal visible={showSuccess} transparent animationType="none">
         <View className="flex-1 bg-black/60 items-center justify-center px-8">
@@ -250,20 +321,18 @@ export function SubmitReportScreen({ navigation, route }: any) {
             style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
             className="bg-white w-full rounded-[40px] p-8 items-center border border-white/20 shadow-2xl"
           >
-            <View className="w-24 h-24 bg-primary-500 rounded-full items-center justify-center mb-6 shadow-xl shadow-primary-500/50">
-              <CheckCircle2 size={56} color="white" strokeWidth={2.5} />
+            <View className="relative mb-8">
+              <View className="absolute -inset-4 bg-primary-50 rounded-full opacity-60" />
+              <View className="absolute -inset-2 bg-primary-100 rounded-full opacity-80" />
+              <View className="w-24 h-24 bg-primary-500 rounded-full items-center justify-center shadow-xl shadow-primary-500/40">
+                <CheckCircle2 size={52} color="white" strokeWidth={3} />
+              </View>
             </View>
             
-            <Text className="text-2xl font-black text-slate-900 mb-2 text-center">Tuyệt vời!</Text>
-            <Text className="text-slate-500 text-center mb-8 leading-5">
-              Báo cáo của bạn đã được gửi. Chúc bạn một ngày làm việc năng suất!
+            <Text className="text-3xl font-black text-slate-900 mb-3 text-center" style={{ letterSpacing: -0.5 }}>Báo cáo đã gửi!</Text>
+            <Text className="text-slate-500 text-center mb-10 leading-6 px-4">
+              Tuyệt vời! Công việc của bạn đã được ghi nhận. Hệ thống sẽ thông báo khi chủ nông trại duyệt báo cáo này.
             </Text>
-
-            <View className="flex-row gap-2 mb-8">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star key={s} size={20} fill="#fbbf24" color="#fbbf24" />
-              ))}
-            </View>
 
             <View className="w-full gap-3">
               <Button 

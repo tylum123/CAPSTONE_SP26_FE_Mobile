@@ -4,12 +4,12 @@
  * Outputs: API request to save user profile changes.
  * Dependencies: User service, Location service, Auth context, Media service. */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform, DeviceEventEmitter } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { User, MapPin, Calendar, Clock, Camera, ChevronLeft, Check, ChevronRight } from "lucide-react-native";
+import { User, MapPin, Calendar, Camera, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { hapticFeedback } from "../utils/haptic";
@@ -24,8 +24,9 @@ import { mediaService, workerProfileService, skillService } from "../services/ex
 import { useAuth } from "../context/AuthContext";
 import { COLORS, TYPOGRAPHY } from "../constants/theme";
 import { parseLocation, formatLocation } from "../utils/locationUtils";
-import { formatSchedule, formatScheduleShort, DAYS_ORDER } from "../utils/scheduleUtils";
+import { formatSchedule, DAYS_ORDER } from "../utils/scheduleUtils";
 import { getErrorMessage } from "../utils/error_handling";
+import { UpdateWorkerProfileRequest } from "../types/export_type_definitions";
 
 export function EditProfileScreen({ navigation, route }: any) {
   const { isAuthenticated, user } = useAuth();
@@ -79,7 +80,14 @@ export function EditProfileScreen({ navigation, route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [availableSkills, setAvailableSkills] = useState<any[]>([]);
-  const [feedback, setFeedback] = useState({ visible: false, title: "", message: "", variant: "info" as "success" | "error" | "info" });
+  const [feedback, setFeedback] = useState<{ 
+    visible: boolean; 
+    title: string; 
+    message: string; 
+    variant: "success" | "error" | "info"; 
+    onConfirm?: () => void;
+    onClose?: () => void;
+  }>({ visible: false, title: "", message: "", variant: "info" as "success" | "error" | "info" });
 
   useEffect(() => {
     const fetchSkills = async () => {
@@ -116,21 +124,30 @@ export function EditProfileScreen({ navigation, route }: any) {
       setFeedback({ visible: true, title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ các trường bắt buộc.", variant: "error" });
       return;
     }
-    const [dd, mm, yyyy] = dateOfBirth.split("/");
     setLoading(true);
     hapticFeedback.medium();
     try {
-      await workerProfileService.updateProfile({
-        fullName, dateOfBirth: `${yyyy}-${mm}-${dd}`, primaryLocation,
-        address: primaryLocation, // PENDING #7: BE Worker entity requires address (NOT NULL)
-        travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : undefined,
-        experienceLevelId, availabilitySchedule, avatarUrl, skillIds,
+      const payload: UpdateWorkerProfileRequest = {
+        fullName,
+        dateOfBirth, // Use DD/MM/YYYY as shown in successful test
+        primaryLocation,
+        travelRadiusKmPreference: travelRadiusKmPreference ? Number(travelRadiusKmPreference) : 0,
+        experienceLevelId,
+        availabilitySchedule,
+        avatarUrl,
+        skillIds,
         genderId: formData.genderId
-      });
+      };
+
+      await workerProfileService.updateProfile(payload);
       DeviceEventEmitter.emit("REFRESH_DATA");
       hapticFeedback.success();
-      setFeedback({ visible: true, title: "Thành công", message: "Hồ sơ đã được cập nhật.", variant: "success" });
-      setTimeout(() => navigation.goBack(), 1500);
+      setFeedback({ 
+        visible: true, 
+        title: "Thành công", 
+        message: "Hồ sơ đã được cập nhật.", 
+        variant: "success" 
+      });
     } catch (err: any) {
       const errorMessage = getErrorMessage(err, "Không thể cập nhật hồ sơ. Vui lòng thử lại.");
       setFeedback({ visible: true, title: "Lỗi cập nhật", message: errorMessage, variant: "error" });
@@ -274,7 +291,26 @@ export function EditProfileScreen({ navigation, route }: any) {
           <Button className="flex-1 h-[52px]" style={{ flex: 1 }} onPress={handleSave} loading={loading}>Lưu hồ sơ</Button>
         </View>
       </View>
-      <FeedbackModal visible={feedback.visible} title={feedback.title} message={feedback.message} variant={feedback.variant} onClose={() => setFeedback({ ...feedback, visible: false })} />
+      <FeedbackModal 
+        visible={feedback.visible} 
+        title={feedback.title} 
+        message={feedback.message} 
+        variant={feedback.variant} 
+        onClose={() => {
+          setFeedback({ ...feedback, visible: false });
+          if (feedback.variant === "success") {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          }
+        }} 
+        onConfirm={() => {
+          setFeedback({ ...feedback, visible: false });
+          if (feedback.variant === "success") {
+            DeviceEventEmitter.emit("REFRESH_DATA");
+            navigation.goBack();
+          }
+        }} 
+      />
       <LocationPicker visible={showLocationPicker} onClose={() => setShowLocationPicker(false)} initialValues={formData} onSelect={loc => setFormData(p => ({ ...p, ...loc }))} />
       <SkillSelectionModal visible={showSkillModal} onClose={() => setShowSkillModal(false)} selectedSkillIds={formData.skillIds} onSave={ids => updateField("skillIds", ids)} />
     </SafeAreaView>

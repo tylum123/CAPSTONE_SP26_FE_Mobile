@@ -62,12 +62,11 @@ export const API_ENDPOINTS = {
     BY_WAGE: `${API_PREFIX}/job/post/by-wage`,
     URGENT: `${API_PREFIX}/job/post/urgent`,
     BY_TYPE: `${API_PREFIX}/job/post/by-type`,
+    WORKER_BY_DAY: (id: string) => `${API_PREFIX}/job/post/${id}/workers-per-day`,
     APPLICATION: `${API_PREFIX}/job/application`,
-    APPLICATION_AUTO_ACCEPT: `${API_PREFIX}/job/application/auto-accept`,
     APPLICATION_WORKER: `${API_PREFIX}/job/application/worker`,
     APPLICATION_DETAIL: (id: string) => `${API_PREFIX}/job/application/${id}`,
     CANCEL_APPLICATION: (id: string) => `${API_PREFIX}/job/application/cancel/${id}`,
-    APPLICATION_STATS: `${API_PREFIX}/job/application/worker/stats`,
   },
   // Job Detail (Daily Report replacement for Attendance)
   JOB_DETAIL: {
@@ -92,6 +91,7 @@ export const API_ENDPOINTS = {
     BASE: `${API_PREFIX}/ratings`,
     CREATE: `${API_PREFIX}/ratings`,
     DETAIL: (id: string) => `${API_PREFIX}/ratings/${id}`,
+    DELETE: (id: string) => `${API_PREFIX}/ratings/${id}`,
     USER_SPECIFIC: (userId: string) => `${API_PREFIX}/ratings/user/${userId}`,
     USER_ALL: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/all`,
     USER_AVERAGE: (userId: string) => `${API_PREFIX}/ratings/user/${userId}/average`,
@@ -112,6 +112,7 @@ export const API_ENDPOINTS = {
   WALLET: {
     ME: `${API_PREFIX}/wallet/me`,
     TRANSACTIONS: (walletId: string) => `${API_PREFIX}/wallet-transaction/wallet/${walletId}`,
+    TRANSACTION_DETAIL:(id: string) => `${API_PREFIX}/wallet-transaction/${id}`,
     WITHDRAW: `${API_PREFIX}/withdraw`,
     WITHDRAW_HISTORY: `${API_PREFIX}/withdraw`, // GET - withdrawal history list (same route, different method)
     ACCOUNT_BALANCE: `${API_PREFIX}/withdraw/account-balance`,
