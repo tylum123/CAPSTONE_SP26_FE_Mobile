@@ -168,6 +168,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                         className={[
                           "flex-row items-center gap-1 px-2.5 py-1.5 rounded-full border min-w-[55px] justify-center",
                           selected && !isApproved ? "bg-sky-100 border-sky-200" :
+                          isSelectedAndApproved ? "bg-emerald-50 border-emerald-200" :
                           !slot.available ? "bg-rose-50 border-rose-100" :
                           slot.acceptedCount > 0 ? "bg-emerald-50 border-emerald-100" :
                           "bg-slate-50 border-slate-100"
@@ -177,6 +178,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                           size={12} 
                           color={
                             selected && !isApproved ? "#0284c7" :
+                            isSelectedAndApproved ? "#059669" :
                             !slot.available ? "#e11d48" :
                             slot.acceptedCount > 0 ? "#059669" :
                             "#64748b"
@@ -185,6 +187,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                         <Text className={[
                           "text-[11px] font-extrabold",
                           selected && !isApproved ? "text-sky-700" :
+                          isSelectedAndApproved ? "text-emerald-700" :
                           !slot.available ? "text-rose-600" :
                           slot.acceptedCount > 0 ? "text-emerald-700" :
                           "text-slate-500"
@@ -194,7 +197,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                       </View>
                     )}
 
-                    {!slot.available && !isSelectedAndApplied && (
+                    {!slot.available && !isSelectedAndApplied && !isSelectedAndApproved && (
                       <Badge variant="secondary" className="px-2 h-7">Hết chỗ</Badge>
                     )}
                     
@@ -241,7 +244,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                   </View>
                   
                   {/* Progress Strip at Bottom */}
-                  {slot.neededCount > 0 && (
+                  {slot.neededCount > 0 && !isSelectedAndApproved && (
                     <View className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-100/30 rounded-b-2xl overflow-hidden">
                       <View 
                         className={[
