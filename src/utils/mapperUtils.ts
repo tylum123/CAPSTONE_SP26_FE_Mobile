@@ -81,6 +81,9 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     : "Chưa rõ";
 
   const fProfile = job?.farmerProfile || job?.farmer;
+  
+  const timeRange = (job?.startTime && job?.endTime) ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` : "";
+  const timeString = job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : timeRange);
 
   return {
     ...app,
@@ -88,9 +91,13 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     farmer: fProfile?.contactName || (job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"),
     farmerId: job?.farmerProfileId,
     farmerUserId: fProfile?.userId || (job as any)?.farmerUserId || null,
-    farmerAvatar: fProfile?.avatarUrl || "https://i.pravatar.cc/150?img=1",
+    farmerAvatar: fProfile?.avatarUrl || null,
     date: formattedDate,
-    time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
-    status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"
+    time: timeString,
+    status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted",
+    wage: job?.wageAmount?.toLocaleString('vi-VN') || 0,
+    wageUnit: job?.jobTypeId === 1 ? "" : "/ngày",
+    location: job?.address || "Chưa cập nhật địa chỉ",
+    urgent: job?.isUrgent || false,
   };
 };
