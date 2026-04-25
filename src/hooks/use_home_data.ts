@@ -230,7 +230,8 @@ export function useHomeData(): HomeDataResult {
           date: m.date,
           rating: m.farmer.rating,
           urgent: m.urgent,
-          wageUnit: m.wageUnit
+          wageUnit: m.wageUnit,
+          thumbnailUrl: m.thumbnailUrl
         };
       })
     );

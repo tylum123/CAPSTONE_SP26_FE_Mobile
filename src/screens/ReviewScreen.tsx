@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, DeviceEventEmitter, ActivityIndicator } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Star, Calendar } from "lucide-react-native";
+import { X, Star, Calendar, Trash2 } from "lucide-react-native";
 import { Avatar, FeedbackModal } from "../components/ui/export_ui_components";
 import { ratingService } from "../services/rating.service";
 import { jobService } from "../services/job.service";
@@ -252,7 +252,7 @@ export function ReviewScreen({ navigation, route }: any) {
                   onPress={handleDelete}
                   disabled={isSubmitting}
                 >
-                  <X size={20} color="#f43f5e" />
+                  <Trash2 size={20} color="#f43f5e" />
                 </TouchableOpacity>
               )}
               <TouchableOpacity 

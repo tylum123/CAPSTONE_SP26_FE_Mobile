@@ -72,7 +72,7 @@ export function WorkerHomeScreen({ navigation }: any) {
       <View className="bg-white rounded-[24px] overflow-hidden shadow-sm border border-slate-100 flex-1 m-1 mb-2">
         {/* Cover Image */}
         <View className="h-[140px] w-full bg-slate-100 relative">
-          <Image source={{ uri: CATEGORY_PLACEHOLDER_IMG }} className="w-full h-full" resizeMode="cover" />
+          <Image source={{ uri: j.thumbnailUrl || CATEGORY_PLACEHOLDER_IMG }} className="w-full h-full" resizeMode="cover" />
           
           <View className="absolute top-2 left-2 flex-row gap-1">
             {j.urgent && (
@@ -336,7 +336,7 @@ export function WorkerHomeScreen({ navigation }: any) {
               {/* Job Thumbnail */}
               <View className="w-[110px] h-full bg-slate-100 relative">
                  <Image 
-                    source={{ uri: CATEGORY_PLACEHOLDER_IMG }} 
+                    source={{ uri: job.thumbnailUrl || CATEGORY_PLACEHOLDER_IMG }} 
                     className="w-full h-full"
                     resizeMode="cover"
                  />
