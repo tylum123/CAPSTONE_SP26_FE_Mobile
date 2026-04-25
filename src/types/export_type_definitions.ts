@@ -21,6 +21,8 @@ export interface Job {
   date?: string;
   wageUnit?: string;
   thumbnailUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpcomingJob {

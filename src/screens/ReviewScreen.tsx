@@ -54,6 +54,8 @@ export function ReviewScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant: "success" | "error" | "info"; 
+    confirmLabel?: string;
+    cancelLabel?: string;
     onConfirm?: () => void;
     onClose?: () => void;
   }>({ 
@@ -67,6 +69,8 @@ export function ReviewScreen({ navigation, route }: any) {
     title: string; 
     message: string; 
     variant?: "success" | "error" | "info"; 
+    confirmLabel?: string;
+    cancelLabel?: string;
     onConfirm?: () => void;
     onClose?: () => void;
   }) => setFeedback({ 
@@ -74,12 +78,14 @@ export function ReviewScreen({ navigation, route }: any) {
     title: params.title, 
     message: params.message, 
     variant: params.variant || "info", 
+    confirmLabel: params.confirmLabel,
+    cancelLabel: params.cancelLabel,
     onConfirm: params.onConfirm,
     onClose: params.onClose
   });
 
   const closeFeedback = () => { 
-    const cb = feedback.onClose || feedback.onConfirm; 
+    const cb = feedback.onClose; 
     setFeedback((p) => ({ ...p, visible: false })); 
     cb?.(); 
   };
@@ -206,6 +212,8 @@ export function ReviewScreen({ navigation, route }: any) {
       title: "Xác nhận xóa",
       message: "Bạn có chắc chắn muốn xóa đánh giá này không?",
       variant: "info",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy",
       onConfirm: async () => {
         setIsSubmitting(true);
         try {
@@ -409,6 +417,8 @@ export function ReviewScreen({ navigation, route }: any) {
         title={feedback.title}
         message={feedback.message}
         variant={feedback.variant}
+        confirmLabel={feedback.confirmLabel}
+        cancelLabel={feedback.cancelLabel}
         onClose={closeFeedback}
         onConfirm={feedback.onConfirm}
       />

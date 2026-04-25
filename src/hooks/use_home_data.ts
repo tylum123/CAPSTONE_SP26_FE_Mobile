@@ -211,30 +211,45 @@ export function useHomeData(): HomeDataResult {
         .map(a => String(a.jobPostId))
     );
 
-    const availableJobs = finalizedNearby.filter(j => !myAppliedIds.has(String(j.id)));
+    const availableJobsRaw = finalizedNearby.filter(j => !myAppliedIds.has(String(j.id)));
+    
+    // Perform sequential geocoding for markers
+    const mappedJobs: Job[] = [];
+    for (const j of availableJobsRaw) {
+      const m = mapJobPostToUI(j);
+      let lat = j.latitude;
+      let lon = j.longitude;
+      
+      if (!lat || !lon) {
+        const coords = await nominatimService.geocodeAddress(m.location.address);
+        if (coords) {
+          lat = coords.latitude;
+          lon = coords.longitude;
+        }
+      }
 
-    setNearbyJobs(
-      availableJobs.map((j: any): Job => {
-        const m = mapJobPostToUI(j);
-        return {
-          id: j.id,
-          title: m.title,
-          farmer: m.farmer.name,
-          farmerAvatar: m.farmer.avatar,
-          location: m.location.address,
-          distanceKm: m.location.distance || 0,
-          matchScore: m.matchScore ?? undefined,
-          wage: m.wage.toLocaleString('vi-VN'),
-          wageAmount: m.wage,
-          duration: m.duration,
-          date: m.date,
-          rating: m.farmer.rating,
-          urgent: m.urgent,
-          wageUnit: m.wageUnit,
-          thumbnailUrl: m.thumbnailUrl
-        };
-      })
-    );
+      mappedJobs.push({
+        id: j.id,
+        title: m.title,
+        farmer: m.farmer.name,
+        farmerAvatar: m.farmer.avatar,
+        location: m.location.address,
+        distanceKm: m.location.distance || 0,
+        matchScore: m.matchScore ?? undefined,
+        wage: m.wage.toLocaleString('vi-VN'),
+        wageAmount: m.wage,
+        duration: m.duration,
+        date: m.date,
+        rating: m.farmer.rating,
+        urgent: m.urgent,
+        wageUnit: m.wageUnit,
+        thumbnailUrl: m.thumbnailUrl,
+        latitude: lat,
+        longitude: lon,
+      });
+    }
+
+    setNearbyJobs(mappedJobs);
 
     // ── 4. Map applications ─────────────────────────────────────────────────
 
