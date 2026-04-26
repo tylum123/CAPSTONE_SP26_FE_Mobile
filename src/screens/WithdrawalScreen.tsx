@@ -92,7 +92,8 @@ export function WithdrawalScreen() {
     }
   };
 
-  // Auto lookup account holder name
+  // Lookup is disabled because it's unreliable; users enter name manually
+  /*
   useEffect(() => {
     if (!selectedBank || accountNumber.length < 6) {
       setAccountHolder("");
@@ -103,6 +104,7 @@ export function WithdrawalScreen() {
     }, 800);
     return () => clearTimeout(timer);
   }, [accountNumber, selectedBank]);
+  */
 
   const lookupAccount = async () => {
     setIsLookingUp(true);
@@ -284,21 +286,15 @@ export function WithdrawalScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-[11px] text-slate-400 font-bold uppercase mb-1">Tên chủ tài khoản</Text>
-                {isLookingUp ? (
-                  <View className="flex-row items-center gap-2">
-                    <ActivityIndicator size="small" color="#059669" />
-                    <Text className="text-[13px] text-slate-400 font-medium italic">Đang tra cứu...</Text>
-                  </View>
-                ) : (
-                  <TextInput
-                    placeholder="TỰ ĐỘNG LẤY THEO SỐ TÀI KHOẢN"
-                    value={accountHolder}
-                    className="text-slate-900 py-0 font-bold"
-                    style={{ fontSize: accountHolder ? 16 : 12 }}
-                    placeholderTextColor="#94a3b8"
-                    editable={false}
-                  />
-                )}
+                <TextInput
+                  placeholder="NHẬP TÊN CHỦ TÀI KHOẢN (KHÔNG DẤU)"
+                  value={accountHolder}
+                  onChangeText={(val) => setAccountHolder(removeAccents(val))}
+                  className="text-slate-900 py-0 font-bold"
+                  style={{ fontSize: 16 }}
+                  placeholderTextColor="#94a3b8"
+                  autoCapitalize="characters"
+                />
               </View>
             </View>
           </Card>
