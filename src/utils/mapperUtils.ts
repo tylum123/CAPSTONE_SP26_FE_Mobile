@@ -58,6 +58,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     startDate: formatDateStr(job.startDate),
     endDate: formatDateStr(job.endDate),
     date: formatDateStr(job.startDate),
+    thumbnailUrl: getCategoryThumbnail(job.jobCategoryId, job.title),
     time: job.jobTypeId === 1 ? "Khoán" : (timeRange || "07:00 - 17:00"),
     duration: duration,
     workload: job.workload || "Thỏa thuận",
@@ -74,6 +75,28 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
   };
 };
 
+export const getCategoryThumbnail = (categoryId?: string, title?: string): string => {
+  const IMG_FARMING = "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=600&auto=format&fit=crop"; // Lush agricultural farm
+  const IMG_LIVESTOCK = "https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?q=80&w=600&auto=format&fit=crop"; // Farm animals
+  const IMG_AQUACULTURE = "https://thiennhienmoitruong.vn/upload/images/btv/btv/btv/khanh-hoa.jpg"; // Aquaculture/fishing
+  const IMG_DEFAULT = "https://images.unsplash.com/photo-1589923188900-85dae523342b?q=80&w=600&auto=format&fit=crop"; // Worker in field
+
+  const t = title?.toLowerCase() || "";
+  
+  if (t.includes("nuôi") || t.includes("bò") || t.includes("heo") || t.includes("lợn") || t.includes("gà") || t.includes("vịt")) {
+    return IMG_LIVESTOCK;
+  }
+  if (t.includes("thủy sản") || t.includes("cá") || t.includes("tôm") || t.includes("ao") || t.includes("lưới")) {
+    return IMG_AQUACULTURE;
+  }
+  if (categoryId === 'cat-1' || categoryId === 'cat-2' || t.includes("trồng") || t.includes("thu hoạch") || t.includes("lúa") || t.includes("vườn") || t.includes("cây")) {
+    return IMG_FARMING;
+  }
+  
+  return IMG_DEFAULT;
+};
+
+
 export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => {
   const startDate = job?.startDate;
   const formattedDate = (startDate && !startDate.startsWith("0001")) 
@@ -81,6 +104,9 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     : "Chưa rõ";
 
   const fProfile = job?.farmerProfile || job?.farmer;
+  
+  const timeRange = (job?.startTime && job?.endTime) ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` : "";
+  const timeString = job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : timeRange);
 
   return {
     ...app,
@@ -88,9 +114,14 @@ export const mapApplicationToUI = (app: JobApplicationDTO, job?: JobPostDTO) => 
     farmer: fProfile?.contactName || (job?.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"),
     farmerId: job?.farmerProfileId,
     farmerUserId: fProfile?.userId || (job as any)?.farmerUserId || null,
-    farmerAvatar: fProfile?.avatarUrl || "https://i.pravatar.cc/150?img=1",
+    farmerAvatar: fProfile?.avatarUrl || null,
     date: formattedDate,
-    time: job?.jobTypeId === 1 ? "Khoán" : (job?.estimatedHours ? `${job.estimatedHours} giờ` : "N/A"),
-    status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted"
+    time: timeString,
+    status: app.statusId === 1 ? "pending" : app.statusId === 3 ? "rejected" : "accepted",
+    wage: job?.wageAmount?.toLocaleString('vi-VN') || 0,
+    wageUnit: job?.jobTypeId === 1 ? "" : "/ngày",
+    location: job?.address || "Chưa cập nhật địa chỉ",
+    urgent: job?.isUrgent || false,
+    thumbnailUrl: getCategoryThumbnail(job?.jobCategoryId, job?.title),
   };
 };

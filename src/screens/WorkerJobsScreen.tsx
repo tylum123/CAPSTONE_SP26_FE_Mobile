@@ -409,7 +409,7 @@ export function WorkerJobsScreen({ navigation, route }: any) {
               onPress={() => navigation.navigate("Review", { jobId: job.jobPostId, rateeId: job.farmerUserId })}
             >
               <Star size={18} color="#ffffff" fill="#ffffff" />
-              <Text className="text-[14px] font-black text-white px-1">Đánh giá công việc ngay</Text>
+              <Text className="text-[14px] font-black text-white px-1">Đánh giá</Text>
             </TouchableOpacity>
           )}
         </View>

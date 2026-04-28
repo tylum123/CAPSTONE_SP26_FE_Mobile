@@ -20,6 +20,9 @@ export interface Job {
   urgent?: boolean;
   date?: string;
   wageUnit?: string;
+  thumbnailUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpcomingJob {

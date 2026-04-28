@@ -122,7 +122,6 @@ export function NotificationsScreen({ navigation }: any) {
 
   const handlePress = (notif: Notification) => {
     markAsRead(notif.id);
-    if (notif.actionable && notif.jobId) navigation.navigate("JobDetail", { jobId: notif.jobId });
   };
 
   return (
@@ -165,8 +164,8 @@ export function NotificationsScreen({ navigation }: any) {
           const IconComp = cfg.icon;
           return (
             <TouchableOpacity
-              className={["flex-row items-start p-4 gap-2 rounded-[20px] border relative overflow-hidden", notif.read ? "bg-white border-slate-100" : "border-primary-100"].join(" ")}
-              style={notif.read ? { shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 } : { backgroundColor: "#f8fffe", shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 }}
+              className={["flex-row items-start p-4 gap-2 rounded-[20px] border relative overflow-hidden", notif.read ? "bg-white border-slate-100" : "bg-emerald-50/60 border-emerald-200"].join(" ")}
+              style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 }}
               onPress={() => handlePress(notif)} activeOpacity={0.88}
             >
               {!notif.read && (
@@ -182,8 +181,7 @@ export function NotificationsScreen({ navigation }: any) {
                   </Text>
                   <Text className="text-[11px] text-slate-400 font-medium shrink-0 ml-2">{notif.timestamp}</Text>
                 </View>
-                <Text className="text-[13px] text-slate-500 leading-[18px] mb-1" numberOfLines={2}>{notif.message}</Text>
-                {notif.actionable && <Text className="text-xs text-primary-600 font-semibold">Nhấn để xem chi tiết →</Text>}
+                <Text className="text-[13px] text-slate-500 leading-[20px] mb-1">{notif.message}</Text>
               </View>
               <TouchableOpacity className="p-1 shrink-0" onPress={() => deleteItem(notif.id)} hitSlop={8}>
                 <X size={14} color="#cbd5e1" />

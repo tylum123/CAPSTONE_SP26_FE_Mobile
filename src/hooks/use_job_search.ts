@@ -5,7 +5,7 @@
  * Dependencies: jobService, JobSearchFilterRequest, JobDiscoveryDTO. */
 
 import { useState, useCallback, useEffect } from "react";
-import { jobService } from "../services/export_services";
+import { jobService, nominatimService } from "../services/export_services";
 import { 
   JobSearchFilterRequest, 
   JobDiscoveryDTO, 
@@ -160,6 +160,16 @@ export function useJobSearch() {
         // 3. Fallback total
         if (total === 0) total = jobs.length;
       }
+      // Perform sequential geocoding for results to show on map
+      for (const job of jobs) {
+        if (!job.latitude || !job.longitude) {
+          const coords = await nominatimService.geocodeAddress(job.address);
+          if (coords) {
+            job.latitude = coords.latitude;
+            job.longitude = coords.longitude;
+          }
+        }
+      }
       
       setResults(jobs);
       setTotalCount(total);
@@ -204,6 +214,17 @@ export function useJobSearch() {
           if (firstArray) newJobs = firstArray;
         }
       }
+      
+      // Perform sequential geocoding for new results
+      for (const job of newJobs) {
+        if (!job.latitude || !job.longitude) {
+          const coords = await nominatimService.geocodeAddress(job.address);
+          if (coords) {
+            job.latitude = coords.latitude;
+            job.longitude = coords.longitude;
+          }
+        }
+      }
 
       setResults((prev) => [...prev, ...newJobs]);
       setFilters(nextFilters);
@@ -230,6 +251,17 @@ export function useJobSearch() {
         data = await jobService.getJobsByDate(type as any);
       }
       
+      // Perform sequential geocoding for results to show on map
+      for (const job of data) {
+        if (!job.latitude || !job.longitude) {
+          const coords = await nominatimService.geocodeAddress(job.address);
+          if (coords) {
+            job.latitude = coords.latitude;
+            job.longitude = coords.longitude;
+          }
+        }
+      }
+
       setResults(data);
       setTotalCount(data.length);
       setFilters(prev => ({ 
@@ -257,6 +289,18 @@ export function useJobSearch() {
     setError(null);
     try {
       const data = await jobService.getJobsByType(Number(typeId));
+      
+      // Perform sequential geocoding for results to show on map
+      for (const job of data) {
+        if (!job.latitude || !job.longitude) {
+          const coords = await nominatimService.geocodeAddress(job.address);
+          if (coords) {
+            job.latitude = coords.latitude;
+            job.longitude = coords.longitude;
+          }
+        }
+      }
+
       setResults(data);
       setTotalCount(data.length);
       setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));

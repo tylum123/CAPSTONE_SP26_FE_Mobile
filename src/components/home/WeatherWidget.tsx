@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { CloudSun, RefreshCw } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { WeatherDTO } from '../../types/export_type_definitions';
 
 interface WeatherWidgetProps {
@@ -35,23 +36,28 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   };
 
   return (
-    <View className="flex-row justify-between items-center bg-white/10 px-4 py-3 rounded-2xl border border-white/20 mb-3">
+    <LinearGradient
+      colors={['#38bdf8', '#0284c7']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      className="flex-row justify-between items-center px-5 py-4 rounded-[24px] shadow-sm mb-2"
+    >
       {/* Left: Icon + Info */}
-      <View className="flex-row items-center gap-3 flex-1">
-        <View className="w-10 h-10 rounded-xl bg-white/20 justify-center items-center shadow-sm">
+      <View className="flex-row items-center gap-4 flex-1">
+        <View className="w-12 h-12 rounded-full bg-white/20 justify-center items-center shadow-sm border border-white/20">
           {isLoading ? (
             <ActivityIndicator size="small" color="white" />
           ) : (
-            <CloudSun size={20} color="white" />
+            <CloudSun size={24} color="white" />
           )}
         </View>
         <View className="flex-1">
-          <Text className="text-white font-bold text-[15px]" numberOfLines={1}>
+          <Text className="text-white font-black text-[17px] tracking-tight" numberOfLines={1}>
             {isLoading
               ? 'Đang tải...'
               : weatherData?.city || 'Vị trí của bạn'}
           </Text>
-          <Text className="text-white/80 font-medium text-xs mt-0.5 capitalize" numberOfLines={1}>
+          <Text className="text-white/80 font-semibold text-[13px] mt-0.5 capitalize" numberOfLines={1}>
             {weatherData?.description || getStatusMessage()}
           </Text>
         </View>
@@ -59,22 +65,25 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
 
       {/* Right: Temperature OR retry button */}
       {!isLoading && weatherData?.temperature !== undefined ? (
-        <View className="flex-row items-start gap-0.5 ml-2">
-          <Text className="text-white text-3xl font-black tracking-tighter">
+        <View className="flex-row items-start gap-1 ml-2">
+          <Text 
+            className="text-white text-[40px] font-black tracking-tighter leading-tight"
+            style={{ textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: {width: 0, height: 2}, textShadowRadius: 4 }}
+          >
             {Math.round(weatherData.temperature)}
           </Text>
-          <Text className="text-white/80 text-xl font-bold mt-0.5">°C</Text>
+          <Text className="text-white/90 text-[20px] font-bold mt-1">°C</Text>
         </View>
       ) : !isLoading && isError && onRetry ? (
         <TouchableOpacity
           onPress={onRetry}
           activeOpacity={0.7}
-          className="ml-2 flex-row items-center gap-1.5 bg-white/20 rounded-xl px-3 py-2"
+          className="ml-2 flex-row items-center gap-1.5 bg-white/20 rounded-full px-4 py-2 border border-white/20"
         >
-          <RefreshCw size={13} color="white" />
-          <Text className="text-white text-[12px] font-bold">Thử lại</Text>
+          <RefreshCw size={14} color="white" />
+          <Text className="text-white text-[13px] font-bold">Thử lại</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+    </LinearGradient>
   );
 };

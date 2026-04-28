@@ -82,6 +82,8 @@ export interface JobPostDTO {
   updatedAt: string;
   isUrgent: boolean;
   statusId: number;
+  latitude?: number;
+  longitude?: number;
   estimatedHours?: number; // Optional calculated field for FE
   workload?: string;       // Optional custom field for FE/Demo
 }

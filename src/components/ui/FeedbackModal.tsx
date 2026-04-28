@@ -27,7 +27,7 @@ export function FeedbackModal({
   title,
   message,
   variant = "info",
-  confirmLabel = "Đóng",
+  confirmLabel,
   cancelLabel,
   onClose,
   onConfirm,
@@ -36,6 +36,13 @@ export function FeedbackModal({
     if (variant === "success") return <CheckCircle2 size={28} color="#059669" />;
     if (variant === "error")   return <AlertTriangle size={28} color="#f43f5e" />;
     return <Info size={28} color="#2563eb" />;
+  };
+
+  const getConfirmLabel = () => {
+    if (confirmLabel) return confirmLabel;
+    if (cancelLabel) return "Xác nhận";
+    if (variant === "success") return "Đồng ý";
+    return "Đóng";
   };
 
   return (
@@ -75,12 +82,9 @@ export function FeedbackModal({
               style={cancelLabel ? { flex: 1 } : { minWidth: 120 }}
               variant={variant === "error" ? "danger" : "default"}
             >
-              {confirmLabel}
+              {getConfirmLabel()}
             </Button>
           </View>
-          <TouchableOpacity className="absolute top-2 right-2 p-1" onPress={onClose}>
-            <X size={16} color="#6b7280" />
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>

@@ -15,8 +15,8 @@ export function useMapMarkers(jobs: Job[], userLocation: { latitude: number; lon
       const offsetLng = (seed % 7) * 0.005 * (seed % 3 === 0 ? 1 : -1);
       return {
         ...job,
-        lat: (job as any).latitude || (userLocation ? userLocation.latitude + offsetLat : 10.762622 + offsetLat),
-        lng: (job as any).longitude || (userLocation ? userLocation.longitude + offsetLng : 106.660172 + offsetLng),
+        lat: job.latitude || (userLocation ? userLocation.latitude + offsetLat : 10.762622 + offsetLat),
+        lng: job.longitude || (userLocation ? userLocation.longitude + offsetLng : 106.660172 + offsetLng),
       };
     });
   }, [jobs, userLocation]);

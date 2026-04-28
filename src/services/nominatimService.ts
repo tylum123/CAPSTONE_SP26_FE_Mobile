@@ -13,6 +13,7 @@ export interface Coordinates {
 
 class NominatimService {
   private readonly baseUrl = "https://nominatim.openstreetmap.org/search";
+  private cache: Map<string, Coordinates> = new Map();
 
   /**
    * Geocodes an address string to latitude/longitude using OpenStreetMap's Nominatim API.
@@ -21,6 +22,15 @@ class NominatimService {
    */
   async geocodeAddress(address: string): Promise<Coordinates | null> {
     if (!address || address.trim() === "") return null;
+    
+    const cleanAddress = address.trim().toLowerCase();
+    if (this.cache.has(cleanAddress)) {
+      return this.cache.get(cleanAddress) || null;
+    }
+    
+    // Add a small delay to respect Nominatim's 1 req/sec policy if called in loop
+    // (Wait at least 200ms between calls as a safety measure for mobile demo)
+    await new Promise(r => setTimeout(r, 200));
 
     try {
       const response = await axios.get(this.baseUrl, {
@@ -37,10 +47,12 @@ class NominatimService {
 
       if (response.data && response.data.length > 0) {
         const result = response.data[0];
-        return {
+        const coords = {
           latitude: parseFloat(result.lat),
           longitude: parseFloat(result.lon),
         };
+        this.cache.set(cleanAddress, coords);
+        return coords;
       }
       return null;
     } catch (error) {
