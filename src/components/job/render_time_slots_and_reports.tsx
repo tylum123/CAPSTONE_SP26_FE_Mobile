@@ -243,18 +243,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                     )}
                   </View>
                   
-                  {/* Progress Strip at Bottom */}
-                  {slot.neededCount > 0 && !isSelectedAndApproved && (
-                    <View className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-100/30 rounded-b-2xl overflow-hidden">
-                      <View 
-                        className={[
-                          "h-full",
-                          !slot.available ? "bg-rose-500" : "bg-emerald-500"
-                        ].join(" ")} 
-                        style={{ width: `${Math.min((slot.acceptedCount / slot.neededCount) * 100, 100)}%` }} 
-                      />
-                    </View>
-                  )}
+
                 </TouchableOpacity>
               );
             })}

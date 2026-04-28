@@ -62,7 +62,7 @@ export function useJobSearch() {
   const refreshAppliedStatus = useCallback(async () => {
     try {
       const apps = await jobService.getApplications();
-      const ids = new Set(apps.map((a) => a.jobPostId));
+      const ids = new Set(apps.filter(a => a.statusId !== 3 && a.statusId !== 4).map((a) => a.jobPostId));
       setAppliedJobPostIds(ids);
     } catch (err) {
       console.error("Failed to fetch application status for filtering", err);

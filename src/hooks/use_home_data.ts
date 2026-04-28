@@ -207,7 +207,7 @@ export function useHomeData(): HomeDataResult {
     const myProfileId   = sourceProfile?.id;
     const myAppliedIds  = new Set(
       sourceApps
-        .filter(a => (a.worker?.id || a.workerId) === myProfileId)
+        .filter(a => (a.worker?.id || a.workerId) === myProfileId && a.statusId !== 3 && a.statusId !== 4)
         .map(a => String(a.jobPostId))
     );
 

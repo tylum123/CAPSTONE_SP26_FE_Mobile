@@ -74,7 +74,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         (a.worker?.id === sourceProfile?.id || (a as any).workerId === sourceProfile?.id)
       );
 
-      if (existing && existing.statusId !== 3) {
+      if (existing && existing.statusId !== 3 && existing.statusId !== 4) {
         setIsApplied(true);
         setApplicationInfo({ 
           id: existing.id, 
