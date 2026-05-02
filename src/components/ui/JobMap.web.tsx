@@ -4,8 +4,8 @@
  * Contains UI components or service modules for the React Native app.
  * Rule: DO NOT modify existing code logic.
  */
-import React, { useMemo, useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
 import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Job } from "../../types/export_type_definitions";
@@ -24,13 +24,7 @@ try {
 }
 
 // Custom icons can be created using L.divIcon
-const formatWage = (wageStr: string | number) => {
-  const num = typeof wageStr === 'string' ? parseFloat(wageStr.toString().replace(/,/g, '').replace(/\./g,'')) : wageStr;
-  if (!num || isNaN(num)) return wageStr;
-  if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'Tr';
-  if (num >= 1000) return (num / 1000).toFixed(0) + 'K';
-  return num.toString();
-};
+
 
 const userIcon = L.divIcon({
   className: 'custom-div-icon',

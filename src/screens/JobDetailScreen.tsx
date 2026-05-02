@@ -7,10 +7,9 @@
 import React, { useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Platform, RefreshControl, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MapPin, Clock, Briefcase, Users, Wrench, Calendar, Banknote, ArrowLeft } from "lucide-react-native";
+import { MapPin, Clock, Users, Wrench, Banknote, ArrowLeft } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 
 // Custom Hooks
 import { useFetchJobDetail } from "../hooks/use_fetch_job_detail";
@@ -30,12 +29,12 @@ export function JobDetailScreen({ navigation, route }: any) {
 
   const {
     jobDetail, isLoading, refreshing, isApplied, setIsApplied,
-    applicationInfo, selectedTimeSlots, setSelectedTimeSlots,
+    applicationInfo, selectedTimeSlots,
     lastMessage, loadJobData, onRefresh, toggleTimeSlot
   } = useFetchJobDetail(jobId, isAuthenticated, user);
 
   const {
-    isSubmitting, feedback, showFeedback, closeFeedback, handleQuickApply
+    isSubmitting, handleQuickApply
   } = useApplyForJob(jobId, isAuthenticated, user, jobDetail, selectedTimeSlots, setIsApplied, () => navigation.goBack());
 
   const infoRows = useMemo(() => {
@@ -91,16 +90,14 @@ export function JobDetailScreen({ navigation, route }: any) {
               user={user} 
               lastMessage={lastMessage} 
               onChatPress={() => {
-                // farmer.userId comes from JobDetailResponseDTO (enriched from reports)
-                // This is the User table ID needed by the Messages API
-                const partnerId = jobDetail.farmer?.userId;
+                const partnerId = jobDetail.farmerUserId || jobDetail.farmer?.userId;
                 if (!partnerId) {
-                  console.warn("No farmer userId available — worker may not have reports yet for this job.");
+                  console.warn("No farmer userId available.");
                   return;
                 }
                 
-                let chatName = jobDetail.farmer.name;
-                let chatAvatar = jobDetail.farmer.avatar;
+                let chatName = jobDetail.farmer?.name || "Chủ nông trại";
+                let chatAvatar = jobDetail.farmer?.avatar;
                 
                 // Enrich from last message data if available
                 if (lastMessage) {
@@ -137,8 +134,6 @@ export function JobDetailScreen({ navigation, route }: any) {
           />
         </>
       )}
-
-      <FeedbackModal visible={feedback.visible} title={feedback.title} message={feedback.message} variant={feedback.variant} onClose={closeFeedback} onConfirm={feedback.onConfirm} />
     </View>
   );
 }

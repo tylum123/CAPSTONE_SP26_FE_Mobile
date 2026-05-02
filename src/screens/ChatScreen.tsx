@@ -5,7 +5,7 @@
  * Dependencies: Chat service, Auth context, Navigation parameters. */
 
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Keyboard, KeyboardAvoidingView, Animated, Platform } from "react-native";
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Keyboard, Animated, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Send } from "lucide-react-native";
 import { Avatar } from "../components/ui/Avatar";

@@ -28,6 +28,7 @@ import {
 import { mapApplicationToUI, mapJobPostToUI } from '../utils/mapperUtils';
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from '../constants/demoData';
 import type { Job } from '../types/export_type_definitions';
+import { handleError } from '../utils/errorHandler';
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -151,7 +152,7 @@ export function useHomeData(): HomeDataResult {
         });
       } catch (err: any) {
         if (isAuthenticated) {
-          console.error('[useHomeData] Base fetch error:', err?.message);
+          handleError(err, "Không thể tải dữ liệu trang chủ.");
         }
       }
     }

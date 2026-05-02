@@ -15,6 +15,7 @@ import { useAuth } from "../context/AuthContext";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { mapApplicationToUI } from "../utils/mapperUtils";
 import { getReportButtonStatus } from "../utils/jobRules";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 type TabType = "applied" | "upcoming" | "completed";
 
@@ -41,10 +42,10 @@ export function WorkerJobsScreen({ navigation, route }: any) {
              setIsCanceling(appId);
              try {
                 await jobService.cancelApplication(appId);
-                Alert.alert("Thành công", "Đã hủy đơn ứng tuyển.");
+                handleSuccess("Đã hủy đơn ứng tuyển.");
                 loadJobs();
              } catch (error: any) {
-                Alert.alert("Lỗi", error?.response?.data?.message || "Không thể hủy đơn lúc này.");
+                handleError(error, "Không thể hủy đơn lúc này.");
              } finally {
                 setIsCanceling(null);
              }
@@ -147,7 +148,8 @@ export function WorkerJobsScreen({ navigation, route }: any) {
       const ratingForJob = sourceRatings.find((r: any) => String(r.jobPostId) === String(app.jobPostId));
 
       const reportForThisJob = sourceReports.find(r => String(r.jobPostId) === String(app.jobPostId));
-      const resolvedFarmerUserId = reportForThisJob?.farmer?.userId || mappedData.farmerUserId || (jobInfo as any)?.farmerUserId || jobInfo?.farmerProfile?.userId || jobInfo?.farmer?.userId;
+      // Prioritize native farmerUserId from jobInfo (jobPost), fallback to report data if somehow missing
+      const resolvedFarmerUserId = (jobInfo as any)?.farmerUserId || jobInfo?.farmerProfile?.userId || mappedData.farmerUserId || reportForThisJob?.farmer?.userId || jobInfo?.farmer?.userId;
 
       return {
         ...mappedData,

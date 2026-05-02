@@ -21,3 +21,4 @@ export * from "./weather.service";
 export * from "./dispute.service";
 export * from "./message.service";
 export * from "./rating.service";
+export * from "./farmer.service";

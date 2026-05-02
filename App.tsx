@@ -1,7 +1,6 @@
 import "./global.css";
 import "react-native-gesture-handler";
 import React from "react";
-import { Platform, View, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -11,6 +10,7 @@ import { RootNavigator } from "./src/navigation/RootNavigator";
 import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "./src/services/push-notification.service";
 import { DeviceEventEmitter } from "react-native";
+import Toast from "react-native-toast-message";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -28,7 +28,7 @@ export default function App() {
   React.useEffect(() => {
     registerForPushNotificationsAsync();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
       // Refresh dữ liệu khi có thông báo mới (ví dụ: công việc mới)
       DeviceEventEmitter.emit("REFRESH_DATA");
     });
@@ -51,6 +51,7 @@ export default function App() {
           </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>
+      <Toast />
     </GestureHandlerRootView>
   );
 }

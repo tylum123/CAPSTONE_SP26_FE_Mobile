@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, Modal, TouchableOpacity, ScrollView, ActivityIndicator, Pressable, Platform, TextInput } from "react-native";
+import { View, Text, Modal, TouchableOpacity, ScrollView, ActivityIndicator, Pressable, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, Package, Tractor, Tag, MousePointer2, Search } from "lucide-react-native";
 import { skillService, jobService } from "../../services/export_services";
 import { SkillResponse, JobCategoryDTO } from "../../types/export_type_definitions";
-import { COLORS, TYPOGRAPHY } from "../../constants/theme";
+import { COLORS } from "../../constants/theme";
 import { Button } from "../ui/Button";
 
 interface SkillSelectionModalProps {

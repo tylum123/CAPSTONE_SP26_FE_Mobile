@@ -4,7 +4,7 @@
  * Rule: DO NOT modify existing code logic.
  */
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Check } from "lucide-react-native";
 import { skillService } from "../../services/export_services";
 import { SkillResponse } from "../../types/export_type_definitions";

@@ -5,10 +5,9 @@
  * Final Fix: Implements Smart-Match (ID lookup by Name) and key-based initialScrollIndex for rock-solid stability.
  */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { View, Text, TouchableOpacity, Modal, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, TextInput, Keyboard, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, Modal, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, TextInput, ScrollView } from "react-native";
 import { MapPin, X, ChevronLeft, ChevronRight, Check, Send } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { locationService, nominatimService } from "../../services/export_services";
+import { locationService } from "../../services/export_services";
 import { COLORS } from "../../constants/theme";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -43,11 +42,7 @@ export function LocationPicker({ visible, onClose, onSelect, initialValues }: Lo
   const [district, setDistrict] = useState({ id: initialValues?.districtId || 0, name: initialValues?.districtName || "" });
   const [ward, setWard] = useState(initialValues?.ward || "");
   const [street, setStreet] = useState(initialValues?.street || "");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-
   const streetInputRef = useRef<TextInput>(null);
-  const insets = useSafeAreaInsets();
 
   // SMARTER INITIALIZATION: Find ID by Name if missing
   useEffect(() => {
@@ -56,7 +51,6 @@ export function LocationPicker({ visible, onClose, onSelect, initialValues }: Lo
       setDistrict({ id: initialValues?.districtId || 0, name: initialValues?.districtName || "" });
       setWard(initialValues?.ward || "");
       setStreet(initialValues?.street || "");
-      setSuggestions([]);
       loadProvinces(); 
     }
   }, [visible]);
@@ -261,7 +255,6 @@ export function LocationPicker({ visible, onClose, onSelect, initialValues }: Lo
                     value={street} onChangeText={setStreet}
                     placeholder="Số nhà, tên đường" placeholderTextColor={COLORS.slate[400]}
                   />
-                  {isSearching && <ActivityIndicator size="small" color={COLORS.primary[600]} />}
                 </View>
                 
                 <TouchableOpacity

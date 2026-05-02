@@ -5,12 +5,12 @@
  * Rule: DO NOT modify existing code logic.
  */
 import React from "react";
-import { Modal, View, Text, TouchableOpacity, Dimensions } from "react-native";
-import { UserPlus, ChevronRight, X } from "lucide-react-native";
+import { Modal, View, Text, Dimensions } from "react-native";
+import { UserPlus, ChevronRight } from "lucide-react-native";
 import { COLORS, TYPOGRAPHY } from "../../constants/theme";
 import { Button } from "./Button";
 
-const { width } = Dimensions.get("window");
+Dimensions.get("window");
 
 interface WelcomeModalProps {
   visible: boolean;
@@ -19,7 +19,7 @@ interface WelcomeModalProps {
   userName?: string;
 }
 
-export function WelcomeModal({ visible, onClose, onAction, userName }: WelcomeModalProps) {
+export function WelcomeModal({ visible, onAction, userName }: WelcomeModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View className="flex-1 bg-black/60 justify-center items-center px-6">

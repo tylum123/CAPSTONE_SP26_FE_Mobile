@@ -12,8 +12,7 @@ import { ChevronLeft, Info, HelpCircle, AlertCircle } from "lucide-react-native"
 import { useFetchMyDisputes } from "../hooks/use_fetch_my_disputes";
 import { RenderDisputeCard } from "../components/dispute/render_dispute_card";
 import { EmptyState, PillTabs } from "../components/ui/export_ui_components";
-import { DisputeStatus, DisputeType, DisputeStatusLabels, DisputeTypeLabels } from "../constants/enums";
-import { Filter, Tag } from "lucide-react-native";
+import { Tag } from "lucide-react-native";
 
 export function DisputeHistoryScreen({ navigation }: any) {
   const { disputes, isLoading, error, refetch } = useFetchMyDisputes();

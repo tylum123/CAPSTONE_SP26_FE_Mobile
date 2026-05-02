@@ -4,12 +4,11 @@
  * Outputs: Filter state, search results, loading/error status, and search handlers.
  * Dependencies: jobService, JobSearchFilterRequest, JobDiscoveryDTO. */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { jobService, nominatimService } from "../services/export_services";
 import { 
   JobSearchFilterRequest, 
   JobDiscoveryDTO, 
-  PaginatedJobDiscoveryResponse 
 } from "../types/export_type_definitions";
 
 // Extend local filter request to include excludeApplied
@@ -25,6 +24,7 @@ const INITIAL_FILTERS: ExtendedJobFilter = {
 
 import { DEMO_JOB_POSTS } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
+import { handleError } from "../utils/errorHandler";
 
 
 export function useJobSearch() {
@@ -65,7 +65,7 @@ export function useJobSearch() {
       const ids = new Set(apps.filter(a => a.statusId !== 3 && a.statusId !== 4).map((a) => a.jobPostId));
       setAppliedJobPostIds(ids);
     } catch (err) {
-      console.error("Failed to fetch application status for filtering", err);
+      // Silently ignore application fetch error here
     }
   }, []);
 
@@ -133,11 +133,7 @@ export function useJobSearch() {
         mergedFilters.maxDistanceKm = 2000;
       }
 
-      console.log("[SearchRequest] Payload:", JSON.stringify(mergedFilters, null, 2));
-
       const response: any = await jobService.searchJobs(mergedFilters);
-      
-      console.log("[SearchResponse] Raw:", JSON.stringify(response, null, 2));
 
       // ULTIMATE DEFENSIVE DECODING: 
       // Handle PascalCase, camelCase, direct Array, or any object property that is an array
@@ -178,7 +174,7 @@ export function useJobSearch() {
       // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
       refreshAppliedStatus();
     } catch (err: any) {
-      console.error("Advanced search error:", err);
+      handleError(err, "Đã xảy ra lỗi khi tìm kiếm công việc.");
       const errorMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.";
       setError(errorMsg);
       setResults([]);
@@ -229,7 +225,7 @@ export function useJobSearch() {
       setResults((prev) => [...prev, ...newJobs]);
       setFilters(nextFilters);
     } catch (err: any) {
-      console.error("Load more search error:", err);
+      handleError(err, "Không thể tải thêm kết quả.");
       setError("Không thể tải thêm kết quả.");
     } finally {
       setIsLoading(false);
@@ -273,7 +269,7 @@ export function useJobSearch() {
         workerLongitude: location?.longitude || prev.workerLongitude
       }));
     } catch (err: any) {
-      console.error("Specialized search error:", err);
+      handleError(err, "Đã xảy ra lỗi khi tìm kiếm.");
       setError(err.message || "Đã xảy ra lỗi khi tìm kiếm.");
     } finally {
       setIsLoading(false);
@@ -305,7 +301,7 @@ export function useJobSearch() {
       setTotalCount(data.length);
       setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));
     } catch (err: any) {
-      console.error("Search by type error:", err);
+      handleError(err, "Không thể tải danh sách việc theo loại.");
       setError("Không thể tải danh sách việc theo loại.");
     } finally {
       setIsLoading(false);

@@ -12,9 +12,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Mail, CheckCircle, Lock, ShieldCheck } from "lucide-react-native";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { Button } from "../components/ui/Button";
 import { authService } from "../services/export_services";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 type FlowStep = "request" | "verify" | "success";
 
@@ -25,12 +25,8 @@ export function ForgotPasswordScreen({ navigation }: any) {
   const [newPassword, setNewPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(0);
+  // const timerRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
-
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   useEffect(() => {
     if (timer > 0) {
@@ -42,13 +38,13 @@ export function ForgotPasswordScreen({ navigation }: any) {
   }, [timer]);
 
   const handleSendRequest = async () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showFeedback({ title: "Lỗi", message: "Địa chỉ email không hợp lệ", variant: "error" });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { handleError(null, "Địa chỉ email không hợp lệ"); return; }
     setIsLoading(true);
     try {
       await authService.forgotPassword(email);
       setStep("verify");
       setTimer(60);
-    } catch { showFeedback({ title: "Thất bại", message: "Không thể gửi mã. Vui lòng thử lại sau.", variant: "error" }); }
+    } catch { handleError(null, "Không thể gửi mã. Vui lòng thử lại sau."); }
     finally { setIsLoading(false); }
   };
 
@@ -58,19 +54,19 @@ export function ForgotPasswordScreen({ navigation }: any) {
     try {
       await authService.resendVerification(email);
       setTimer(60);
-      showFeedback({ title: "Thành công", message: "Mã xác thực mới đã được gửi!", variant: "success" });
-    } catch { showFeedback({ title: "Lỗi", message: "Không thể gửi lại mã.", variant: "error" }); }
+      handleSuccess("Mã xác thực mới đã được gửi!");
+    } catch { handleError(null, "Không thể gửi lại mã."); }
     finally { setIsLoading(false); }
   };
 
   const handleVerifyAndReset = async () => {
-    if (!otp || otp.length < 4) return showFeedback({ title: "Lỗi", message: "Vui lòng nhập mã OTP", variant: "error" });
-    if (!newPassword || newPassword.length < 6) return showFeedback({ title: "Lỗi", message: "Mật khẩu mới phải có ít nhất 6 ký tự", variant: "error" });
+    if (!otp || otp.length < 4) { handleError(null, "Vui lòng nhập mã OTP"); return; }
+    if (!newPassword || newPassword.length < 6) { handleError(null, "Mật khẩu mới phải có ít nhất 6 ký tự"); return; }
     setIsLoading(true);
     try {
       await authService.resetPassword({ email, otp, newPassword });
       setStep("success");
-    } catch { showFeedback({ title: "Thất bại", message: "Mã OTP không đúng hoặc đã hết hạn.", variant: "error" }); }
+    } catch { handleError(null, "Mã OTP không đúng hoặc đã hết hạn."); }
     finally { setIsLoading(false); }
   };
 
@@ -152,7 +148,6 @@ export function ForgotPasswordScreen({ navigation }: any) {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-      <FeedbackModal visible={feedback.visible} title={feedback.title} message={feedback.message} variant={feedback.variant} onConfirm={closeFeedback} onClose={closeFeedback} />
     </SafeAreaView>
   );
 }

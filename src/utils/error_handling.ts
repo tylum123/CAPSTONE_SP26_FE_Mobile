@@ -4,7 +4,6 @@
  * Core React Native utility, navigation, state, or hook logic.
  * Rule: DO NOT modify existing code logic.
  */
-import { AxiosError } from "axios";
 
 /**
  * Safely extracts a user-friendly error message from a Backend ApiResponse or AxiosError.

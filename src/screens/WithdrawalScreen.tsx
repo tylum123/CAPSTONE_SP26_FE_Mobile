@@ -5,7 +5,7 @@
  * Dependencies: Wallet service, Auth context. */
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, Image, KeyboardAvoidingView, Platform, DeviceEventEmitter } from "react-native";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Modal, FlatList, Image, KeyboardAvoidingView, Platform, DeviceEventEmitter } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, Info, Landmark, Wallet, ShieldCheck, Check, Search, X } from "lucide-react-native";
@@ -16,6 +16,7 @@ import { Card } from "../components/ui/Card";
 import { walletService } from "../services/wallet.service";
 import { useAuth } from "../context/AuthContext";
 import { WalletDTO } from "../types/export_type_definitions";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 function removeAccents(str: string) {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -45,7 +46,6 @@ export function WithdrawalScreen() {
   const [banks, setBanks] = useState<any[]>([]);
   const [showBankModal, setShowBankModal] = useState(false);
   const [searchBankQuery, setSearchBankQuery] = useState("");
-  const [isLookingUp, setIsLookingUp] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -106,20 +106,6 @@ export function WithdrawalScreen() {
   }, [accountNumber, selectedBank]);
   */
 
-  const lookupAccount = async () => {
-    setIsLookingUp(true);
-    setAccountHolder("");
-    try {
-      // Simulate API call for name lookup. In production, requires VietQR API Keys
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      setAccountHolder(removeAccents(user?.name || "NGUYEN VAN A"));
-    } catch (e) {
-      console.log(e);
-      setAccountHolder("");
-    } finally {
-      setIsLookingUp(false);
-    }
-  };
 
   const filteredBanks = useMemo(() => {
     if (!searchBankQuery) return banks;
@@ -133,18 +119,18 @@ export function WithdrawalScreen() {
 
   const handleWithdraw = async () => {
     if (!amount || !selectedBank || !accountHolder || !accountNumber) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin");
+      handleError(null, "Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
     const withdrawAmount = parseInt(amount.replace(/[^0-9]/g, ""));
     if (isNaN(withdrawAmount) || withdrawAmount < 5000) {
-      Alert.alert("Lỗi", "Số tiền rút tối thiểu là 5.000₫");
+      handleError(null, "Số tiền rút tối thiểu là 5.000₫");
       return;
     }
 
     if (wallet && withdrawAmount > wallet.balance) {
-      Alert.alert("Lỗi", "Số dư khả dụng không đủ");
+      handleError(null, "Số dư khả dụng không đủ");
       return;
     }
 
@@ -152,9 +138,8 @@ export function WithdrawalScreen() {
       setLoading(true);
       setTimeout(() => {
         setLoading(false);
-        Alert.alert("Thành công", "Yêu cầu rút tiền của bạn đã được gửi (Chế độ Demo)", [
-          { text: "OK", onPress: () => navigation.goBack() }
-        ]);
+        handleSuccess("Yêu cầu rút tiền của bạn đã được gửi (Chế độ Demo)");
+        navigation.goBack();
       }, 1500);
       return;
     }
@@ -168,17 +153,11 @@ export function WithdrawalScreen() {
         accountHolderName: accountHolder,
         description: `Rut tien AgroTemp ${Date.now().toString().slice(-4)}`
       });
-      Alert.alert("Thành công", "Yêu cầu rút tiền đã được gửi và đang chờ xử lý.", [
-        { 
-          text: "OK", 
-          onPress: () => {
-            DeviceEventEmitter.emit("REFRESH_DATA");
-            navigation.goBack();
-          } 
-        }
-      ]);
+      handleSuccess("Yêu cầu rút tiền đã được gửi và đang chờ xử lý.");
+      DeviceEventEmitter.emit("REFRESH_DATA");
+      navigation.goBack();
     } catch (error: any) {
-      Alert.alert("Lỗi", error?.response?.data?.message || "Không thể thực hiện yêu cầu rút tiền.");
+      handleError(error, "Không thể thực hiện yêu cầu rút tiền.");
     } finally {
       setLoading(false);
     }
@@ -331,7 +310,7 @@ export function WithdrawalScreen() {
       >
         <Button 
           onPress={handleWithdraw} 
-          disabled={loading || fetchingWallet || isLookingUp}
+          disabled={loading || fetchingWallet}
           className="bg-primary-600 h-14 rounded-2xl shadow-lg shadow-primary-500/30"
         >
           {loading ? (

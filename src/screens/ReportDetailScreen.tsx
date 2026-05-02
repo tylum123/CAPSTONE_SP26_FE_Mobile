@@ -10,7 +10,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   DeviceEventEmitter,
   ActivityIndicator,
@@ -139,7 +138,6 @@ export function ReportDetailScreen({ navigation, route }: any) {
 
         <ReportActionBar
           isPending={isPending}
-          isApproved={isApproved}
           approvedPercent={approvedPercent}
           showDisputeButton={showDisputeButton}
           isAppealing={false}

@@ -7,7 +7,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, DeviceEventEmitter, Animated, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, X, CheckCircle2, Star, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
+import { ChevronLeft, X, CheckCircle2, Home, ArrowRight, Info, Image as ImageIcon } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { dailyReportService } from "../services/daily_report.service";
@@ -17,6 +17,7 @@ import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { hapticFeedback } from "../utils/haptic";
 import { getReportButtonStatus } from "../utils/jobRules";
 import { mapJobPostToUI } from "../utils/mapperUtils";
+import { handleError } from "../utils/errorHandler";
 
 export function SubmitReportScreen({ navigation, route }: any) {
   const { jobApplicationId } = route.params || {};
@@ -49,12 +50,8 @@ export function SubmitReportScreen({ navigation, route }: any) {
   useEffect(() => {
     const validateEligibility = async () => {
       if (!jobApplicationId) {
-        showFeedback({
-          title: "Lỗi dữ liệu",
-          message: "Không tìm thấy thông tin ứng tuyển.",
-          variant: "error",
-          onConfirm: () => navigation.goBack()
-        });
+        handleError(null, "Không tìm thấy thông tin ứng tuyển.");
+        navigation.goBack();
         return;
       }
 
@@ -83,15 +80,10 @@ export function SubmitReportScreen({ navigation, route }: any) {
         );
 
         if (!btnStatus.enabled) {
-          showFeedback({
-            title: "Không thể báo cáo",
-            message: `Lý do: ${btnStatus.label}`,
-            variant: "error",
-            onConfirm: () => navigation.goBack()
-          });
+          handleError(null, `Không thể báo cáo. Lý do: ${btnStatus.label}`);
+          navigation.goBack();
         }
       } catch (error) {
-        console.error("Validation error:", error);
         // Fallback: allow if we can't verify, but log it
       } finally {
         setIsValidating(false);
@@ -131,7 +123,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        showFeedback({ title: "Thiếu quyền", message: "Cần quyền truy cập thư viện ảnh để thêm ảnh báo cáo.", variant: "error" });
+        handleError(null, "Cần quyền truy cập thư viện ảnh để thêm ảnh báo cáo.");
         return;
       }
 
@@ -150,7 +142,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
         }]);
       }
     } catch (error) {
-      showFeedback({ title: "Lỗi", message: "Không thể chọn ảnh lúc này.", variant: "error" });
+      handleError(error, "Không thể chọn ảnh lúc này.");
     }
   };
 
@@ -168,15 +160,13 @@ export function SubmitReportScreen({ navigation, route }: any) {
 
   const handleSubmit = async () => {
     if (!description.trim()) {
-      showFeedback({ title: "Lỗi", message: "Vui lòng nhập mô tả công việc hôm nay.", variant: "error" });
+      handleError(null, "Vui lòng nhập mô tả công việc hôm nay.");
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (jobApplicationId) {
-        let evidenceUrl = "";
-        
         // Upload images if any
         if (images.length > 0) {
           setIsUploading(true);
@@ -206,11 +196,7 @@ export function SubmitReportScreen({ navigation, route }: any) {
     } catch (error: any) {
       setIsUploading(false);
       hapticFeedback.error();
-      showFeedback({ 
-        title: "Lỗi", 
-        message: error.message || "Không thể gửi báo cáo lúc này.", 
-        variant: "error" 
-      });
+      handleError(error, "Không thể gửi báo cáo lúc này.");
     } finally {
       setIsSubmitting(false);
     }

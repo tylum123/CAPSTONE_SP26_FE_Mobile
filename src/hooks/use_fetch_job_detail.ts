@@ -9,6 +9,7 @@ import { DeviceEventEmitter } from "react-native";
 import { jobService, workerProfileService, dailyReportService, messageService } from "../services/export_services";
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE, DEMO_CATEGORIES } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
+import { handleError } from "../utils/errorHandler";
 
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
@@ -54,7 +55,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         // NOTE: chat partner resolution is deferred until after reports are fetched,
         // because JobPostDTO does not include farmer.userId — only reports (JobDetailResponseDTO) do.
       } catch (error) {
-        console.error("Load job detail error:", error);
+        handleError(error, "Không thể tải thông tin công việc.");
         setJobDetail(null);
         setIsLoading(false);
         setRefreshing(false);
@@ -115,7 +116,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
           ];
         }
       } catch (err) {
-        console.error("Fetch reports error", err);
+        // Silently ignore report fetch errors
       }
 
       // Fallback: if worker has no reports with farmer data, try fetching ANY report for this job post
@@ -142,7 +143,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
             setLastMessage(msgList[0]);
           }
         } catch (mErr) {
-          console.error("Fetch last message error:", mErr);
+          // Silently ignore message fetch errors
         }
       }
 
@@ -152,7 +153,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         try {
           dayCounts = await jobService.getCountWorkerPerDay(String(jobId));
         } catch (err) {
-          console.error("Fetch day counts error", err);
+          // Silently ignore day counts error
         }
       } else if (user?.isDemo || !isAuthenticated) {
         // Mock counts for demo

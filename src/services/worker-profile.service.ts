@@ -7,7 +7,6 @@
 import api from "../config/configure_axios_client";
 import { API_ENDPOINTS } from "../constants/api";
 import { ApiResponse, WorkerProfileDTO, UpdateWorkerProfileRequest, WorkerDashboardResponseDTO } from "../types/export_type_definitions";
-import { authTokenService } from "./auth-token.service";
 
 // Use JWT token directly for worker profile APIs
 export const workerProfileService = {

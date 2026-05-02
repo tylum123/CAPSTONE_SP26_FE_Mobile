@@ -19,8 +19,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Calendar, Check } from "lucide-react-native";
-import { Button } from "../ui/Button";
-import { JobSearchFilterRequest, JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
+import { JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
 import { ExtendedJobFilter } from "../../hooks/use_job_search";
 import { jobService } from "../../services/job.service";
 import { skillService } from "../../services/skill.service";

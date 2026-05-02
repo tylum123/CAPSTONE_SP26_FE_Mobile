@@ -12,8 +12,8 @@ import {
 import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { getErrorMessage } from "../utils/error_handling";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 export function RegisterScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber]       = useState("");
@@ -24,32 +24,23 @@ export function RegisterScreen({ navigation }: any) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading]               = useState(false);
   const [focusedField, setFocusedField]     = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
   const { register } = useAuth();
 
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
-
   const handleRegister = async () => {
-    if (!phoneNumber || !email || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
-    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { showFeedback({ title: "Sai định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFeedback({ title: "Sai định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
-    if (password !== confirmPassword) { showFeedback({ title: "Mật khẩu không khớp", message: "Mật khẩu xác nhận không khớp", variant: "error" }); return; }
-    if (password.length < 6) { showFeedback({ title: "Mật khẩu yếu", message: "Mật khẩu phải có ít nhất 6 ký tự", variant: "error" }); return; }
+    if (!phoneNumber || !email || !password || !confirmPassword) { handleError(null, "Vui lòng nhập đầy đủ thông tin"); return; }
+    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { handleError(null, "Số điện thoại không hợp lệ"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { handleError(null, "Email không hợp lệ"); return; }
+    if (password !== confirmPassword) { handleError(null, "Mật khẩu xác nhận không khớp"); return; }
+    if (password.length < 6) { handleError(null, "Mật khẩu phải có ít nhất 6 ký tự"); return; }
     setLoading(true);
     try {
       const trimmedEmail = email.trim();
       await register({ email: trimmedEmail, phoneNumber: phoneNumber.trim(), password, roleId: 3 });
-      showFeedback({ 
-        title: "Thành công", 
-        message: "Mã OTP đã được gửi về email của bạn. Vui lòng kiểm tra và xác thực.", 
-        variant: "success", 
-        onConfirm: () => navigation.navigate("VerifyEmail", { email: trimmedEmail }) 
-      });
+      handleSuccess("Mã OTP đã được gửi về email của bạn. Vui lòng kiểm tra và xác thực.");
+      navigation.navigate("VerifyEmail", { email: trimmedEmail });
     } catch (error) { 
       const errorMessage = getErrorMessage(error, "Đăng ký thất bại. Vui lòng thử lại.");
-      showFeedback({ title: "Thất bại", message: errorMessage, variant: "error" }); 
+      handleError(null, errorMessage); 
     }
     finally { setLoading(false); }
   };
@@ -125,15 +116,6 @@ export function RegisterScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <FeedbackModal
-        visible={feedback.visible}
-        title={feedback.title}
-        message={feedback.message}
-        variant={feedback.variant}
-        onConfirm={closeFeedback}
-        onClose={closeFeedback}
-      />
     </View>
   );
 }

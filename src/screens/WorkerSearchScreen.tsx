@@ -15,7 +15,6 @@ import {
   ActivityIndicator, 
   DeviceEventEmitter,
   ScrollView,
-  Platform
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Briefcase } from "lucide-react-native";
@@ -35,7 +34,7 @@ export function WorkerSearchScreen({ navigation }: any) {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   
   const { 
-    filters, results, isLoading, updateFilter, search, loadMore, reset, specializedSearch, appliedJobPostIds, refreshAppliedStatus 
+    filters, results, isLoading, updateFilter, search, loadMore, appliedJobPostIds, refreshAppliedStatus 
   } = useJobSearch();
 
   const filteredResults = React.useMemo(() => {
@@ -135,7 +134,6 @@ export function WorkerSearchScreen({ navigation }: any) {
 
 
     } catch (err) {
-      console.error("Search init error", err);
       // Fallback: search without any filters
       search({ pageNumber: 1, pageSize: 10, sortBy: "date" });
     }
