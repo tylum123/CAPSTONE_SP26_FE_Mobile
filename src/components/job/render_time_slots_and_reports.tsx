@@ -132,7 +132,7 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                   className={[
                     "flex-row items-center justify-between p-4 rounded-2xl border-2 min-h-[72px] mb-2.5",
                     isSelectedAndApproved ? "bg-emerald-50/80 border-emerald-200" : 
-                    selected ? "bg-sky-50 border-transparent" : 
+                    selected ? "bg-primary-600 border-primary-700 shadow-md" : 
                     !slot.available ? "bg-rose-50/50 border-rose-100 opacity-90" : 
                     "bg-white border-slate-100"
                   ].join(" ")}
@@ -143,105 +143,104 @@ export function RenderTimeSlotsAndReports({ jobDetail, applicationInfo, selected
                   <View className="flex-row items-center gap-3 pr-4" style={{ flex: 1 }}>
                     <Calendar 
                       size={20} 
-                      color={isSelectedAndApproved ? "#057a55" : selected ? "#0284c7" : slot.available ? "#0ea5e9" : "#94a3b8"} 
+                      color={isSelectedAndApproved ? "#057a55" : selected ? "#ffffff" : slot.available ? "#0ea5e9" : "#94a3b8"} 
                     />
                     <Text 
                       numberOfLines={1}
                       className={[
                         "text-[16px] font-bold", 
                         isSelectedAndApproved ? "text-emerald-900" : 
-                        selected ? "text-sky-700" : 
+                        selected ? "text-white" : 
                         !slot.available ? "text-rose-400" : 
                         "text-slate-700"
                       ].join(" ")}
-                      style={selected && !isApplied ? { color: 'white' } : {}}
                     >
                       {slot.date}
                     </Text>
                   </View>
 
-                  {/* Right Indicators Group */}
-                  <View className="flex-row items-center gap-1.5">
-                    {/* Recruitment Capacity Pill */}
-                    {slot.neededCount > 0 && (
-                      <View 
-                        className={[
-                          "flex-row items-center gap-1 px-2.5 py-1.5 rounded-full border min-w-[55px] justify-center",
-                          selected && !isApproved ? "bg-sky-100 border-sky-200" :
-                          isSelectedAndApproved ? "bg-emerald-50 border-emerald-200" :
-                          !slot.available ? "bg-rose-50 border-rose-100" :
-                          slot.acceptedCount > 0 ? "bg-emerald-50 border-emerald-100" :
-                          "bg-slate-50 border-slate-100"
-                        ].join(" ")}
-                      >
-                        <Users 
-                          size={12} 
-                          color={
-                            selected && !isApproved ? "#0284c7" :
-                            isSelectedAndApproved ? "#059669" :
-                            !slot.available ? "#e11d48" :
-                            slot.acceptedCount > 0 ? "#059669" :
-                            "#64748b"
-                          } 
-                        />
-                        <Text className={[
-                          "text-[11px] font-extrabold",
-                          selected && !isApproved ? "text-sky-700" :
-                          isSelectedAndApproved ? "text-emerald-700" :
-                          !slot.available ? "text-rose-600" :
-                          slot.acceptedCount > 0 ? "text-emerald-700" :
-                          "text-slate-500"
-                        ].join(" ")}>
-                          {slot.acceptedCount}/{slot.neededCount}
-                        </Text>
-                      </View>
-                    )}
-
-                    {!slot.available && !isSelectedAndApplied && !isSelectedAndApproved && (
-                      <Badge variant="secondary" className="px-2 h-7">Hết chỗ</Badge>
-                    )}
-                    
-                    {/* ONLY show report status if user is officially accepted for THIS specific day */}
-                    {isSelectedAndApproved && (() => {
-                      const now = new Date();
-                      // Compare only the date part to avoid premature "overdue" on the same day
-                      const slotDate = new Date(slot.rawDate);
-                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                      const isPast = slotDate < today;
-
-                      let statusLabel = "Chờ báo cáo";
-                      let containerStyle = "bg-emerald-100 border-emerald-200";
-                      let textStyle = "text-emerald-700";
-
-                      if (slot.reportedAt) {
-                        statusLabel = "Đã báo cáo";
-                        containerStyle = "bg-primary-100 border-primary-200";
-                        textStyle = "text-primary-700";
-                      } else if (isPast) {
-                        statusLabel = "Quá hạn";
-                        containerStyle = "bg-rose-100 border-rose-200";
-                        textStyle = "text-rose-700";
-                      }
-
-                      return (
-                        <View className={["px-2.5 py-1.5 rounded-lg border", containerStyle].join(" ")}>
-                          <Text className={["text-[10px] font-extrabold uppercase", textStyle].join(" ")}>
-                            {statusLabel}
+                    {/* Right Indicators Group */}
+                    <View className="flex-row items-center gap-1.5">
+                      {/* Recruitment Capacity Pill */}
+                      {slot.neededCount > 0 && (
+                        <View 
+                          className={[
+                            "flex-row items-center gap-1 px-2.5 py-1.5 rounded-full border min-w-[55px] justify-center",
+                            selected && !isApproved ? "bg-white/20 border-white/30" :
+                            isSelectedAndApproved ? "bg-emerald-50 border-emerald-200" :
+                            !slot.available ? "bg-rose-50 border-rose-100" :
+                            slot.acceptedCount > 0 ? "bg-emerald-50 border-emerald-100" :
+                            "bg-slate-50 border-slate-100"
+                          ].join(" ")}
+                        >
+                          <Users 
+                            size={12} 
+                            color={
+                              selected && !isApproved ? "#ffffff" :
+                              isSelectedAndApproved ? "#059669" :
+                              !slot.available ? "#e11d48" :
+                              slot.acceptedCount > 0 ? "#059669" :
+                              "#64748b"
+                            } 
+                          />
+                          <Text className={[
+                            "text-[11px] font-extrabold",
+                            selected && !isApproved ? "text-white" :
+                            isSelectedAndApproved ? "text-emerald-700" :
+                            !slot.available ? "text-rose-600" :
+                            slot.acceptedCount > 0 ? "text-emerald-700" :
+                            "text-slate-500"
+                          ].join(" ")}>
+                            {slot.acceptedCount}/{slot.neededCount}
                           </Text>
                         </View>
-                      );
-                    })()}
+                      )}
 
-                    {isPending && selected && (
-                      <Badge variant="warning" className="px-2 h-7">Đợi duyệt</Badge>
-                    )}
-                    
-                    {selected && !isApproved && (
-                      <View className="w-6 h-6 rounded-full bg-sky-200/50 justify-center items-center ml-1">
-                        <Text className="text-sm font-extrabold text-sky-700">✓</Text>
-                      </View>
-                    )}
-                  </View>
+                      {!slot.available && !isSelectedAndApplied && !isSelectedAndApproved && (
+                        <Badge variant="secondary" className="px-2 h-7">Hết chỗ</Badge>
+                      )}
+                      
+                      {/* ONLY show report status if user is officially accepted for THIS specific day */}
+                      {isSelectedAndApproved && (() => {
+                        const now = new Date();
+                        // Compare only the date part to avoid premature "overdue" on the same day
+                        const slotDate = new Date(slot.rawDate);
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const isPast = slotDate < today;
+
+                        let statusLabel = "Chờ báo cáo";
+                        let containerStyle = "bg-emerald-100 border-emerald-200";
+                        let textStyle = "text-emerald-700";
+
+                        if (slot.reportedAt) {
+                          statusLabel = "Đã báo cáo";
+                          containerStyle = "bg-primary-100 border-primary-200";
+                          textStyle = "text-primary-700";
+                        } else if (isPast) {
+                          statusLabel = "Quá hạn";
+                          containerStyle = "bg-rose-100 border-rose-200";
+                          textStyle = "text-rose-700";
+                        }
+
+                        return (
+                          <View className={["px-2.5 py-1.5 rounded-lg border", containerStyle].join(" ")}>
+                            <Text className={["text-[10px] font-extrabold uppercase", textStyle].join(" ")}>
+                              {statusLabel}
+                            </Text>
+                          </View>
+                        );
+                      })()}
+
+                      {isPending && selected && (
+                        <Badge variant="warning" className="px-2 h-7" style={{ backgroundColor: '#fef3c7', borderColor: '#fde68a' }}>Đợi duyệt</Badge>
+                      )}
+                      
+                      {selected && !isApproved && (
+                        <View className="w-6 h-6 rounded-full bg-white/20 justify-center items-center ml-1">
+                          <Text className="text-sm font-extrabold text-white">✓</Text>
+                        </View>
+                      )}
+                    </View>
                   
 
                 </TouchableOpacity>
