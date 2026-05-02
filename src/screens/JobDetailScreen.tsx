@@ -42,7 +42,7 @@ export function JobDetailScreen({ navigation, route }: any) {
     return [
       { Icon: MapPin,    label: "Địa điểm",        value: jobDetail.location?.address, hint: jobDetail.location?.distance ? `Cách bạn ${jobDetail.location.distance} km` : "" },
       { Icon: Clock,     label: "Thời gian",        value: jobDetail.duration },
-      { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.requiredWorkers || 0} người` },
+      { Icon: Users,     label: "Số lượng cần tuyển",value: `${jobDetail.requiredWorkersRange || jobDetail.requiredWorkers || 0} người${jobDetail.wageTypeId === "Daily" ? "/ngày" : ""}` },
       { Icon: Wrench,    label: "Kỹ năng khuyến nghị", value: jobDetail.requiredSkills || "Không yêu cầu" },
       { Icon: Banknote,  label: "Loại Hình", value: jobDetail.wageTypeId || "N/A" },
     ];

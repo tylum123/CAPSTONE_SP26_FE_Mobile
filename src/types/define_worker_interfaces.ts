@@ -91,6 +91,7 @@ export interface JobPostDTO {
 export interface WorkerCountPerDay {
   date: string;
   acceptedWorkerCount: number;
+  neededWorkerCount: number;
 }
 
 export interface JobDiscoveryDTO extends JobPostDTO {

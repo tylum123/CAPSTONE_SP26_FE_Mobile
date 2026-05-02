@@ -159,7 +159,8 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         // Mock counts for demo
         dayCounts = (sourceJob.selectedDays || []).map((d: string, i: number) => ({
           date: d,
-          acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0)
+          acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0),
+          neededWorkerCount: i % 2 === 0 ? sourceJob.workersNeeded : Math.max(1, sourceJob.workersNeeded - 2)
         }));
       }
 
@@ -168,7 +169,8 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
         const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
         const acceptedCount = countData?.acceptedWorkerCount || 0;
-        const neededCount = sourceJob.workersNeeded || 0;
+        // Logic: Use per-day needed count if available, otherwise fallback to global workersNeeded
+        const neededCount = countData?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
         const isFull = acceptedCount >= neededCount;
 
         return {
@@ -182,11 +184,23 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         };
       });
 
+      // Calculate worker range for Daily jobs
+      if (sourceJob.jobTypeId !== 1 && dayCounts.length > 0) {
+        const neededCounts = dayCounts.map(c => c.neededWorkerCount ?? sourceJob.workersNeeded).filter(n => n !== undefined);
+        if (neededCounts.length > 0) {
+          const min = Math.min(...neededCounts);
+          const max = Math.max(...neededCounts);
+          if (min !== max) {
+            mappedData.requiredWorkersRange = `${min} - ${max}`;
+          }
+        }
+      }
+
       // Special case for backward compatibility or if selectedDays is empty for Daily jobs
       if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
         const firstDayCount = dayCounts.find(c => c.date?.substring(0, 10) === sourceJob.startDate?.substring(0, 10));
         const accepted = firstDayCount?.acceptedWorkerCount || 0;
-        const needed = sourceJob.workersNeeded || 0;
+        const needed = firstDayCount?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
 
         timeSlots.push({
           id: 1,

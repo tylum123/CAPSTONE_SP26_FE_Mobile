@@ -9,11 +9,20 @@ import {
   View, Text, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Image,
 } from "react-native";
-import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
+import { Phone, Lock, Eye, EyeOff, Mail, Check, X } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { getErrorMessage } from "../utils/error_handling";
 import { handleError, handleSuccess } from "../utils/errorHandler";
+
+function RequirementItem({ met, label }: { met: boolean; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      {met ? <Check size={12} color="#059669" strokeWidth={3} /> : <X size={12} color="#f43f5e" strokeWidth={3} />}
+      <Text className={["text-[12px]", met ? "text-primary-700 font-medium" : "text-slate-400"].join(" ")}>{label}</Text>
+    </View>
+  );
+}
 
 export function RegisterScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber]       = useState("");
@@ -26,12 +35,27 @@ export function RegisterScreen({ navigation }: any) {
   const [focusedField, setFocusedField]     = useState<string | null>(null);
   const { register } = useAuth();
 
+  const validatePassword = (pass: string) => {
+    return {
+      length: pass.length >= 8,
+      uppercase: /[A-Z]/.test(pass),
+      number: /[0-9]/.test(pass),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(pass),
+    };
+  };
+
+  const passwordRequirements = validatePassword(password);
+  const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
+
   const handleRegister = async () => {
     if (!phoneNumber || !email || !password || !confirmPassword) { handleError(null, "Vui lòng nhập đầy đủ thông tin"); return; }
     if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { handleError(null, "Số điện thoại không hợp lệ"); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { handleError(null, "Email không hợp lệ"); return; }
     if (password !== confirmPassword) { handleError(null, "Mật khẩu xác nhận không khớp"); return; }
-    if (password.length < 6) { handleError(null, "Mật khẩu phải có ít nhất 6 ký tự"); return; }
+    
+    if (!passwordRequirements.length) { handleError(null, "Mật khẩu phải có ít nhất 8 ký tự"); return; }
+    if (!isPasswordValid) { handleError(null, "Mật khẩu chưa đủ mạnh. Vui lòng kiểm tra các yêu cầu bên dưới."); return; }
+    
     setLoading(true);
     try {
       const trimmedEmail = email.trim();
@@ -101,6 +125,18 @@ export function RegisterScreen({ navigation }: any) {
                       </TouchableOpacity>
                     )}
                   </View>
+
+                  {field.key === "password" && password.length > 0 && (
+                    <View className="mt-2.5 px-1">
+                      <Text className="text-[11px] font-bold text-slate-400 mb-2 uppercase">Yêu cầu bảo mật:</Text>
+                      <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
+                        <RequirementItem met={passwordRequirements.length} label="Ít nhất 8 ký tự" />
+                        <RequirementItem met={passwordRequirements.uppercase} label="Chữ hoa" />
+                        <RequirementItem met={passwordRequirements.number} label="Chữ số" />
+                        <RequirementItem met={passwordRequirements.special} label="Ký tự đặc biệt (!@#...)" />
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })}
