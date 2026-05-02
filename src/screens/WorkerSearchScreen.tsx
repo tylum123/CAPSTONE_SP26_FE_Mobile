@@ -38,7 +38,7 @@ export function WorkerSearchScreen({ navigation }: any) {
   } = useJobSearch();
 
   const filteredResults = React.useMemo(() => {
-    let data = results;
+    let data = [...results];
     if (filters.excludeApplied) {
       data = data.filter(job => !appliedJobPostIds.has(String(job.id)));
     }
@@ -46,6 +46,22 @@ export function WorkerSearchScreen({ navigation }: any) {
     if (filters.onlyUrgent === false) {
       data = data.filter(job => !job.isUrgent);
     }
+
+    // MULTI-LEVEL SORT: 1. Proximity (closest first), 2. Start Date (earliest first)
+    data.sort((a, b) => {
+      // Primary: Distance (closest first)
+      const distA = a.distanceKm ?? 99999;
+      const distB = b.distanceKm ?? 99999;
+      if (Math.abs(distA - distB) > 0.01) { // Use epsilon for float comparison
+        return distA - distB;
+      }
+      
+      // Secondary: Start Date (earliest first)
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : Infinity;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : Infinity;
+      return dateA - dateB;
+    });
+
     return data;
   }, [results, filters.excludeApplied, filters.onlyUrgent, appliedJobPostIds]);
 
@@ -111,10 +127,12 @@ export function WorkerSearchScreen({ navigation }: any) {
 
       await refreshAppliedStatus();
 
-      // ULTIMATE FALLBACK: Search with NO filters except page size to ensure BE returns everything
+      // ULTIMATE FALLBACK: Search with location and page size to ensure results are relevant and immediately visible
       const count = await search({
         pageNumber: 1,
         pageSize: 20,
+        workerLatitude: lat,
+        workerLongitude: lon,
       }, user?.isDemo);
 
       // REAL-WORLD DEFENSIVE LOGIC: 
@@ -229,13 +247,17 @@ export function WorkerSearchScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
-          className="flex-1"
+          style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           data={filteredResults}
           keyExtractor={(item) => item.id.toString()}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={async () => { await refreshAppliedStatus(); search(); }} colors={["#059669"]} />}
           onEndReached={() => loadMore()}
-          onEndReachedThreshold={0.4}
+          onEndReachedThreshold={0.5}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews={false}
           renderItem={({ item }) => (
             <JobSearchCard job={item} onPress={(j) => navigation.navigate("JobDetail", { jobId: j.id })} />
           )}
