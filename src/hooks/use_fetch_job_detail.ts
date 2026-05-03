@@ -165,28 +165,57 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       }
 
       const mappedData = mapJobPostToUI(sourceJob);
-      const timeSlots = (sourceJob.jobTypeId === 1) ? [] : (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
-        const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
-        const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
-        const acceptedCount = countData?.acceptedWorkerCount || 0;
-        // Logic: Use per-day needed count if available, otherwise fallback to global workersNeeded
-        const neededCount = countData?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
-        const isFull = acceptedCount >= neededCount;
+      
+      // Use jobPostDays if available (new response structure), otherwise fallback to manual construction
+      let timeSlots = [];
+      if (sourceJob.jobPostDays && sourceJob.jobPostDays.length > 0) {
+        timeSlots = sourceJob.jobPostDays.map((day: any, index: number) => {
+          const dateStr = day.workDate;
+          const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+          const acceptedCount = day.workersAccepted || 0;
+          const neededCount = day.workersNeeded || 0;
+          const isFull = acceptedCount >= neededCount;
 
-        return {
-          id: index + 1,
-          date: formattedSlotDate,
-          rawDate: dateStr.substring(0, 10),
-          available: !isFull,
-          reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
-          acceptedCount,
-          neededCount
-        };
-      });
+          return {
+            id: index + 1,
+            date: formattedSlotDate,
+            rawDate: dateStr.substring(0, 10),
+            available: !isFull,
+            reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
+            acceptedCount,
+            neededCount
+          };
+        });
+      } else if (sourceJob.jobTypeId !== 1) {
+        // Fallback to legacy logic: use selectedDays + dayCounts
+        timeSlots = (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
+          const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
+          const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
+          const acceptedCount = countData?.acceptedWorkerCount || 0;
+          const neededCount = countData?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
+          const isFull = acceptedCount >= neededCount;
+
+          return {
+            id: index + 1,
+            date: formattedSlotDate,
+            rawDate: dateStr.substring(0, 10),
+            available: !isFull,
+            reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
+            acceptedCount,
+            neededCount
+          };
+        });
+      }
 
       // Calculate worker range for Daily jobs
-      if (sourceJob.jobTypeId !== 1 && dayCounts.length > 0) {
-        const neededCounts = dayCounts.map(c => c.neededWorkerCount ?? sourceJob.workersNeeded).filter(n => n !== undefined);
+      if (sourceJob.jobTypeId !== 1) {
+        let neededCounts: number[] = [];
+        if (sourceJob.jobPostDays && sourceJob.jobPostDays.length > 0) {
+          neededCounts = sourceJob.jobPostDays.map((d: any) => d.workersNeeded).filter((n: any) => n !== undefined);
+        } else if (dayCounts.length > 0) {
+          neededCounts = dayCounts.map(c => c.neededWorkerCount ?? sourceJob.workersNeeded).filter(n => n !== undefined);
+        }
+
         if (neededCounts.length > 0) {
           const min = Math.min(...neededCounts);
           const max = Math.max(...neededCounts);

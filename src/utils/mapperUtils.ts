@@ -37,7 +37,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     description: cleanDescription,
     farmer: { 
       id: job.farmerProfileId,
-      userId: fProfile?.userId || (job as any).farmerUserId || null,
+      userId: job.farmerUserId || fProfile?.userId || null,
       name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
       avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
       rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
