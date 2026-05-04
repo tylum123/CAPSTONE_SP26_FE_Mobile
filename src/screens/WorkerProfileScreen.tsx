@@ -311,7 +311,7 @@ export function WorkerProfileScreen({ navigation }: any) {
                  { icon: Bell, label: "Thông báo", sub: "Hoạt động & Hệ thống", color: "#f59e0b", onPress: () => navigation.navigate("Notifications") },
                  { icon: Edit2, label: "Chỉnh sửa hồ sơ", sub: "Cập nhật thông tin cá nhân", color: "#3b82f6", onPress: () => navigation.navigate("EditProfile", { currentProfile: displayProf }) },
                  { icon: FileText, label: "Lịch sử báo cáo", sub: "Theo dõi công việc", color: "#64748b", onPress: () => navigation.navigate("Jobs") },
-                 { icon: ShieldAlert, label: "Trung tâm hỗ trợ", sub: "Khiếu nại & Trợ giúp", color: "#f43f5e", onPress: () => navigation.navigate("DisputeHistory") },
+                 { icon: ShieldAlert, label: "Khiếu nại của tôi", sub: "Khiếu nại & Trợ giúp", color: "#f43f5e", onPress: () => navigation.navigate("DisputeHistory") },
                  { icon: CreditCard, label: "Ví của tôi", sub: "Quản lý thu nhập", color: "#059669", onPress: () => navigation.navigate("WorkerWallet") },
                ].map((item, idx) => (
                  <TouchableOpacity 

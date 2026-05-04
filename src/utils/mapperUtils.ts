@@ -92,13 +92,13 @@ export const getCategoryThumbnail = (categoryId?: string, title?: string): strin
 
   const t = title?.toLowerCase() || "";
   
-  if (t.includes("nuôi") || t.includes("bò") || t.includes("heo") || t.includes("lợn") || t.includes("gà") || t.includes("vịt")) {
-    return IMG_LIVESTOCK;
-  }
-  if (t.includes("thủy sản") || t.includes("cá") || t.includes("tôm") || t.includes("ao") || t.includes("lưới")) {
+  if (t.includes("thủy sản") || t.includes("cá") || t.includes("tôm") || t.includes("ao") || t.includes("lưới") || categoryId === 'cat-3') {
     return IMG_AQUACULTURE;
   }
-  if (categoryId === 'cat-1' || categoryId === 'cat-2' || t.includes("trồng") || t.includes("thu hoạch") || t.includes("lúa") || t.includes("vườn") || t.includes("cây")) {
+  if (t.includes("chăn nuôi") || t.includes("gia súc") || t.includes("gia cầm") || t.includes("bò") || t.includes("heo") || t.includes("lợn") || t.includes("gà") || t.includes("vịt") || categoryId === 'cat-2') {
+    return IMG_LIVESTOCK;
+  }
+  if (categoryId === 'cat-1' || t.includes("trồng") || t.includes("thu hoạch") || t.includes("lúa") || t.includes("vườn") || t.includes("cây")) {
     return IMG_FARMING;
   }
   

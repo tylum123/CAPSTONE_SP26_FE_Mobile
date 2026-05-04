@@ -128,7 +128,7 @@ export function RegisterScreen({ navigation }: any) {
 
                   {field.key === "password" && password.length > 0 && (
                     <View className="mt-2.5 px-1">
-                      <Text className="text-[11px] font-bold text-slate-400 mb-2 uppercase">Yêu cầu bảo mật:</Text>
+                      <Text className="text-[11px] font-bold text-slate-400 mb-2 uppercase">Yêu cầu:</Text>
                       <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
                         <RequirementItem met={passwordRequirements.length} label="Ít nhất 8 ký tự" />
                         <RequirementItem met={passwordRequirements.uppercase} label="Chữ hoa" />
