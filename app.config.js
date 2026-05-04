@@ -27,6 +27,7 @@ module.exports = {
     },
     android: {
       package: "com.tylum123.agrotemp",
+      googleServicesFile: "./android/app/google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/logo.png",
         backgroundColor: "#ffffff",

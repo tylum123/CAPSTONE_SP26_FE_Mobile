@@ -8,7 +8,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "./src/context/AuthContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import * as Notifications from "expo-notifications";
-import { registerForPushNotificationsAsync } from "./src/services/push-notification.service";
 import { DeviceEventEmitter } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -26,8 +25,6 @@ export default function App() {
   const responseListener = React.useRef<Notifications.EventSubscription | null>(null);
 
   React.useEffect(() => {
-    registerForPushNotificationsAsync();
-
     notificationListener.current = Notifications.addNotificationReceivedListener(() => {
       // Refresh dữ liệu khi có thông báo mới (ví dụ: công việc mới)
       DeviceEventEmitter.emit("REFRESH_DATA");
