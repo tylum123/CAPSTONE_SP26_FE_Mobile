@@ -78,7 +78,7 @@ export function RenderJobMapCallout({ selectedJob, onCalloutPress }: RenderJobMa
 
     const jobList = selectedJob.isMulti ? selectedJob.jobs : [selectedJob];
     const calloutWidth = 260;
-    const contentWidth = calloutWidth - 24; // padding horizontal 12 * 2
+    const contentWidth = calloutWidth; // Full width for paging
 
     const handleScroll = (event: any) => {
         const xOffset = event.nativeEvent.contentOffset.x;
@@ -103,6 +103,7 @@ export function RenderJobMapCallout({ selectedJob, onCalloutPress }: RenderJobMa
                     showsHorizontalScrollIndicator={false}
                     onMomentumScrollEnd={handleScroll}
                     scrollEventThrottle={16}
+                    style={{ marginHorizontal: -12 }} // Negate parent padding
                 >
                     {jobList.map((job: any) => (
                         <JobItem 
@@ -213,6 +214,7 @@ const styles = StyleSheet.create({
   },
   jobItem: {
     paddingVertical: 4,
+    paddingHorizontal: 12,
   },
   multiHeader: {
     backgroundColor: '#f8fafc',

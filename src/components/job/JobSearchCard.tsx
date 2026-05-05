@@ -34,7 +34,13 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
       <View className="flex-1 p-4">
         <View className="flex-row items-center gap-3 mb-3">
           <Avatar 
-            source={(job as any).farmer?.avatar ? { uri: (job as any).farmer.avatar } : undefined} 
+            source={
+              (job as any).farmer?.avatar ? { uri: (job as any).farmer.avatar } : 
+              (job as any).farmerAvatar ? { uri: (job as any).farmerAvatar } :
+              (job as any).farmerAvatarUrl ? { uri: (job as any).farmerAvatarUrl } :
+              (job as any).avatarUrl ? { uri: (job as any).avatarUrl } :
+              undefined
+            } 
             fallback={job.contactName?.[0] || "?"} 
             size={42} 
           />
