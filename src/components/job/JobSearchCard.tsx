@@ -51,7 +51,7 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
           <View className="flex-row items-center gap-1.5 flex-1 pr-1">
             <MapPin size={12} color="#64748b" />
             <Text className="text-[11px] text-slate-600 font-medium" numberOfLines={1}>
-              {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
+              {job.distanceKm !== undefined ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />

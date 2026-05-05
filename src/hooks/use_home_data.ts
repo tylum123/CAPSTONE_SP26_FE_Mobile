@@ -17,6 +17,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { DeviceEventEmitter } from 'react-native';
+import * as Location from "expo-location";
 import { useAuth } from '../context/AuthContext';
 import {
   jobService,
@@ -158,22 +159,42 @@ export function useHomeData(): HomeDataResult {
     }
 
     // ── 2. Geocode + fetch nearby jobs ──────────────────────────────────────
-
     let lat = DEFAULT_LOCATION.latitude;
     let lon = DEFAULT_LOCATION.longitude;
+    let locationSource = "default";
 
-    if (sourceProfile?.primaryLocation && sourceProfile.id !== 'demo-worker-123') {
+    // 2.1 TRY GPS FIRST (High Accuracy)
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        lat = location.coords.latitude;
+        lon = location.coords.longitude;
+        setUserLocation({ latitude: lat, longitude: lon });
+        locationSource = "gps";
+        console.log("[HomeLocation] Using GPS position:", lat, lon);
+      }
+    } catch (gpsError) {
+      console.warn("[HomeLocation] GPS fetch failed, falling back to profile:", gpsError);
+    }
+
+    // 2.2 FALLBACK TO PROFILE
+    if (locationSource !== "gps" && sourceProfile?.primaryLocation && sourceProfile.id !== 'demo-worker-123') {
       try {
         const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
         if (loc) {
           setUserLocation(loc);
           lat = loc.latitude;
           lon = loc.longitude;
+          locationSource = "profile";
+          console.log("[HomeLocation] Using Profile position:", lat, lon);
         }
       } catch {
         setUserLocation(DEFAULT_LOCATION);
       }
-    } else {
+    } else if (locationSource !== "gps") {
       setUserLocation(DEFAULT_LOCATION);
     }
 

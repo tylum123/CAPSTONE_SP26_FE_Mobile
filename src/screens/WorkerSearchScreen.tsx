@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Briefcase } from "lucide-react-native";
 import { useDebounce } from "../hooks/use_debounce";
 import { EmptyState } from "../components/ui/export_ui_components";
+import * as Location from "expo-location";
 import { useAuth } from "../context/AuthContext";
 import { nominatimService, workerProfileService } from "../services/export_services";
 import { JobMap } from "../components/ui/JobMap";
@@ -114,24 +115,47 @@ export function WorkerSearchScreen({ navigation }: any) {
    */
   const init = useCallback(async () => {
     try {
-      const profile = await workerProfileService.getProfile();
-      let lat = 10.762622;
+      let lat = 10.762622; // Default (HCM City)
       let lon = 106.660172;
+      let locationSource = "default";
 
-      if (profile?.primaryLocation && !user?.isDemo) {
-        const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
-        if (loc) {
-          lat = loc.latitude;
-          lon = loc.longitude;
+      // 1. TRY GPS FIRST (High Accuracy)
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          lat = location.coords.latitude;
+          lon = location.coords.longitude;
+          locationSource = "gps";
+          console.log("[Location] Using GPS position:", lat, lon);
+        }
+      } catch (gpsError) {
+        console.warn("[Location] GPS fetch failed, falling back to profile:", gpsError);
+      }
+
+      // 2. FALLBACK TO PROFILE (If GPS not granted or failed)
+      if (locationSource !== "gps" && !user?.isDemo) {
+        try {
+          const profile = await workerProfileService.getProfile();
+          if (profile?.primaryLocation) {
+            const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
+            if (loc) {
+              lat = loc.latitude;
+              lon = loc.longitude;
+              locationSource = "profile";
+              console.log("[Location] Using Profile position:", lat, lon);
+            }
+          }
+        } catch (profileError) {
+          console.error("[Location] Profile fetch failed:", profileError);
         }
       }
 
       const location = { latitude: lat, longitude: lon };
       setUserLocation(location);
       
-      // Store location for map view but DON'T filter by distance initially
-      // Reason: BE SearchJobs filters by Farm lat/lon which may be null for some jobs,
-      // causing them to be excluded entirely. Only filter when user explicitly sets distance.
       updateFilter({ 
         workerLatitude: lat, 
         workerLongitude: lon,
