@@ -181,7 +181,10 @@ export function useJobSearch() {
         }
       }
       
-      setResults(jobs);
+      // Map results to UI-friendly format
+      const mappedJobs = jobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      
+      setResults(mappedJobs);
       setTotalCount(total);
       resultCount = total;
 
@@ -245,7 +248,9 @@ export function useJobSearch() {
         }
       }
 
-      setResults((prev) => [...prev, ...newJobs]);
+      const mappedNewJobs = newJobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+
+      setResults((prev) => [...prev, ...mappedNewJobs]);
       setFilters(nextFilters);
     } catch (err: any) {
       handleError(err, "Không thể tải thêm kết quả.");
@@ -293,7 +298,8 @@ export function useJobSearch() {
         }
       }
 
-      setResults(data);
+      const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults(mappedData);
       setTotalCount(data.length);
       setFilters(prev => ({ 
         ...prev, 
@@ -341,7 +347,8 @@ export function useJobSearch() {
         }
       }
 
-      setResults(data);
+      const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults(mappedData);
       setTotalCount(data.length);
       setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));
     } catch (err: any) {

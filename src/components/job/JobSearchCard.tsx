@@ -33,7 +33,11 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
       <View className={["w-1.5", job.isUrgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
       <View className="flex-1 p-4">
         <View className="flex-row items-center gap-3 mb-3">
-          <Avatar fallback={job.contactName?.[0] || "?"} size={42} />
+          <Avatar 
+            source={(job as any).farmer?.avatar ? { uri: (job as any).farmer.avatar } : undefined} 
+            fallback={job.contactName?.[0] || "?"} 
+            size={42} 
+          />
           <View className="flex-1">
             <Text className="text-[16px] font-bold text-slate-800" numberOfLines={1}>{job.title}</Text>
             <Text className="text-xs text-slate-500">{job.contactName || "Chủ nông trại"}</Text>

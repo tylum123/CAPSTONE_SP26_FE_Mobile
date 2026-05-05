@@ -5,7 +5,7 @@
  * Rule: DO NOT modify existing code logic.
  */
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform, Linking, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Linking, StyleSheet, ScrollView } from 'react-native';
 import MapLibreGL from '@maplibre/maplibre-react-native';
 import { Navigation, Info } from 'lucide-react-native';
 
@@ -14,47 +14,84 @@ interface RenderJobMapCalloutProps {
     onCalloutPress?: (job: any) => void;
 }
 
+function JobItem({ job, onCalloutPress, isLast }: { job: any, onCalloutPress?: (job: any) => void, isLast?: boolean }) {
+    return (
+        <View style={[styles.jobItem, !isLast && styles.jobItemSeparator]}>
+            <View style={styles.calloutHeader}>
+                <Text style={styles.calloutTitle} numberOfLines={1}>{job.title}</Text>
+                {(job.urgent || job.isUrgent) && <View style={styles.urgentBadge}><Text style={styles.urgentText}>GẤP</Text></View>}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[styles.calloutFarmer, { marginBottom: 0 }]} numberOfLines={1}>
+                    {job.farmer?.name || job.farmer || job.contactName || "Chủ nông trại"}
+                </Text>
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#cbd5e1', marginHorizontal: 6 }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366f1' }} numberOfLines={1}>
+                    {job.distanceKm !== undefined ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
+                </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={styles.calloutWage}>{(job.wageAmount || job.wage || 0).toLocaleString()}đ</Text>
+                {job.matchScore !== undefined && (
+                   <Text style={{ fontSize: 10, color: '#16a34a', fontWeight: 'bold' }}>
+                     Phù hợp: {Math.round(job.matchScore > 1 ? job.matchScore : job.matchScore * 100)}%
+                   </Text>
+                )}
+            </View>
+            <View style={styles.calloutActions}>
+                <TouchableOpacity 
+                    style={[styles.calloutButton, { flex: 1, marginRight: 6 }]} 
+                    onPress={() => onCalloutPress && onCalloutPress(job)}
+                >
+                    <Info size={12} color="#fff" />
+                    <Text style={styles.calloutButtonText}>CHI TIẾT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.calloutButton, { backgroundColor: '#3b82f6', paddingHorizontal: 10 }]} 
+                    onPress={() => {
+                        const url = Platform.select({
+                            ios: `maps:0,0?q=${job.lat},${job.lng}`,
+                            android: `geo:0,0?q=${job.lat},${job.lng}`,
+                        });
+                        if (url) Linking.openURL(url);
+                    }}
+                >
+                    <Navigation size={12} color="#fff" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
+
 export function RenderJobMapCallout({ selectedJob, onCalloutPress }: RenderJobMapCalloutProps) {
     if (!selectedJob) return null;
 
+    const jobList = selectedJob.isMulti ? selectedJob.jobs : [selectedJob];
+    const calloutWidth = 240;
+    const maxHeight = 350;
+
     return (
         <MapLibreGL.MarkerView coordinate={[selectedJob.lng, selectedJob.lat]} anchor={{ x: 0.5, y: 1.1 }}>
-            <View style={[styles.customCallout, { width: 220 }]}>
-                <View style={styles.calloutHeader}>
-                    <Text style={styles.calloutTitle} numberOfLines={1}>{selectedJob.title}</Text>
-                    {selectedJob.urgent && <View style={styles.urgentBadge}><Text style={styles.urgentText}>GẤP</Text></View>}
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={[styles.calloutFarmer, { marginBottom: 0 }]} numberOfLines={1}>
-                        {selectedJob.farmer || selectedJob.contactName || "Chủ nông trại"}
-                    </Text>
-                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#cbd5e1', marginHorizontal: 6 }} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#6366f1' }} numberOfLines={1}>
-                        {selectedJob.distanceKm !== undefined ? `${selectedJob.distanceKm.toFixed(1)} km` : (selectedJob.locationName || selectedJob.address || "Việt Nam")}
-                    </Text>
-                </View>
-                <Text style={styles.calloutWage}>{(selectedJob.wageAmount || 0).toLocaleString()}đ</Text>
-                <View style={styles.calloutActions}>
-                    <TouchableOpacity 
-                        style={[styles.calloutButton, { flex: 1, marginRight: 6 }]} 
-                        onPress={() => onCalloutPress && onCalloutPress(selectedJob)}
-                    >
-                        <Info size={12} color="#fff" />
-                        <Text style={styles.calloutButtonText}>CHI TIẾT</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.calloutButton, { backgroundColor: '#3b82f6', paddingHorizontal: 10 }]} 
-                        onPress={() => {
-                            const url = Platform.select({
-                                ios: `maps:0,0?q=${selectedJob.lat},${selectedJob.lng}`,
-                                android: `geo:0,0?q=${selectedJob.lat},${selectedJob.lng}`,
-                            });
-                            if (url) Linking.openURL(url);
-                        }}
-                    >
-                        <Navigation size={12} color="#fff" />
-                    </TouchableOpacity>
-                </View>
+            <View style={[styles.customCallout, { width: calloutWidth, maxHeight }]}>
+                {selectedJob.isMulti && (
+                    <View style={styles.multiHeader}>
+                        <Text style={styles.multiHeaderText}>{jobList.length} công việc tại đây</Text>
+                    </View>
+                )}
+                <ScrollView 
+                    style={{ flexShrink: 1 }} 
+                    showsVerticalScrollIndicator={jobList.length > 2}
+                    contentContainerStyle={{ paddingBottom: 2 }}
+                >
+                    {jobList.map((job: any, index: number) => (
+                        <JobItem 
+                            key={job.id} 
+                            job={job} 
+                            onCalloutPress={onCalloutPress} 
+                            isLast={index === jobList.length - 1} 
+                        />
+                    ))}
+                </ScrollView>
                 <View style={styles.calloutArrow} />
             </View>
         </MapLibreGL.MarkerView>
@@ -129,7 +166,7 @@ const styles = StyleSheet.create({
   calloutArrow: {
     position: 'absolute',
     bottom: -10,
-    left: 90,
+    left: 110,
     width: 20,
     height: 20,
     backgroundColor: 'white',
@@ -137,5 +174,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderRightWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  jobItem: {
+    paddingVertical: 8,
+  },
+  jobItemSeparator: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    marginBottom: 8,
+    paddingBottom: 12,
+  },
+  multiHeader: {
+    backgroundColor: '#f8fafc',
+    marginHorizontal: -12,
+    marginTop: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    marginBottom: 8,
+  },
+  multiHeaderText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

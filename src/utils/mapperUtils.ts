@@ -55,8 +55,6 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     wageUnit: job.jobTypeId === 1 ? "" : " /ngày",
     startDateFormatted: formatDateStr(job.startDate),
     endDateFormatted: formatDateStr(job.endDate),
-    startDate: formatDateStr(job.startDate),
-    endDate: formatDateStr(job.endDate),
     date: formatDateStr(job.startDate),
     thumbnailUrl: getCategoryThumbnail(job.jobCategoryId, job.title),
     time: job.jobTypeId === 1 ? "Khoán" : (timeRange || "07:00 - 17:00"),
