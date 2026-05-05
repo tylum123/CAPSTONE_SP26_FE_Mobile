@@ -122,15 +122,19 @@ export function useJobSearch() {
 
 
       // Merge with existing filters but reset page to 1 for new searches
+      // IMPORTANT: Preserve coordinates from current filters if not provided in customFilters
       const mergedFilters = { 
         ...filters, 
         ...customFilters, 
-        pageNumber: customFilters?.pageNumber || 1 
+        pageNumber: customFilters?.pageNumber || 1,
+        workerLatitude: customFilters?.workerLatitude !== undefined ? customFilters.workerLatitude : filters.workerLatitude,
+        workerLongitude: customFilters?.workerLongitude !== undefined ? customFilters.workerLongitude : filters.workerLongitude,
       };
 
-      // Ensure maxDistanceKm is at least 2000 if NO specific distance is provided but location exists
-      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && !mergedFilters.maxDistanceKm) {
-        mergedFilters.maxDistanceKm = 2000;
+      // Ensure maxDistanceKm is at least 3000 (Toàn quốc) if NO specific distance is provided but location exists
+      // This allows the backend to return results without strict filtering unless requested
+      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && mergedFilters.maxDistanceKm === undefined) {
+        mergedFilters.maxDistanceKm = 3000;
       }
 
       const response: any = await jobService.searchJobs(mergedFilters);
@@ -156,7 +160,7 @@ export function useJobSearch() {
         // 3. Fallback total
         if (total === 0) total = jobs.length;
       }
-      // Perform sequential geocoding for results to show on map
+      // Perform sequential geocoding and manual distance calculation
       for (const job of jobs) {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
@@ -164,6 +168,16 @@ export function useJobSearch() {
             job.latitude = coords.latitude;
             job.longitude = coords.longitude;
           }
+        }
+        
+        // Recalculate distance if coordinates are available
+        if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
+          job.distanceKm = nominatimService.calculateDistanceKm(
+            mergedFilters.workerLatitude,
+            mergedFilters.workerLongitude,
+            job.latitude,
+            job.longitude
+          );
         }
       }
       
@@ -211,7 +225,7 @@ export function useJobSearch() {
         }
       }
       
-      // Perform sequential geocoding for new results
+      // Perform sequential geocoding and distance calculation for new results
       for (const job of newJobs) {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
@@ -219,6 +233,15 @@ export function useJobSearch() {
             job.latitude = coords.latitude;
             job.longitude = coords.longitude;
           }
+        }
+
+        if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+          job.distanceKm = nominatimService.calculateDistanceKm(
+            filters.workerLatitude,
+            filters.workerLongitude,
+            job.latitude,
+            job.longitude
+          );
         }
       }
 
@@ -247,7 +270,7 @@ export function useJobSearch() {
         data = await jobService.getJobsByDate(type as any);
       }
       
-      // Perform sequential geocoding for results to show on map
+      // Perform sequential geocoding and manual distance calculation
       for (const job of data) {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
@@ -255,6 +278,18 @@ export function useJobSearch() {
             job.latitude = coords.latitude;
             job.longitude = coords.longitude;
           }
+        }
+
+        const currentLat = location?.latitude || filters.workerLatitude;
+        const currentLon = location?.longitude || filters.workerLongitude;
+
+        if (currentLat && currentLon && job.latitude && job.longitude) {
+          job.distanceKm = nominatimService.calculateDistanceKm(
+            currentLat,
+            currentLon,
+            job.latitude,
+            job.longitude
+          );
         }
       }
 
@@ -286,7 +321,7 @@ export function useJobSearch() {
     try {
       const data = await jobService.getJobsByType(Number(typeId));
       
-      // Perform sequential geocoding for results to show on map
+      // Perform sequential geocoding and manual distance calculation
       for (const job of data) {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
@@ -294,6 +329,15 @@ export function useJobSearch() {
             job.latitude = coords.latitude;
             job.longitude = coords.longitude;
           }
+        }
+
+        if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+          job.distanceKm = nominatimService.calculateDistanceKm(
+            filters.workerLatitude,
+            filters.workerLongitude,
+            job.latitude,
+            job.longitude
+          );
         }
       }
 

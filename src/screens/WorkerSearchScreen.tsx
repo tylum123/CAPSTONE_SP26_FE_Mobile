@@ -39,12 +39,24 @@ export function WorkerSearchScreen({ navigation }: any) {
 
   const filteredResults = React.useMemo(() => {
     let data = [...results];
+    
+    // EXCLUDE APPLIED: Filter out jobs user already applied to
     if (filters.excludeApplied) {
       data = data.filter(job => !appliedJobPostIds.has(String(job.id)));
     }
-    // Strictly filter out urgent jobs if "Không cần gấp" is selected
+
+    // URGENT FILTER: Strictly filter out urgent jobs if "Không cần gấp" is selected
     if (filters.onlyUrgent === false) {
       data = data.filter(job => !job.isUrgent);
+    }
+
+    // DISTANCE FILTER: Only apply if user explicitly set a limit (not 'Toàn quốc' 3000km)
+    // This provides a second layer of accuracy over the backend search.
+    if (filters.maxDistanceKm && filters.maxDistanceKm < 2000) {
+      data = data.filter(job => {
+        // If we have distance, use it. If not (geocode failed), hide it for strict filters.
+        return job.distanceKm !== undefined && job.distanceKm <= filters.maxDistanceKm!;
+      });
     }
 
     // MULTI-LEVEL SORT: 1. Proximity (closest first), 2. Start Date (earliest first)
@@ -63,7 +75,7 @@ export function WorkerSearchScreen({ navigation }: any) {
     });
 
     return data;
-  }, [results, filters.excludeApplied, filters.onlyUrgent, appliedJobPostIds]);
+  }, [results, filters.excludeApplied, filters.onlyUrgent, filters.maxDistanceKm, appliedJobPostIds]);
 
   const [activeQuickFilter, setActiveQuickFilter] = useState<string>("all");
   const hasInitialized = React.useRef(false);

@@ -229,13 +229,18 @@ export function useHomeData(): HomeDataResult {
         }
       }
 
+      let distanceVal = m.location.distance || 0;
+      if (lat && lon && j.latitude && j.longitude) {
+        distanceVal = nominatimService.calculateDistanceKm(lat, lon, j.latitude, j.longitude);
+      }
+
       mappedJobs.push({
         id: j.id,
         title: m.title,
         farmer: m.farmer.name,
         farmerAvatar: m.farmer.avatar,
         location: m.location.address,
-        distanceKm: m.location.distance || 0,
+        distanceKm: distanceVal,
         matchScore: m.matchScore ?? undefined,
         wage: m.wage.toLocaleString('vi-VN'),
         wageAmount: m.wage,

@@ -18,7 +18,7 @@ import {
   Dimensions
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Check, ChevronDown, Package, Tractor, Tag, MousePointer2 } from "lucide-react-native";
+import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Check, ChevronDown, Package, Tractor, Tag, MousePointer2, Fish } from "lucide-react-native";
 import { JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
 import { ExtendedJobFilter } from "../../hooks/use_job_search";
 import { jobService } from "../../services/job.service";
@@ -43,7 +43,7 @@ const DISTANCE_OPTIONS = [
 const SKILL_CATEGORY_MAP: Record<string, { name: string; icon: any; color: string }> = {
   "1": { name: "Trồng trọt", icon: Tractor, color: "#059669" },
   "2": { name: "Chăn nuôi", icon: Package, color: "#d97706" },
-  "3": { name: "Máy móc", icon: Tag, color: "#2563eb" },
+  "3": { name: "Thủy sản", icon: Fish, color: "#0ea5e9" },
   "4": { name: "Khác", icon: MousePointer2, color: "#64748b" },
 };
 
@@ -315,9 +315,30 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                     {availableSkills
                       .filter(skill => {
                         if (selectedSkillCategoryId === "all") return true;
-                        let catId = String(skill.categoryId || "4");
-                        if (catId.startsWith("cat-")) catId = catId.replace("cat-", "");
-                        return catId === selectedSkillCategoryId;
+                        
+                        // Robust category resolution:
+                        // 1. Try to find the category object by ID (handling both string UUIDs and numbers)
+                        // 2. Map the category name or the raw ID to our hardcoded bucket IDs (1-4)
+                        const skillCatIdRaw = (skill as any).categoryId || (skill as any).jobCategoryId;
+                        const resolvedCategory = categories.find(c => String(c.id) === String(skillCatIdRaw));
+                        const categoryName = resolvedCategory?.name || "";
+                        
+                        let bucketId = "4"; // Default to "Khác"
+                        if (categoryName.includes("Trồng trọt")) {
+                          bucketId = "1";
+                        } else if (categoryName.includes("Chăn nuôi")) {
+                          bucketId = "2";
+                        } else if (categoryName.includes("Thủy sản")) {
+                          bucketId = "3";
+                        } else {
+                          // Fallback to direct ID matching if it matches our 1, 2, 3, 4 pattern
+                          const rawIdStr = String(skillCatIdRaw || "").replace("cat-", "");
+                          if (["1", "2", "3", "4"].includes(rawIdStr)) {
+                            bucketId = rawIdStr;
+                          }
+                        }
+                        
+                        return bucketId === selectedSkillCategoryId;
                       })
                       .slice(0, skillLimit)
                       .map((skill: SkillResponse) => {

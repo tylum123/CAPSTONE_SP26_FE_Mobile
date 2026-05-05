@@ -322,7 +322,7 @@ export function WorkerHomeScreen({ navigation }: any) {
             </View>
 
             <View className="px-5 mb-4">
-              <SectionHeader title="Công việc mới đăng gần đây" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
+              <SectionHeader title="Việc mới đăng gần đây" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
             </View>
           </>
         }
