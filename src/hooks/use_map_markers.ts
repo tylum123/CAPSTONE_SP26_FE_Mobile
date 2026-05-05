@@ -33,13 +33,19 @@ export function useMapMarkers(jobs: Job[], userLocation: { latitude: number; lon
       groups[key].push(job);
     });
 
-    // 3. Create unique markers (if multiple jobs at one spot, the properties contain the list)
+    // 3. Create unique markers
     return Object.values(groups).map(group => {
       if (group.length === 1) return group[0];
+      
+      // If multiple jobs, check if any are urgent
+      const hasUrgent = group.some(j => j.urgent || j.isUrgent);
+      
       return {
         ...group[0],
-        id: `group-${group[0].id}`, // Unique ID for the group marker
+        id: `group-${group[0].id}`,
         isMulti: true,
+        urgent: hasUrgent,
+        isUrgent: hasUrgent,
         jobs: group
       };
     });

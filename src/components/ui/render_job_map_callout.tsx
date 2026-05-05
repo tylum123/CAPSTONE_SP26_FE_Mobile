@@ -14,9 +14,17 @@ interface RenderJobMapCalloutProps {
     onCalloutPress?: (job: any) => void;
 }
 
-function JobItem({ job, onCalloutPress, isLast }: { job: any, onCalloutPress?: (job: any) => void, isLast?: boolean }) {
+function JobItem({ 
+    job, 
+    onCalloutPress, 
+    width 
+}: { 
+    job: any, 
+    onCalloutPress?: (job: any) => void, 
+    width: number 
+}) {
     return (
-        <View style={[styles.jobItem, !isLast && styles.jobItemSeparator]}>
+        <View style={[styles.jobItem, { width }]}>
             <View style={styles.calloutHeader}>
                 <Text style={styles.calloutTitle} numberOfLines={1}>{job.title}</Text>
                 {(job.urgent || job.isUrgent) && <View style={styles.urgentBadge}><Text style={styles.urgentText}>GẤP</Text></View>}
@@ -64,34 +72,62 @@ function JobItem({ job, onCalloutPress, isLast }: { job: any, onCalloutPress?: (
 }
 
 export function RenderJobMapCallout({ selectedJob, onCalloutPress }: RenderJobMapCalloutProps) {
+    const [activeIndex, setActiveIndex] = React.useState(0);
+    
     if (!selectedJob) return null;
 
     const jobList = selectedJob.isMulti ? selectedJob.jobs : [selectedJob];
-    const calloutWidth = 240;
-    const maxHeight = 350;
+    const calloutWidth = 260;
+    const contentWidth = calloutWidth - 24; // padding horizontal 12 * 2
+
+    const handleScroll = (event: any) => {
+        const xOffset = event.nativeEvent.contentOffset.x;
+        const index = Math.round(xOffset / contentWidth);
+        if (index !== activeIndex) setActiveIndex(index);
+    };
 
     return (
         <MapLibreGL.MarkerView coordinate={[selectedJob.lng, selectedJob.lat]} anchor={{ x: 0.5, y: 1.1 }}>
-            <View style={[styles.customCallout, { width: calloutWidth, maxHeight }]}>
+            <View style={[styles.customCallout, { width: calloutWidth }]}>
                 {selectedJob.isMulti && (
                     <View style={styles.multiHeader}>
-                        <Text style={styles.multiHeaderText}>{jobList.length} công việc tại đây</Text>
+                        <Text style={styles.multiHeaderText}>
+                            {activeIndex + 1}/{jobList.length} công việc tại đây
+                        </Text>
                     </View>
                 )}
+                
                 <ScrollView 
-                    style={{ flexShrink: 1 }} 
-                    showsVerticalScrollIndicator={jobList.length > 2}
-                    contentContainerStyle={{ paddingBottom: 2 }}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleScroll}
+                    scrollEventThrottle={16}
                 >
-                    {jobList.map((job: any, index: number) => (
+                    {jobList.map((job: any) => (
                         <JobItem 
                             key={job.id} 
                             job={job} 
                             onCalloutPress={onCalloutPress} 
-                            isLast={index === jobList.length - 1} 
+                            width={contentWidth}
                         />
                     ))}
                 </ScrollView>
+
+                {jobList.length > 1 && (
+                    <View style={styles.dotsContainer}>
+                        {jobList.map((_: any, i: number) => (
+                            <View 
+                                key={i} 
+                                style={[
+                                    styles.dot, 
+                                    i === activeIndex ? styles.activeDot : styles.inactiveDot
+                                ]} 
+                            />
+                        ))}
+                    </View>
+                )}
+
                 <View style={styles.calloutArrow} />
             </View>
         </MapLibreGL.MarkerView>
@@ -176,31 +212,46 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   jobItem: {
-    paddingVertical: 8,
-  },
-  jobItemSeparator: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    marginBottom: 8,
-    paddingBottom: 12,
+    paddingVertical: 4,
   },
   multiHeader: {
     backgroundColor: '#f8fafc',
     marginHorizontal: -12,
     marginTop: -12,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   multiHeaderText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  activeDot: {
+    backgroundColor: '#059669',
+    width: 12,
+  },
+  inactiveDot: {
+    backgroundColor: '#cbd5e1',
   },
 });

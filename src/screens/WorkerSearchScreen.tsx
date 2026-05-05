@@ -111,15 +111,28 @@ export function WorkerSearchScreen({ navigation }: any) {
 
 
   /**
-   * Initializes screen by fetching user profile location or setting default coordinates.
+   * Initializes screen by fetching national results immediately, then updates with location.
    */
   const init = useCallback(async () => {
     try {
+      // 1. IMMEDIATE NATIONAL SEARCH (Toàn quốc)
+      // This ensures results are visible instantly without waiting for GPS
+      search({
+        pageNumber: 1,
+        pageSize: 20,
+        workerLatitude: undefined,
+        workerLongitude: undefined,
+        maxDistanceKm: 3000, // Explicitly national
+      }, user?.isDemo);
+
+      await refreshAppliedStatus();
+
+      // 2. FETCH LOCATION IN BACKGROUND
       let lat = 10.762622; // Default (HCM City)
       let lon = 106.660172;
       let locationSource = "default";
 
-      // 1. TRY GPS FIRST (High Accuracy)
+      // TRY GPS
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
@@ -129,15 +142,11 @@ export function WorkerSearchScreen({ navigation }: any) {
           lat = location.coords.latitude;
           lon = location.coords.longitude;
           locationSource = "gps";
-          console.log("[Location] Using GPS position:", lat, lon);
+          console.log("[Location] GPS found:", lat, lon);
         }
       } catch (gpsError) {
-        console.warn("[Location] GPS fetch failed, falling back to profile:", gpsError);
-      }
-
-      // 2. FALLBACK TO PROFILE (If GPS not granted or failed)
-      if (locationSource !== "gps" && !user?.isDemo) {
-        try {
+        // GPS failed, try profile
+        if (!user?.isDemo) {
           const profile = await workerProfileService.getProfile();
           if (profile?.primaryLocation) {
             const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
@@ -145,53 +154,25 @@ export function WorkerSearchScreen({ navigation }: any) {
               lat = loc.latitude;
               lon = loc.longitude;
               locationSource = "profile";
-              console.log("[Location] Using Profile position:", lat, lon);
             }
           }
-        } catch (profileError) {
-          console.error("[Location] Profile fetch failed:", profileError);
         }
       }
 
       const location = { latitude: lat, longitude: lon };
       setUserLocation(location);
       
+      // Update filters so subsequent searches (like refresh or load more) use the location
       updateFilter({ 
         workerLatitude: lat, 
         workerLongitude: lon,
       });
 
-      await refreshAppliedStatus();
-
-      // ULTIMATE FALLBACK: Search with location and page size to ensure results are relevant and immediately visible
-      const count = await search({
-        pageNumber: 1,
-        pageSize: 20,
-        workerLatitude: lat,
-        workerLongitude: lon,
-      }, user?.isDemo);
-
-      // REAL-WORLD DEFENSIVE LOGIC: 
-      // If a real user sees 0 results even with ultimate fallback, 
-      // it might be because the BE spatial search is broken (requiring coords that don't match).
-      // Try one more search with NO coordinates if we still have nothing.
-      if (!user?.isDemo && count === 0) {
-        console.log("[SearchFallback] Zero results with coords. Retrying with NO location filters.");
-        await search({
-          pageNumber: 1,
-          pageSize: 20,
-          workerLatitude: undefined,
-          workerLongitude: undefined,
-          maxDistanceKm: undefined
-        });
-      }
-
-
     } catch (err) {
-      // Fallback: search without any filters
+      // Final fallback if everything fails
       search({ pageNumber: 1, pageSize: 10, sortBy: "date" });
     }
-  }, [user?.isDemo]);
+  }, [user?.isDemo, search, updateFilter, refreshAppliedStatus]);
 
   useEffect(() => {
     init();
