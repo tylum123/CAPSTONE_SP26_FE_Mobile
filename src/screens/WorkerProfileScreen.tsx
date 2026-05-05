@@ -14,6 +14,7 @@ import { useAuth } from "../context/AuthContext";
 import { workerProfileService, walletService, jobService, dailyReportService } from "../services/export_services";
 import { WorkerProfileDTO } from "../types/define_worker_interfaces";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
+import { handleError } from "../utils/errorHandler";
 import { DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { parseLocation } from "../utils/locationUtils";
 
@@ -24,12 +25,6 @@ const EXPERIENCE_INFO: Record<number, { label: string; sub: string }> = {
 const DAYS_ORDER = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const LABELS_MAP: Record<string, string> = { T2: "Thứ 2", T3: "Thứ 3", T4: "Thứ 4", T5: "Thứ 5", T6: "Thứ 6", T7: "Thứ 7", CN: "Chủ nhật" };
 
-const CAT_COLORS: Record<string, { label: string; variant: "success" | "warning" | "info" | "secondary"; icon: any }> = {
-  "1": { label: "Trồng trọt", variant: "success",   icon: Tractor },
-  "2": { label: "Chăn nuôi", variant: "warning",   icon: Package },
-  "3": { label: "Máy móc",   variant: "info",      icon: Tag },
-  "4": { label: "Khác",      variant: "secondary", icon: MousePointer2 }
-};
 
 const fmtSched = (raw?: string | null) => {
   if (!raw?.trim()) return "Chưa cập nhật";
@@ -45,24 +40,20 @@ const fmtSched = (raw?: string | null) => {
   return sorted.map(id => LABELS_MAP[id]).join(", ");
 };
 
-const fmtCur = (val: number) => val >= 1000000 ? (val / 1000000).toFixed(1) + "M" : val >= 1000 ? (val / 1000).toFixed(0) + "K" : val.toString();
 
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<WorkerProfileDTO | null>(null);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showAllSkills, setShowAllSkills] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [statsData, setStatsData] = useState<any>(null);
   const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated) return;
       try {
-        setLoading(true);
         const [p, cats, dash] = await Promise.all([
           workerProfileService.getProfile(),
           jobService.getCategories().catch(() => []),
@@ -74,14 +65,13 @@ export function WorkerProfileScreen({ navigation }: any) {
         setStatsData(dash);
 
         // Conditional fetches requiring profile/user ID
-        const [w, reps] = await Promise.all([
+        const [_, reps] = await Promise.all([
           isAuthenticated && !user?.isDemo ? walletService.getWallet().catch(() => ({ balance: 0 })) : Promise.resolve({ balance: 8500000 }),
           isAuthenticated && !user?.isDemo && p?.id ? dailyReportService.getWorkerReports(p.id).catch(() => []) : Promise.resolve([])
         ]);
 
-        if (w && typeof w.balance === 'number') setWalletBalance(w.balance);
         setReports(reps);
-      } catch (err) { console.error("Profile error:", err); } finally { setLoading(false); }
+      } catch (err) { handleError(err, "Không thể tải hồ sơ người dùng."); }
     };
     fetchData();
     const sub = DeviceEventEmitter.addListener("REFRESH_DATA", fetchData);
@@ -120,7 +110,6 @@ export function WorkerProfileScreen({ navigation }: any) {
 
     const today = new Date();
     const dNum = today.getDay(); // 0 (Sun) - 6 (Sat)
-    const sunday = new Date(today);
     // Find previous Monday (Mon=1 in getDay)
     const monday = new Date(today);
     monday.setDate(today.getDate() - (dNum === 0 ? 6 : dNum - 1));
@@ -322,7 +311,7 @@ export function WorkerProfileScreen({ navigation }: any) {
                  { icon: Bell, label: "Thông báo", sub: "Hoạt động & Hệ thống", color: "#f59e0b", onPress: () => navigation.navigate("Notifications") },
                  { icon: Edit2, label: "Chỉnh sửa hồ sơ", sub: "Cập nhật thông tin cá nhân", color: "#3b82f6", onPress: () => navigation.navigate("EditProfile", { currentProfile: displayProf }) },
                  { icon: FileText, label: "Lịch sử báo cáo", sub: "Theo dõi công việc", color: "#64748b", onPress: () => navigation.navigate("Jobs") },
-                 { icon: ShieldAlert, label: "Trung tâm hỗ trợ", sub: "Khiếu nại & Trợ giúp", color: "#f43f5e", onPress: () => navigation.navigate("DisputeHistory") },
+                 { icon: ShieldAlert, label: "Khiếu nại của tôi", sub: "Khiếu nại & Trợ giúp", color: "#f43f5e", onPress: () => navigation.navigate("DisputeHistory") },
                  { icon: CreditCard, label: "Ví của tôi", sub: "Quản lý thu nhập", color: "#059669", onPress: () => navigation.navigate("WorkerWallet") },
                ].map((item, idx) => (
                  <TouchableOpacity 

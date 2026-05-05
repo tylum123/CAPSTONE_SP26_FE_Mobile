@@ -5,9 +5,9 @@
  * Dependencies: disputeService, mediaService, expo-image-picker. */
 
 import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
+import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Info, Camera, Send, AlertTriangle, CheckCircle2, X, ClipboardList, WalletCards, MoreHorizontal } from "lucide-react-native";
+import { ChevronLeft, Camera, Send, AlertTriangle, X, ClipboardList, WalletCards, MoreHorizontal } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Button } from "../components/ui/Button";
 import { Card, CardContent } from "../components/ui/Card";
@@ -15,7 +15,7 @@ import { disputeService } from "../services/dispute.service";
 import { mediaService } from "../services/media.service";
 import { dailyReportService } from "../services/daily_report.service";
 import { jobService } from "../services/job.service";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 import { hapticFeedback } from "../utils/haptic";
 import { DeviceEventEmitter } from "react-native";
 import { canSubmitDispute } from "../utils/disputeRules";
@@ -42,24 +42,10 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
 
-  const [feedback, setFeedback] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    variant: "success" | "error" | "info";
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: "",
-    message: "",
-    variant: "info",
-  });
-
   const [isValidating, setIsValidating] = useState(true);
 
   // Reset feedback state and sync params when entering or params change
   useEffect(() => {
-    setFeedback(p => ({ ...p, visible: false }));
     setIsSubmitting(false);
     setUploadProgress(false);
 
@@ -89,12 +75,8 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
       }
 
       if (!reportId) {
-        showFeedback({
-          title: "Lỗi dữ liệu",
-          message: "Không tìm thấy thông tin báo cáo để khiếu nại.",
-          variant: "error",
-          onConfirm: () => navigation.goBack(),
-        });
+        handleError(null, "Không tìm thấy thông tin báo cáo để khiếu nại.");
+        navigation.goBack();
         return;
       }
 
@@ -130,23 +112,15 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         }
 
         if (!canSubmitDispute(reportData)) {
-          showFeedback({
-            title: "Không thể khiếu nại",
-            message: "Báo cáo này hiện không ở trạng thái được phép khiếu nại hoặc đã được xử lý.",
-            variant: "error",
-            onConfirm: () => navigation.goBack(),
-          });
+          handleError(null, "Báo cáo này hiện không ở trạng thái được phép khiếu nại hoặc đã được xử lý.");
+          navigation.goBack();
           return;
         }
       } catch (error) {
         // If fetch fails, we still allow proceeding if params were passed, 
         if (!jobPostId && !jobTitle) {
-          showFeedback({
-            title: "Lỗi kết nối",
-            message: "Không thể xác thực trạng thái báo cáo. Vui lòng thử lại sau.",
-            variant: "error",
-            onConfirm: () => navigation.goBack(),
-          });
+          handleError(null, "Không thể xác thực trạng thái báo cáo. Vui lòng thử lại sau.");
+          navigation.goBack();
           return;
         }
       } finally {
@@ -157,18 +131,13 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
     validateReport();
   }, [reportId]);
 
-  const showFeedback = (config: any) => setFeedback({ ...config, visible: true });
-  const closeFeedback = () => {
-    const cb = feedback.onConfirm;
-    setFeedback(p => ({ ...p, visible: false }));
-    cb?.();
-  };
+
 
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        showFeedback({ title: "Quyền truy cập", message: "Ứng dụng cần quyền truy cập ảnh để gửi bằng chứng khiếu nại.", variant: "error" });
+        handleError(null, "Ứng dụng cần quyền truy cập ảnh để gửi bằng chứng khiếu nại.");
         return;
       }
 
@@ -187,13 +156,13 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         });
       }
     } catch (error) {
-      showFeedback({ title: "Lỗi", message: "Không thể chọn ảnh lúc này.", variant: "error" });
+      handleError(error, "Không thể chọn ảnh lúc này.");
     }
   };
 
   const handleSubmit = async () => {
     if (!reason.trim()) {
-      showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập lý do vắn tắt của khiếu nại.", variant: "error" });
+      handleError(null, "Vui lòng nhập lý do vắn tắt của khiếu nại.");
       return;
     }
 
@@ -215,15 +184,9 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         });
 
         hapticFeedback.success();
-        showFeedback({
-          title: "Cập nhật thành công",
-          message: "Khiếu nại của bạn đã được cập nhật thông tin mới nhất.",
-          variant: "success",
-          onConfirm: () => {
-            DeviceEventEmitter.emit("REFRESH_DATA");
-            navigation.goBack();
-          },
-        });
+        handleSuccess("Khiếu nại của bạn đã được cập nhật thông tin mới nhất.");
+        DeviceEventEmitter.emit("REFRESH_DATA");
+        navigation.goBack();
       } else {
         await disputeService.createDispute({
           jobPostId: jobPostId,
@@ -234,24 +197,14 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
         });
 
         hapticFeedback.success();
-        showFeedback({
-          title: "Gửi khiếu nại thành công",
-          message: "Khiếu nại của bạn đã được ghi nhận. Chúng tôi sẽ xem xét và phản hồi trong thời gian sớm nhất.",
-          variant: "success",
-          onConfirm: () => {
-            DeviceEventEmitter.emit("REFRESH_DATA");
-            navigation.navigate("DisputeHistory");
-          },
-        });
+        handleSuccess("Khiếu nại của bạn đã được ghi nhận. Chúng tôi sẽ xem xét và phản hồi trong thời gian sớm nhất.");
+        DeviceEventEmitter.emit("REFRESH_DATA");
+        navigation.navigate("DisputeHistory");
       }
     } catch (error: any) {
       setUploadProgress(false);
       hapticFeedback.error();
-      showFeedback({
-        title: "Lỗi hệ thống",
-        message: error.message || "Không thể gửi khiếu nại lúc này. Vui lòng thử lại sau.",
-        variant: "error",
-      });
+      handleError(error, error.message || "Không thể gửi khiếu nại lúc này. Vui lòng thử lại sau.");
     } finally {
       setIsSubmitting(false);
     }
@@ -404,14 +357,6 @@ export function SubmitDisputeScreen({ navigation, route }: any) {
       </ScrollView>
       )}
 
-      <FeedbackModal
-        visible={feedback.visible}
-        title={feedback.title}
-        message={feedback.message}
-        variant={feedback.variant}
-        onClose={closeFeedback}
-        onConfirm={feedback.onConfirm}
-      />
     </SafeAreaView>
   );
 }

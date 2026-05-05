@@ -39,6 +39,7 @@ import { walletService } from "../services/wallet.service";
 import { useAuth } from "../context/AuthContext";
 import { WalletTransactionType, WalletTransactionTypeLabels } from "../constants/enums";
 import { WalletTransactionDTO } from "../types/export_type_definitions";
+import { handleError } from "../utils/errorHandler";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -124,7 +125,8 @@ function StatusChip({ status }: { status: TxStatus }) {
 
 export function WorkerWalletScreen() {
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
+  const { } = useAuth(); // hook may be kept for auth context if needed but it isn't even using the output. I'll just remove the whole line.
+
 
   const [balance, setBalance]           = useState(0);
   const [escrow, setEscrow]             = useState(0);
@@ -213,7 +215,7 @@ export function WorkerWalletScreen() {
       if (!isInitial) setPage(currentPage);
 
     } catch (err) {
-      console.log("[WorkerWalletScreen] Fetch error:", err);
+      handleError(err, "Không thể tải dữ liệu ví.");
       if (isInitial) {
         setBalance(0);
         setTransactions([]);
@@ -232,7 +234,7 @@ export function WorkerWalletScreen() {
       const detail = await walletService.getTransactionDetail(id);
       setSelectedTx(detail);
     } catch (error) {
-      console.log("[fetchDetail] error", error);
+      handleError(error, "Không thể tải chi tiết giao dịch.");
     } finally {
       setIsDetailLoading(false);
     }

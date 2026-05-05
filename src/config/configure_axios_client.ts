@@ -9,13 +9,11 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { CONFIG } from "./export_configurations";
 import {
-  STORAGE_KEYS,
   REQUEST_HEADERS,
   HTTP_STATUS,
-  ERROR_MESSAGES,
   API_ENDPOINTS,
 } from "../constants/api";
 import { authTokenService } from "../services/auth-token.service";
@@ -52,20 +50,7 @@ api.interceptors.request.use(
 );
 
 // Response interceptor
-let isRefreshing = false;
 let isLoggingOut = false; // New flag to prevent redundant logouts
-let failedQueue: any[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
 
 api.interceptors.response.use(
   (response) => {

@@ -5,8 +5,9 @@
  * Dependencies: jobService, DeviceEventEmitter. */
 
 import { useState } from "react";
-import { Alert, DeviceEventEmitter } from "react-native";
+import { DeviceEventEmitter } from "react-native";
 import { jobService } from "../services/export_services";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 export function useApplyForJob(
   jobId: string | number,
@@ -18,16 +19,12 @@ export function useApplyForJob(
   onGoBack: () => void
 ) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
 
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const handleQuickApply = async () => {
     if (!isAuthenticated || user?.isDemo) {
-      if (selectedTimeSlots.length === 0) { Alert.alert("Lỗi", "Vui lòng chọn ít nhất một khung giờ"); return; }
-      Alert.alert("Thành công", `Đã apply mẫu thành công cho ${selectedTimeSlots.length} khung giờ!`);
+      if (selectedTimeSlots.length === 0) { handleError("Vui lòng chọn ít nhất một khung giờ"); return; }
+      handleSuccess(`Đã apply mẫu thành công cho ${selectedTimeSlots.length} khung giờ!`);
       onGoBack();
       return;
     }
@@ -37,7 +34,7 @@ export function useApplyForJob(
       const isDailyJob = jobDetail?.timeSlots && jobDetail.timeSlots.length > 0;
       
       if (isDailyJob && selectedTimeSlots.length === 0) {
-        Alert.alert("Thông báo", "Vui lòng chọn ít nhất một ngày làm việc.");
+        handleError("Vui lòng chọn ít nhất một ngày làm việc.");
         setIsSubmitting(false);
         return;
       }
@@ -58,22 +55,10 @@ export function useApplyForJob(
       });
       setIsApplied(true);
       DeviceEventEmitter.emit("REFRESH_DATA");
-      Alert.alert("Thành công", "Đã gửi đơn ứng tuyển!");
-      showFeedback({ 
-        title: "Thành công", 
-        message: "Bạn đã gửi đơn ứng tuyển thành công. Vui lòng chờ phản hồi từ farmer.", 
-        variant: "success", 
-        onConfirm: () => onGoBack() 
-      });
+      handleSuccess("Bạn đã gửi đơn ứng tuyển thành công. Vui lòng chờ phản hồi từ chủ nông trại.");
+      onGoBack();
     } catch (error: any) {
-      console.error("Apply error:", error);
-      const apiErrorMessage = error.response?.data?.message || "";
-      Alert.alert("Lỗi", `Không thể gửi đơn ứng tuyển. ${apiErrorMessage}`.trim() || "Vui lòng thử lại.");
-      showFeedback({ 
-        title: "Lỗi ứng tuyển", 
-        message: error.message || "Đã xảy ra lỗi. Vui lòng thử lại sau.", 
-        variant: "error" 
-      });
+      handleError(error, "Không thể gửi đơn ứng tuyển.");
     } finally {
       setIsSubmitting(false);
     }
@@ -81,9 +66,6 @@ export function useApplyForJob(
 
   return {
     isSubmitting,
-    feedback,
-    showFeedback,
-    closeFeedback,
     handleQuickApply
   };
 }

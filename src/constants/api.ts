@@ -48,6 +48,10 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: `${API_PREFIX}/user/change-password`,
     UPLOAD_AVATAR: `${API_PREFIX}/user/avatar`,
   },
+  // Farmer
+  FARMER: {
+    PROFILE_BY_USER: (userId: string) => `${API_PREFIX}/farmer/${userId}`,
+  },
   // Jobs
   JOB: {
     CATEGORY_LIST: `${API_PREFIX}/job/category`,

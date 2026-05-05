@@ -21,6 +21,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { messageService } from '../services/message.service';
 import type { MessageDTO, UserBriefDTO } from '../types/define_worker_interfaces';
+import { handleError } from '../utils/errorHandler';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ export function useChat(
       // Mark conversation as read
       await messageService.markAsRead({ senderId: farmerId }).catch(() => {});
     } catch (err) {
-      console.log('[useChat] fetchMessages error:', err);
+      // Silently ignore polling fetch errors to avoid spamming UI
     } finally {
       if (isMounted.current) setLoading(false);
     }
@@ -150,7 +151,7 @@ export function useChat(
       // Refresh shortly after to get the real message with server id
       setTimeout(fetchMessages, 500);
     } catch (err) {
-      console.log('[useChat] send error:', err);
+      handleError(err, "Không thể gửi tin nhắn.");
       // Rollback optimistic message
       setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
     }

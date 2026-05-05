@@ -8,6 +8,7 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Star, MessageCircle } from "lucide-react-native";
 import { Avatar } from "../ui/Avatar";
+import { FarmerProfileModal } from "./FarmerProfileModal";
 
 type Props = {
   jobDetail: any;
@@ -18,6 +19,8 @@ type Props = {
 };
 
 export function RenderFarmerInfoCard({ jobDetail, isAuthenticated, user, lastMessage, onChatPress }: Props) {
+  const [profileModalVisible, setProfileModalVisible] = React.useState(false);
+
   if (!jobDetail?.farmer) return null;
   const isDemo = (!isAuthenticated || user?.isDemo);
 
@@ -40,16 +43,20 @@ export function RenderFarmerInfoCard({ jobDetail, isAuthenticated, user, lastMes
       }
     }
   }
-  
+  const farmerUserIdForModal = jobDetail.farmerUserId || jobDetail.farmer.userId;
+
   return (
-    <View className="bg-white rounded-[20px] flex-row items-center p-4 mb-4 gap-4 border border-slate-100" style={isDemo ? { shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 } : undefined}>
-      {farmerAvatar ? (
-        <Avatar source={{ uri: farmerAvatar }} size={50} />
-      ) : (
-        <Avatar fallback={farmerName[0] || "C"} size={50} />
-      )}
-      
-      <View className="flex-1">
+    <>
+      <View className="bg-white rounded-[20px] flex-row items-center p-4 mb-4 gap-4 border border-slate-100" style={isDemo ? { shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 } : undefined}>
+        <TouchableOpacity onPress={() => farmerUserIdForModal && setProfileModalVisible(true)} activeOpacity={0.7}>
+          {farmerAvatar ? (
+            <Avatar source={{ uri: farmerAvatar }} size={50} />
+          ) : (
+            <Avatar fallback={farmerName[0] || "C"} size={50} />
+          )}
+        </TouchableOpacity>
+        
+        <View className="flex-1">
         <Text className="text-[15px] font-bold text-slate-800 mb-1">{farmerName}</Text>
         <View className="flex-row items-center flex-wrap">
           <View className="flex-row items-center gap-1 mr-2">
@@ -73,5 +80,14 @@ export function RenderFarmerInfoCard({ jobDetail, isAuthenticated, user, lastMes
         <MessageCircle size={16} color="#059669" />
       </TouchableOpacity>
     </View>
+    
+    {farmerUserIdForModal && (
+      <FarmerProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        farmerUserId={farmerUserIdForModal}
+      />
+    )}
+    </>
   );
 }

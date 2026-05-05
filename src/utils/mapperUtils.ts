@@ -37,7 +37,7 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     description: cleanDescription,
     farmer: { 
       id: job.farmerProfileId,
-      userId: fProfile?.userId || (job as any).farmerUserId || null,
+      userId: job.farmerUserId || fProfile?.userId || null,
       name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
       avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
       rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
@@ -63,6 +63,15 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     duration: duration,
     workload: job.workload || "Thỏa thuận",
     requiredWorkers: job.workersNeeded || 0,
+    requiredWorkersRange: (job as any).workerCountPerDays?.length > 0 
+      ? (() => {
+          const counts = (job as any).workerCountPerDays.map((c: any) => c.neededWorkerCount).filter((n: any) => n !== undefined);
+          if (counts.length === 0) return null;
+          const min = Math.min(...counts);
+          const max = Math.max(...counts);
+          return min === max ? null : `${min} - ${max}`;
+        })()
+      : null,
     appliedWorkers: job.workersAccepted || 0,
     requiredSkills: job.jobSkillRequirements?.length > 0 ? job.jobSkillRequirements.map(s => s.name).join(", ") : "Nông nghiệp",
     genderPreference: "Không yêu cầu",
@@ -83,13 +92,13 @@ export const getCategoryThumbnail = (categoryId?: string, title?: string): strin
 
   const t = title?.toLowerCase() || "";
   
-  if (t.includes("nuôi") || t.includes("bò") || t.includes("heo") || t.includes("lợn") || t.includes("gà") || t.includes("vịt")) {
-    return IMG_LIVESTOCK;
-  }
-  if (t.includes("thủy sản") || t.includes("cá") || t.includes("tôm") || t.includes("ao") || t.includes("lưới")) {
+  if (t.includes("thủy sản") || t.includes("cá") || t.includes("tôm") || t.includes("ao") || t.includes("lưới") || categoryId === 'cat-3') {
     return IMG_AQUACULTURE;
   }
-  if (categoryId === 'cat-1' || categoryId === 'cat-2' || t.includes("trồng") || t.includes("thu hoạch") || t.includes("lúa") || t.includes("vườn") || t.includes("cây")) {
+  if (t.includes("chăn nuôi") || t.includes("gia súc") || t.includes("gia cầm") || t.includes("bò") || t.includes("heo") || t.includes("lợn") || t.includes("gà") || t.includes("vịt") || categoryId === 'cat-2') {
+    return IMG_LIVESTOCK;
+  }
+  if (categoryId === 'cat-1' || t.includes("trồng") || t.includes("thu hoạch") || t.includes("lúa") || t.includes("vườn") || t.includes("cây")) {
     return IMG_FARMING;
   }
   

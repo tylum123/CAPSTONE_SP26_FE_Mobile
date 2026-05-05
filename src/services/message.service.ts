@@ -12,7 +12,6 @@ import {
   CreateMessageRequest,
   MarkConversationAsReadRequest,
   ConversationDTO,
-  PaginatedResponse, 
 } from "../types/export_type_definitions";
 
 // Message Service

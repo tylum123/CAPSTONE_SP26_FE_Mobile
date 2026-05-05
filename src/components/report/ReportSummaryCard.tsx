@@ -6,7 +6,6 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, Dimensions } from "react-native";
 import {
-  Briefcase,
   Calendar,
   CheckCircle2,
   Coins,

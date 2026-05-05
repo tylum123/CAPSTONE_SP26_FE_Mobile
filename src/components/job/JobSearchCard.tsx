@@ -6,7 +6,7 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { MapPin, CheckCircle2, Clock } from "lucide-react-native";
+import { MapPin, Clock, Users } from "lucide-react-native";
 import { Avatar } from "../ui/Avatar";
 import { Badge } from "../ui/Badge";
 import { JobDiscoveryDTO } from "../../types/export_type_definitions";
@@ -48,28 +48,28 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
         </View>
 
         <View className="flex-row items-center justify-between mb-3 bg-slate-50 rounded-xl px-3 py-2">
-          <View className="flex-row items-center gap-1.5 flex-1 pr-2">
-            <MapPin size={14} color="#64748b" />
-            <Text className="text-xs text-slate-600 font-medium" numberOfLines={1} ellipsizeMode="tail">
+          <View className="flex-row items-center gap-1.5 flex-1 pr-1">
+            <MapPin size={12} color="#64748b" />
+            <Text className="text-[11px] text-slate-600 font-medium" numberOfLines={1}>
               {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />
-          <View className="flex-row items-center gap-1.5">
-            <CheckCircle2 size={14} color="#059669" />
-            <Text className="text-xs text-primary-700 font-bold">
-              {job.matchScore !== undefined && job.matchScore !== null 
-                ? `${Math.round(job.matchScore > 1 ? job.matchScore : job.matchScore * 100)}% khớp` 
-                : "Phù hợp"}
+          <View className="flex-row items-center gap-1.5 flex-1 px-1 justify-center">
+            <Users size={12} color="#64748b" />
+            <Text className="text-[11px] text-slate-600 font-bold" numberOfLines={1}>
+              {(job as any).requiredWorkersRange 
+                ? `${(job as any).requiredWorkersRange} người/ngày`
+                : `${job.workersNeeded || 0} người${job.jobTypeId !== 1 ? "/ngày" : ""}`}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />
-          <View className="flex-row items-center gap-1.5">
-            <Clock size={14} color="#64748b" />
-            <Text className="text-xs text-slate-600 font-medium">
+          <View className="flex-row items-center gap-1.5 flex-1 pl-1 justify-end">
+            <Clock size={12} color="#64748b" />
+            <Text className="text-[11px] text-slate-600 font-medium" numberOfLines={1}>
               {job.startTime && job.endTime 
                 ? `${job.startTime.substring(0, 5)} - ${job.endTime.substring(0, 5)}` 
-                : (job.estimatedHours ? `${job.estimatedHours}h` : "N/A")}
+                : (job.estimatedHours ? `${job.estimatedHours}h` : "Thỏa thuận")}
             </Text>
           </View>
         </View>

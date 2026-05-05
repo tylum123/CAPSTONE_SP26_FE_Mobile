@@ -10,11 +10,11 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, ShieldCheck, Mail, Lock, CheckCircle } from "lucide-react-native";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
+import { ArrowLeft, ShieldCheck, Lock, CheckCircle } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { authService } from "../services/export_services";
 import { getErrorMessage } from "../utils/error_handling";
+import { handleError, handleSuccess } from "../utils/errorHandler";
 
 export function VerifyEmailScreen({ route, navigation }: any) {
   const { email } = route.params || {};
@@ -22,12 +22,8 @@ export function VerifyEmailScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [timer, setTimer] = useState(60);
+  // const timerRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
-
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   useEffect(() => {
     if (timer > 0) {
@@ -39,14 +35,14 @@ export function VerifyEmailScreen({ route, navigation }: any) {
   }, [timer]);
 
   const handleVerify = async () => {
-    if (!otp || otp.length < 4) return showFeedback({ title: "Lỗi", message: "Vui lòng nhập mã OTP hợp lệ", variant: "error" });
+    if (!otp || otp.length < 4) { handleError(null, "Vui lòng nhập mã OTP hợp lệ"); return; }
     setIsLoading(true);
     try {
       await authService.verifyEmail(email, otp);
       setIsSuccess(true);
     } catch (error) { 
       const msg = getErrorMessage(error, "Xác thực thất bại. Vui lòng kiểm tra lại mã OTP.");
-      showFeedback({ title: "Thất bại", message: msg, variant: "error" }); 
+      handleError(null, msg); 
     }
     finally { setIsLoading(false); }
   };
@@ -57,10 +53,10 @@ export function VerifyEmailScreen({ route, navigation }: any) {
     try {
       await authService.resendVerification(email);
       setTimer(60);
-      showFeedback({ title: "Thành công", message: "Mã xác thực mới đã được gửi đến email của bạn.", variant: "success" });
+      handleSuccess("Mã xác thực mới đã được gửi đến email của bạn.");
     } catch (error) { 
       const msg = getErrorMessage(error, "Không thể gửi lại mã. Vui lòng thử lại sau.");
-      showFeedback({ title: "Lỗi", message: msg, variant: "error" }); 
+      handleError(null, msg); 
     }
     finally { setIsLoading(false); }
   };
@@ -145,7 +141,6 @@ export function VerifyEmailScreen({ route, navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <FeedbackModal visible={feedback.visible} title={feedback.title} message={feedback.message} variant={feedback.variant} onConfirm={closeFeedback} onClose={closeFeedback} />
     </SafeAreaView>
   );
 }

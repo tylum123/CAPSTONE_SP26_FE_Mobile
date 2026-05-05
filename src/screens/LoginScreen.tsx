@@ -13,8 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
-  ImageBackground,
   Image,
 } from "react-native";
 import { Eye, EyeOff, Lock, Mail, Phone } from "lucide-react-native";
@@ -22,12 +20,11 @@ import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
-import Constants from "expo-constants";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { CONFIG } from "../config/export_configurations";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { getErrorMessage } from "../utils/error_handling";
+import { handleError } from "../utils/errorHandler";
 
 if (CONFIG.GOOGLE_WEB_CLIENT_ID) {
   GoogleSignin.configure({
@@ -48,50 +45,45 @@ export function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
   const { login, loginWithGoogle, demoLogin } = useAuth();
-
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
 
   const handleLogin = async () => {
     const identifier = activeTab === "phone" ? phoneNumber.trim() : email.trim();
-    if (!identifier || !password) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
+    if (!identifier || !password) { handleError(null, "Vui lòng nhập đầy đủ thông tin"); return; }
     if (activeTab === "phone") {
-      if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(identifier)) { showFeedback({ title: "Lỗi định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
+      if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(identifier)) { handleError(null, "Số điện thoại không hợp lệ"); return; }
     } else {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) { showFeedback({ title: "Lỗi định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) { handleError(null, "Email không hợp lệ"); return; }
     }
     setLoading(true);
     try { await login(identifier, password); }
     catch (error: any) { 
       const errorMessage = getErrorMessage(error, "Số điện thoại/Email hoặc mật khẩu không đúng.");
-      showFeedback({ title: "Đăng nhập thất bại", message: errorMessage, variant: "error" }); 
+      handleError(null, errorMessage); 
     }
     finally { setLoading(false); }
   };
 
   const handleGoogleLogin = async () => {
-    if (!CONFIG.GOOGLE_WEB_CLIENT_ID) { showFeedback({ title: "Cấu hình thiếu", message: "GOOGLE_WEB_CLIENT_ID chưa được cấu hình.", variant: "error" }); return; }
+    if (!CONFIG.GOOGLE_WEB_CLIENT_ID) { handleError(null, "GOOGLE_WEB_CLIENT_ID chưa được cấu hình."); return; }
     try {
       setLoading(true);
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       const idToken = userInfo.data?.idToken;
-      if (!idToken) { showFeedback({ title: "Lỗi kết nối", message: "Không lấy được Google ID token.", variant: "error" }); return; }
+      if (!idToken) { handleError(null, "Không lấy được Google ID token."); return; }
       await loginWithGoogle(idToken, 3);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       if (error?.message === "UNAUTHORIZED_ROLE") {
-        showFeedback({ title: "Không có quyền", message: "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng cho Worker.", variant: "error" });
+        handleError(null, "Tài khoản của bạn không có quyền đăng nhập vào ứng dụng cho Worker.");
         return;
       }
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       else if (error.code === statusCodes.IN_PROGRESS) return;
-      else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) showFeedback({ title: "Lỗi Google", message: "Google Play Services không khả dụng.", variant: "error" });
+      else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) handleError(null, "Google Play Services không khả dụng.");
       else {
-        showFeedback({ title: "Lỗi Đăng Nhập", message: `Đã có lỗi xảy ra trong quá trình đăng nhập Google. Code: ${error.code || "No code"}`, variant: "error" });
+        handleError(null, `Đã có lỗi xảy ra trong quá trình đăng nhập Google. Code: ${error.code || "No code"}`);
       }
     } finally { setLoading(false); }
   };
@@ -244,15 +236,6 @@ export function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <FeedbackModal
-        visible={feedback.visible}
-        title={feedback.title}
-        message={feedback.message}
-        variant={feedback.variant}
-        onConfirm={closeFeedback}
-        onClose={closeFeedback}
-      />
     </View>
   );
 }

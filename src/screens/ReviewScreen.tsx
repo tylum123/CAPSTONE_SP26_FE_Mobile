@@ -14,6 +14,7 @@ import { jobService } from "../services/job.service";
 import { dailyReportService } from "../services/daily_report.service";
 import { hapticFeedback } from "../utils/haptic";
 import { useAuth } from "../context/AuthContext";
+import { handleError } from "../utils/errorHandler";
 import { COLORS, SHADOWS } from "../constants/theme";
 
 export function ReviewScreen({ navigation, route }: any) {
@@ -146,7 +147,7 @@ export function ReviewScreen({ navigation, route }: any) {
 
   const handleSubmit = async () => {
     if (rating === 0) { 
-      showFeedback({ title: "Thông báo", message: "Vui lòng chọn số sao đánh giá", variant: "info" }); 
+      handleError(null, "Vui lòng chọn số sao đánh giá"); 
       return; 
     }
     
@@ -196,11 +197,7 @@ export function ReviewScreen({ navigation, route }: any) {
       });
     } catch (error: any) {
       hapticFeedback.error();
-      showFeedback({ 
-        title: "Lỗi", 
-        message: error.message || "Không thể gửi đánh giá. Vui lòng thử lại sau.", 
-        variant: "error" 
-      });
+      handleError(error, "Không thể gửi đánh giá. Vui lòng thử lại sau.");
     } finally {
       setIsSubmitting(false);
     }
@@ -229,11 +226,7 @@ export function ReviewScreen({ navigation, route }: any) {
           });
         } catch (error: any) {
           hapticFeedback.error();
-          showFeedback({ 
-            title: "Lỗi", 
-            message: error.message || "Không thể xóa đánh giá lúc này.", 
-            variant: "error" 
-          });
+          handleError(error, "Không thể xóa đánh giá lúc này.");
         } finally {
           setIsSubmitting(false);
         }

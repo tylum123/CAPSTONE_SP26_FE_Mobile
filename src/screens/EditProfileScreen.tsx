@@ -29,7 +29,7 @@ import { getErrorMessage } from "../utils/error_handling";
 import { UpdateWorkerProfileRequest } from "../types/export_type_definitions";
 
 export function EditProfileScreen({ navigation, route }: any) {
-  const { isAuthenticated, user } = useAuth();
+  useAuth();
   const { currentProfile } = route.params || {};
   const insets = useSafeAreaInsets();
 
@@ -75,7 +75,6 @@ export function EditProfileScreen({ navigation, route }: any) {
   });
 
   const [loading, setLoading] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSkillModal, setShowSkillModal] = useState(false);
@@ -155,14 +154,12 @@ export function EditProfileScreen({ navigation, route }: any) {
   };
 
   const handlePickAvatar = async () => {
-    setAvatarUploading(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.8 });
       if (result.canceled || !result.assets?.[0]) return;
       const uploaded = await mediaService.uploadImage({ uri: result.assets[0].uri, name: "avatar.jpg", type: "image/jpeg" });
       updateField("avatarUrl", uploaded);
     } catch { setFeedback({ visible: true, title: "Lỗi", message: "Không thể tải ảnh lên.", variant: "error" }); }
-    finally { setAvatarUploading(false); }
   };
 
   const toggleDay = useCallback((dayId: string) => {

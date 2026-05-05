@@ -9,7 +9,6 @@ import { Clock, Info } from "lucide-react-native";
 
 interface Props {
   isPending: boolean;
-  isApproved: boolean;
   approvedPercent: number;
   showDisputeButton?: boolean;
   isAppealing: boolean;
@@ -18,7 +17,6 @@ interface Props {
 
 export function ReportActionBar({
   isPending,
-  isApproved,
   approvedPercent,
   showDisputeButton,
   isAppealing,

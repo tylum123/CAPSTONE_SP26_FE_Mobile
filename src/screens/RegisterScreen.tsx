@@ -9,11 +9,20 @@ import {
   View, Text, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Image,
 } from "react-native";
-import { Phone, Lock, Eye, EyeOff, Mail } from "lucide-react-native";
+import { Phone, Lock, Eye, EyeOff, Mail, Check, X } from "lucide-react-native";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
-import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { getErrorMessage } from "../utils/error_handling";
+import { handleError, handleSuccess } from "../utils/errorHandler";
+
+function RequirementItem({ met, label }: { met: boolean; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      {met ? <Check size={12} color="#059669" strokeWidth={3} /> : <X size={12} color="#f43f5e" strokeWidth={3} />}
+      <Text className={["text-[12px]", met ? "text-primary-700 font-medium" : "text-slate-400"].join(" ")}>{label}</Text>
+    </View>
+  );
+}
 
 export function RegisterScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber]       = useState("");
@@ -24,32 +33,38 @@ export function RegisterScreen({ navigation }: any) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading]               = useState(false);
   const [focusedField, setFocusedField]     = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ visible: boolean; title: string; message: string; variant: "success" | "error" | "info"; onConfirm?: () => void }>({ visible: false, title: "", message: "", variant: "info" });
   const { register } = useAuth();
 
-  const showFeedback = (params: { title: string; message: string; variant?: "success" | "error" | "info"; onConfirm?: () => void }) =>
-    setFeedback({ visible: true, title: params.title, message: params.message, variant: params.variant || "info", onConfirm: params.onConfirm });
-  const closeFeedback = () => { const cb = feedback.onConfirm; setFeedback((p) => ({ ...p, visible: false })); cb?.(); };
+  const validatePassword = (pass: string) => {
+    return {
+      length: pass.length >= 8,
+      uppercase: /[A-Z]/.test(pass),
+      number: /[0-9]/.test(pass),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(pass),
+    };
+  };
+
+  const passwordRequirements = validatePassword(password);
+  const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
 
   const handleRegister = async () => {
-    if (!phoneNumber || !email || !password || !confirmPassword) { showFeedback({ title: "Thiếu thông tin", message: "Vui lòng nhập đầy đủ thông tin", variant: "error" }); return; }
-    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { showFeedback({ title: "Sai định dạng", message: "Số điện thoại không hợp lệ", variant: "error" }); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFeedback({ title: "Sai định dạng", message: "Email không hợp lệ", variant: "error" }); return; }
-    if (password !== confirmPassword) { showFeedback({ title: "Mật khẩu không khớp", message: "Mật khẩu xác nhận không khớp", variant: "error" }); return; }
-    if (password.length < 6) { showFeedback({ title: "Mật khẩu yếu", message: "Mật khẩu phải có ít nhất 6 ký tự", variant: "error" }); return; }
+    if (!phoneNumber || !email || !password || !confirmPassword) { handleError(null, "Vui lòng nhập đầy đủ thông tin"); return; }
+    if (!/^(0|\+84)(3|5|7|8|9)[0-9]{8}$/.test(phoneNumber)) { handleError(null, "Số điện thoại không hợp lệ"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { handleError(null, "Email không hợp lệ"); return; }
+    if (password !== confirmPassword) { handleError(null, "Mật khẩu xác nhận không khớp"); return; }
+    
+    if (!passwordRequirements.length) { handleError(null, "Mật khẩu phải có ít nhất 8 ký tự"); return; }
+    if (!isPasswordValid) { handleError(null, "Mật khẩu chưa đủ mạnh. Vui lòng kiểm tra các yêu cầu bên dưới."); return; }
+    
     setLoading(true);
     try {
       const trimmedEmail = email.trim();
       await register({ email: trimmedEmail, phoneNumber: phoneNumber.trim(), password, roleId: 3 });
-      showFeedback({ 
-        title: "Thành công", 
-        message: "Mã OTP đã được gửi về email của bạn. Vui lòng kiểm tra và xác thực.", 
-        variant: "success", 
-        onConfirm: () => navigation.navigate("VerifyEmail", { email: trimmedEmail }) 
-      });
+      handleSuccess("Mã OTP đã được gửi về email của bạn. Vui lòng kiểm tra và xác thực.");
+      navigation.navigate("VerifyEmail", { email: trimmedEmail });
     } catch (error) { 
       const errorMessage = getErrorMessage(error, "Đăng ký thất bại. Vui lòng thử lại.");
-      showFeedback({ title: "Thất bại", message: errorMessage, variant: "error" }); 
+      handleError(null, errorMessage); 
     }
     finally { setLoading(false); }
   };
@@ -110,6 +125,18 @@ export function RegisterScreen({ navigation }: any) {
                       </TouchableOpacity>
                     )}
                   </View>
+
+                  {field.key === "password" && password.length > 0 && (
+                    <View className="mt-2.5 px-1">
+                      <Text className="text-[11px] font-bold text-slate-400 mb-2 uppercase">Yêu cầu:</Text>
+                      <View className="flex-row flex-wrap gap-x-4 gap-y-1.5">
+                        <RequirementItem met={passwordRequirements.length} label="Ít nhất 8 ký tự" />
+                        <RequirementItem met={passwordRequirements.uppercase} label="Chữ hoa" />
+                        <RequirementItem met={passwordRequirements.number} label="Chữ số" />
+                        <RequirementItem met={passwordRequirements.special} label="Ký tự đặc biệt (!@#...)" />
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -125,15 +152,6 @@ export function RegisterScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <FeedbackModal
-        visible={feedback.visible}
-        title={feedback.title}
-        message={feedback.message}
-        variant={feedback.variant}
-        onConfirm={closeFeedback}
-        onClose={closeFeedback}
-      />
     </View>
   );
 }

@@ -54,9 +54,16 @@ export interface JobSkillRequirementSummaryDTO {
   name: string;
 }
 
+export interface JobPostDayDTO {
+  workDate: string;
+  workersNeeded: number;
+  workersAccepted: number;
+}
+
 export interface JobPostDTO {
   id: string;
   farmerProfileId: string;
+  farmerUserId?: string;
   farmer?: FarmerProfileDTO;
   farmerProfile?: FarmerProfileDTO;
   contactName: string;
@@ -68,11 +75,13 @@ export interface JobPostDTO {
   address: string;
   startDate: string;
   endDate: string;
-  selectedDays: string[];
+  selectedDays?: string[];
+  jobPostDays?: JobPostDayDTO[];
   startTime: string;
   endTime: string;
   workersNeeded: number;
   workersAccepted: number;
+  workers?: any[];
   jobTypeId: number;
   wageAmount: number;
   requirements: string[];
@@ -91,6 +100,7 @@ export interface JobPostDTO {
 export interface WorkerCountPerDay {
   date: string;
   acceptedWorkerCount: number;
+  neededWorkerCount: number;
 }
 
 export interface JobDiscoveryDTO extends JobPostDTO {
@@ -118,17 +128,17 @@ export interface JobAttachmentDTO {
 }
 
 export interface FarmerProfileDTO {
-  id: string;
-  userId: string;
+  id?: string;
+  userId?: string;
   contactName: string;
-  address: string;
-  dateOfBirth: string;
+  address?: string;
+  dateOfBirth?: string;
   averageRating: number;
   totalJobsPosted: number;
   totalJobsCompleted: number;
   avatarUrl: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface JobDetailDTO {

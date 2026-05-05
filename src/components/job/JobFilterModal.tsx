@@ -18,9 +18,8 @@ import {
   Dimensions
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Calendar, Check } from "lucide-react-native";
-import { Button } from "../ui/Button";
-import { JobSearchFilterRequest, JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
+import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Check, ChevronDown, Package, Tractor, Tag, MousePointer2 } from "lucide-react-native";
+import { JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
 import { ExtendedJobFilter } from "../../hooks/use_job_search";
 import { jobService } from "../../services/job.service";
 import { skillService } from "../../services/skill.service";
@@ -41,11 +40,18 @@ const DISTANCE_OPTIONS = [
 ];
 
 
-const DATE_FILTERS = [
-  { label: "Hôm nay", value: "today" },
-  { label: "Ngày mai", value: "tomorrow" },
-  { label: "Sắp tới", value: "upcoming" },
-];
+const SKILL_CATEGORY_MAP: Record<string, { name: string; icon: any; color: string }> = {
+  "1": { name: "Trồng trọt", icon: Tractor, color: "#059669" },
+  "2": { name: "Chăn nuôi", icon: Package, color: "#d97706" },
+  "3": { name: "Máy móc", icon: Tag, color: "#2563eb" },
+  "4": { name: "Khác", icon: MousePointer2, color: "#64748b" },
+};
+
+function formatCurrencyInput(val: string) {
+  if (!val) return "";
+  const numericValue = val.replace(/[^0-9]/g, "");
+  return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 
 const JOB_TYPE_OPTIONS = [
   { label: "Tất cả", value: undefined },
@@ -60,6 +66,8 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
   const [localFilters, setLocalFilters] = useState<ExtendedJobFilter>(currentFilters);
   const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
   const [availableSkills, setAvailableSkills] = useState<SkillResponse[]>([]);
+  const [selectedSkillCategoryId, setSelectedSkillCategoryId] = useState<string>("all");
+  const [skillLimit, setSkillLimit] = useState(10);
 
   useEffect(() => {
     if (visible) {
@@ -192,37 +200,6 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                 </View>
               </View>
 
-              <View className="py-6 border-b border-slate-100">
-                <View className="flex-row items-center gap-2.5 mb-5">
-                  <View className="w-9 h-9 bg-blue-50 rounded-xl items-center justify-center">
-                    <Calendar size={18} color="#2563eb" />
-                  </View>
-                  <Text className="text-[16px] font-extrabold text-slate-800">Thời gian làm việc</Text>
-                </View>
-                <View className="flex-row flex-wrap gap-2.5">
-                  {DATE_FILTERS.map((opt) => {
-                    const sel = localFilters.dateFilter === opt.value;
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => handleUpdate({ dateFilter: sel ? undefined : opt.value })}
-                        style={{
-                          paddingHorizontal: 18,
-                          paddingVertical: 10,
-                          borderRadius: 20,
-                          borderWidth: 2,
-                          borderColor: sel ? "#2563eb" : "#e2e8f0",
-                          backgroundColor: sel ? "#2563eb" : "#ffffff",
-                        }}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "700", color: sel ? "#ffffff" : "#64748b" }}>
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
 
               <View className="py-6 border-b border-slate-100">
                 <View className="flex-row items-center gap-2.5 mb-5">
@@ -239,8 +216,11 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                       placeholder="0"
                       keyboardType="numeric"
                       placeholderTextColor="#cbd5e1"
-                      value={localFilters.minWageAmount?.toString() || ""}
-                      onChangeText={(v) => handleUpdate({ minWageAmount: v ? parseInt(v.replace(/[^0-9]/g, "")) : undefined })}
+                      value={localFilters.minWageAmount ? formatCurrencyInput(localFilters.minWageAmount.toString()) : ""}
+                      onChangeText={(v) => {
+                        const numeric = v.replace(/[^0-9]/g, "");
+                        handleUpdate({ minWageAmount: numeric ? parseInt(numeric) : undefined });
+                      }}
                     />
                   </View>
                   <View className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3">
@@ -250,8 +230,11 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                       placeholder="Không giới hạn"
                       keyboardType="numeric"
                       placeholderTextColor="#cbd5e1"
-                      value={localFilters.maxWageAmount?.toString() || ""}
-                      onChangeText={(v) => handleUpdate({ maxWageAmount: v ? parseInt(v.replace(/[^0-9]/g, "")) : undefined })}
+                      value={localFilters.maxWageAmount ? formatCurrencyInput(localFilters.maxWageAmount.toString()) : ""}
+                      onChangeText={(v) => {
+                        const numeric = v.replace(/[^0-9]/g, "");
+                        handleUpdate({ maxWageAmount: numeric ? parseInt(numeric) : undefined });
+                      }}
                     />
                   </View>
                 </View>
@@ -299,35 +282,88 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                     </View>
                     <Text className="text-[16px] font-extrabold text-slate-800">Kỹ năng yêu cầu</Text>
                   </View>
-                  <View className="flex-row flex-wrap gap-2.5">
-                    {availableSkills.map((skill: SkillResponse) => {
-                      const sel = localFilters.requiredSkills?.includes(skill.name);
-                      return (
+
+                  {/* Skill Category Selector */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
+                    <View className="flex-row gap-2">
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedSkillCategoryId("all");
+                          setSkillLimit(10);
+                        }}
+                        className={`px-4 py-2 rounded-xl border ${selectedSkillCategoryId === "all" ? "bg-orange-500 border-orange-500" : "bg-white border-slate-200"}`}
+                      >
+                        <Text className={`text-[12px] font-bold ${selectedSkillCategoryId === "all" ? "text-white" : "text-slate-600"}`}>Tất cả</Text>
+                      </TouchableOpacity>
+                      {Object.entries(SKILL_CATEGORY_MAP).map(([id, info]) => (
                         <TouchableOpacity
-                          key={skill.id}
+                          key={id}
                           onPress={() => {
-                            const current = localFilters.requiredSkills || [];
-                            const updated = sel 
-                              ? current.filter(s => s !== skill.name)
-                              : [...current, skill.name];
-                            handleUpdate({ requiredSkills: updated });
+                            setSelectedSkillCategoryId(id);
+                            setSkillLimit(10);
                           }}
-                          style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 9,
-                            borderRadius: 16,
-                            borderWidth: 1.5,
-                            borderColor: sel ? "#f97316" : "#e2e8f0",
-                            backgroundColor: sel ? "#f97316" : "#ffffff",
-                          }}
+                          className={`flex-row items-center px-4 py-2 rounded-xl border ${selectedSkillCategoryId === id ? "bg-orange-500 border-orange-500" : "bg-white border-slate-200"}`}
                         >
-                          <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#475569" }}>
-                            {skill.name}
-                          </Text>
+                          <info.icon size={14} color={selectedSkillCategoryId === id ? "white" : info.color} className="mr-1.5" />
+                          <Text className={`text-[12px] font-bold ${selectedSkillCategoryId === id ? "text-white" : "text-slate-600"}`}>{info.name}</Text>
                         </TouchableOpacity>
-                      );
-                    })}
+                      ))}
+                    </View>
+                  </ScrollView>
+
+                  <View className="flex-row flex-wrap gap-2.5">
+                    {availableSkills
+                      .filter(skill => {
+                        if (selectedSkillCategoryId === "all") return true;
+                        let catId = String(skill.categoryId || "4");
+                        if (catId.startsWith("cat-")) catId = catId.replace("cat-", "");
+                        return catId === selectedSkillCategoryId;
+                      })
+                      .slice(0, skillLimit)
+                      .map((skill: SkillResponse) => {
+                        const sel = localFilters.requiredSkills?.includes(skill.name);
+                        return (
+                          <TouchableOpacity
+                            key={skill.id}
+                            onPress={() => {
+                              const current = localFilters.requiredSkills || [];
+                              const updated = sel 
+                                ? current.filter(s => s !== skill.name)
+                                : [...current, skill.name];
+                              handleUpdate({ requiredSkills: updated });
+                            }}
+                            style={{
+                              paddingHorizontal: 16,
+                              paddingVertical: 9,
+                              borderRadius: 16,
+                              borderWidth: 1.5,
+                              borderColor: sel ? "#f97316" : "#e2e8f0",
+                              backgroundColor: sel ? "#f97316" : "#ffffff",
+                            }}
+                          >
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#475569" }}>
+                              {skill.name}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                   </View>
+
+                  {/* Paging / Load More */}
+                  {availableSkills.filter(skill => {
+                    if (selectedSkillCategoryId === "all") return true;
+                    let catId = String(skill.categoryId || "4");
+                    if (catId.startsWith("cat-")) catId = catId.replace("cat-", "");
+                    return catId === selectedSkillCategoryId;
+                  }).length > skillLimit && (
+                    <TouchableOpacity 
+                      onPress={() => setSkillLimit(prev => prev + 10)}
+                      className="mt-4 self-center py-2 px-6 bg-slate-50 rounded-full border border-slate-100 flex-row items-center gap-2"
+                    >
+                      <ChevronDown size={16} color="#64748b" />
+                      <Text className="text-[13px] text-slate-500 font-bold">Xem thêm kỹ năng</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 

@@ -5,8 +5,8 @@
  * Rule: DO NOT modify existing code logic.
  */
 import React from "react";
-import { Modal, View, Text, TouchableOpacity } from "react-native";
-import { CheckCircle2, AlertTriangle, Info, X } from "lucide-react-native";
+import { Modal, View, Text } from "react-native";
+import { CheckCircle2, AlertTriangle, Info } from "lucide-react-native";
 import { Button } from "./Button";
 
 export type FeedbackVariant = "success" | "error" | "info";

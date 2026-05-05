@@ -4,12 +4,10 @@ import {
   Calendar, 
   MapPin, 
   User, 
-  ChevronRight, 
   AlertCircle, 
   Sprout, 
   Grape, 
   Waves, 
-  Trash2, 
   Hammer,
   Banknote
 } from "lucide-react-native";

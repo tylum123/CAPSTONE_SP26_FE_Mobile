@@ -164,8 +164,8 @@ export function NotificationsScreen({ navigation }: any) {
           const IconComp = cfg.icon;
           return (
             <TouchableOpacity
-              className={["flex-row items-start p-4 gap-2 rounded-[20px] border relative overflow-hidden", notif.read ? "bg-white border-slate-100" : "bg-emerald-50/60 border-emerald-200"].join(" ")}
-              style={{ shadowColor: "#0f172a", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 }}
+              className={["flex-row items-start p-4 gap-2 rounded-[22px] border relative overflow-hidden", notif.read ? "bg-white border-slate-100/60" : "bg-white border-primary-100"].join(" ")}
+              style={{ shadowColor: "#94a3b8", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2 }}
               onPress={() => handlePress(notif)} activeOpacity={0.88}
             >
               {!notif.read && (

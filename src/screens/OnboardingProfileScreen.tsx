@@ -9,7 +9,7 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, Platform } from "r
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { User, MapPin, Calendar, Clock, Camera, ChevronRight, Check } from "lucide-react-native";
+import { User, MapPin, Calendar, Camera, ChevronRight, Check } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { hapticFeedback } from "../utils/haptic";
 import { Button } from "../components/ui/Button";
