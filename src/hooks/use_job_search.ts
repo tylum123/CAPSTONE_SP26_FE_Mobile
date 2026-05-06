@@ -160,33 +160,44 @@ export function useJobSearch() {
         // 3. Fallback total
         if (total === 0) total = jobs.length;
       }
-      // Perform sequential geocoding and manual distance calculation
-      for (const job of jobs) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-        
-        // Recalculate distance if coordinates are available
-        if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
-          job.distanceKm = nominatimService.calculateDistanceKm(
-            mergedFilters.workerLatitude,
-            mergedFilters.workerLongitude,
-            job.latitude,
-            job.longitude
-          );
-        }
-      }
-      
-      // Map results to UI-friendly format
+      // Map results to UI-friendly format immediately to show results as fast as possible
       const mappedJobs = jobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
-      
       setResults(mappedJobs);
       setTotalCount(total);
       resultCount = total;
+
+      // PERFORM GEOCODING & DISTANCE CALCULATION IN BACKGROUND
+      // This avoids blocking the initial UI display for several seconds
+      (async () => {
+        let hasChanges = false;
+        for (const job of mappedJobs) {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address);
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+          
+          // Recalculate distance if coordinates are available
+          if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
+            const oldDist = job.distanceKm;
+            job.distanceKm = nominatimService.calculateDistanceKm(
+              mergedFilters.workerLatitude,
+              mergedFilters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (oldDist !== job.distanceKm) hasChanges = true;
+          }
+        }
+        
+        if (hasChanges) {
+          // Trigger a re-render with updated distances/coordinates
+          setResults([...mappedJobs]);
+        }
+      })();
 
       // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
       refreshAppliedStatus();
@@ -228,30 +239,39 @@ export function useJobSearch() {
         }
       }
       
-      // Perform sequential geocoding and distance calculation for new results
-      for (const job of newJobs) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-
-        if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
-          job.distanceKm = nominatimService.calculateDistanceKm(
-            filters.workerLatitude,
-            filters.workerLongitude,
-            job.latitude,
-            job.longitude
-          );
-        }
-      }
-
       const mappedNewJobs = newJobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
-
       setResults((prev) => [...prev, ...mappedNewJobs]);
       setFilters(nextFilters);
+
+      // PERFORM GEOCODING & DISTANCE CALCULATION FOR NEW RESULTS IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        for (const job of mappedNewJobs) {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address);
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+            const oldDist = job.distanceKm;
+            job.distanceKm = nominatimService.calculateDistanceKm(
+              filters.workerLatitude,
+              filters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (oldDist !== job.distanceKm) hasChanges = true;
+          }
+        }
+        
+        if (hasChanges) {
+          setResults((prev) => [...prev]); // Trigger re-render of the same array to update view
+        }
+      })();
     } catch (err: any) {
       handleError(err, "Không thể tải thêm kết quả.");
       setError("Không thể tải thêm kết quả.");

@@ -278,7 +278,12 @@ export function WorkerSearchScreen({ navigation }: any) {
           renderItem={({ item }) => (
             <JobSearchCard job={item} onPress={(j) => navigation.navigate("JobDetail", { jobId: j.id })} />
           )}
-          ListEmptyComponent={!isLoading ? (
+          ListEmptyComponent={isLoading ? (
+            <View className="flex-1 justify-center items-center py-20">
+              <ActivityIndicator size="large" color="#059669" />
+              <Text className="mt-4 text-slate-500 font-medium">Đang tìm kiếm việc làm...</Text>
+            </View>
+          ) : (
             <EmptyState 
               title="Không tìm thấy việc phù hợp" 
               message="Thử thay đổi bộ lọc hoặc tìm kiếm theo từ khóa khác thay vì xóa hết."
@@ -286,7 +291,7 @@ export function WorkerSearchScreen({ navigation }: any) {
               onAction={() => setIsFilterVisible(true)} 
               actionLabel="Điều chỉnh bộ lọc"
             />
-          ) : null}
+          )}
           ListFooterComponent={isLoading && results.length > 0 ? (
             <ActivityIndicator color="#059669" className="py-5" />
           ) : null}

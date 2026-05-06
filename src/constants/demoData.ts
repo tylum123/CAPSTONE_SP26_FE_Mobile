@@ -74,6 +74,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 2, // Published
     estimatedHours: 10,
     workload: "1 mẫu/ngày",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer1",
+      contactName: "Nguyễn Văn A",
+      averageRating: 4.5,
+      totalJobsPosted: 10,
+      totalJobsCompleted: 8,
+    } as any,
   },
   {
     id: "501",
@@ -103,6 +110,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 4, // InProgress
     estimatedHours: 40,
     workload: "10 mẫu",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer2",
+      contactName: "Trần Văn C",
+      averageRating: 4.2,
+      totalJobsPosted: 5,
+      totalJobsCompleted: 4,
+    } as any,
   },
   {
     id: "301",
@@ -132,6 +146,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 4, // InProgress
     estimatedHours: 4,
     workload: "2 héc-ta",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer3",
+      contactName: "Lê Thị C",
+      averageRating: 4.8,
+      totalJobsPosted: 15,
+      totalJobsCompleted: 14,
+    } as any,
   },
   {
     id: "701",
@@ -161,6 +182,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 2, // Published
     estimatedHours: 8,
     workload: "50 cây/ngày",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer4",
+      contactName: "Phạm Văn D",
+      averageRating: 4.0,
+      totalJobsPosted: 8,
+      totalJobsCompleted: 5,
+    } as any,
   },
   {
     id: "801",
@@ -190,6 +218,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 2, // Published
     estimatedHours: 4,
     workload: "100 gốc",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer5",
+      contactName: "Hoàng Thị E",
+      averageRating: 4.7,
+      totalJobsPosted: 12,
+      totalJobsCompleted: 10,
+    } as any,
   },
   {
     id: "901",
@@ -219,6 +254,13 @@ export const DEMO_JOB_POSTS: JobPostDTO[] = [
     statusId: 2, // Published
     estimatedHours: 4,
     workload: "Vườn 50m2",
+    farmer: {
+      avatarUrl: "https://i.pravatar.cc/150?u=farmer6",
+      contactName: "Bùi Văn F",
+      averageRating: 4.9,
+      totalJobsPosted: 3,
+      totalJobsCompleted: 3,
+    } as any,
   },
   {
     id: "completed-job-1",
