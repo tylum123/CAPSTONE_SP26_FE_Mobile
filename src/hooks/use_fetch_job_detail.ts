@@ -10,6 +10,7 @@ import { jobService, workerProfileService, dailyReportService, messageService } 
 import { DEMO_JOB_POSTS, DEMO_APPLICATIONS, DEMO_WORKER_PROFILE, DEMO_CATEGORIES } from "../constants/demoData";
 import { mapJobPostToUI } from "../utils/mapperUtils";
 import { handleError } from "../utils/errorHandler";
+import { WorkerCountPerDay, JobDetailDTO, JobPostDayDTO } from "../types/export_type_definitions";
 
 export function useFetchJobDetail(jobId: string | number, isAuthenticated: boolean, user: any) {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
@@ -30,6 +31,9 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
     let sourceJob: any = null;
     let sourceApps: any[] = [];
     let sourceProfile: any = null;
+    let reports: any[] = [];
+    let reportFarmer: any = null;
+    let fetchedDayCounts: any[] = [];
 
     if (!isAuthenticated || user?.isDemo) {
       sourceJob = DEMO_JOB_POSTS.find((j: any) => String(j.id) === String(jobId));
@@ -37,15 +41,29 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       sourceProfile = DEMO_WORKER_PROFILE;
     } else {
       try {
-        const [data, apps, profile, categories] = await Promise.all([
+        const [data, apps, profile, categories, allWorkerReports, dayCounts] = await Promise.all([
           jobService.getJobPostDetail(String(jobId)),
           jobService.getApplications(),
           workerProfileService.getProfile(),
-          jobService.getCategories()
+          jobService.getCategories(),
+          isAuthenticated && !user?.isDemo && user?.id ? dailyReportService.getWorkerReports(user.id).catch(() => []) : Promise.resolve([]),
+          isAuthenticated && !user?.isDemo ? jobService.getCountWorkerPerDay(String(jobId)).catch(() => []) : Promise.resolve([])
         ]);
         sourceJob = data;
         sourceApps = apps;
         sourceProfile = profile;
+        
+        // Process Reports (extracted from parallel batch)
+        reports = (allWorkerReports || []).filter((r: any) => 
+          String(r.jobPostId).toLowerCase() === String(jobId).toLowerCase()
+        );
+        const reportWithFarmer = reports.find(r => r.farmer);
+        if (reportWithFarmer?.farmer) {
+          reportFarmer = reportWithFarmer.farmer;
+        }
+
+        // Process Day Counts (extracted from parallel batch)
+        fetchedDayCounts = dayCounts;
         
         if (sourceJob?.jobCategoryId && categories) {
           const cat = categories.find((c: any) => String(c.id) === String(sourceJob.jobCategoryId));
@@ -94,75 +112,33 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         setSelectedTimeSlots([]);
       }
 
-      // Fetch Reports for this job (JobDetailResponseDTO includes farmer with avatarUrl, userId)
-      let reports: any[] = [];
-      let reportFarmer: any = null;
-      try {
-        if (isAuthenticated && !user?.isDemo && sourceProfile?.id) {
-          const allWorkerReports = await dailyReportService.getWorkerReports(sourceProfile.id);
-          reports = (allWorkerReports || []).filter(r => 
-            String(r.jobPostId).toLowerCase() === String(jobId).toLowerCase()
-          );
-          // Extract farmer data from the first report that has it
-          const reportWithFarmer = reports.find(r => r.farmer);
-          if (reportWithFarmer?.farmer) {
-            reportFarmer = reportWithFarmer.farmer;
-          }
-        } else if (user?.isDemo || !isAuthenticated) {
-          // Mock some reports for demo
-          reports = [
-            { id: "r1", workDate: "2026-03-22T08:00:00Z", farmerApprovedPercent: 100, workerPaymentAmount: 250000, farmerFeedback: "Làm tốt lắm!" },
-            { id: "r2", workDate: "2026-03-23T08:00:00Z", farmerApprovedPercent: 80, workerPaymentAmount: 200000, farmerFeedback: "Cần chú ý hơn phần làm cỏ." }
-          ];
-        }
-      } catch (err) {
-        // Silently ignore report fetch errors
-      }
-
       // Fallback: if worker has no reports with farmer data, try fetching ANY report for this job post
-      // GET /job/detail/post/{jobPostId} returns reports from all workers — farmer info is the same
       if (!reportFarmer && isAuthenticated && !user?.isDemo) {
         try {
           const jobPostReports = await dailyReportService.getReportsByJobPostId(String(jobId), 1, 1);
-          const anyReport = (jobPostReports || []).find(r => r.farmer);
+          const anyReport = (jobPostReports || []).find((r: JobDetailDTO) => r.farmer);
           if (anyReport?.farmer) {
             reportFarmer = anyReport.farmer;
           }
-        } catch (err) {
-          // Silently ignore — farmer avatar will just show fallback letter
-        }
+        } catch (err) {}
       }
 
-      // Fetch latest message from farmer
+      // Fetch latest message from farmer (Parallelized separately as it needs farmerUserId)
       const farmerUserId = reportFarmer?.userId || sourceJob?.farmerProfile?.userId || sourceJob?.farmer?.userId || null;
       if (farmerUserId && isAuthenticated && !user?.isDemo) {
-        try {
-          const messages = await messageService.getMessages(farmerUserId, 1, 1);
+        messageService.getMessages(farmerUserId, 1, 1).then(messages => {
           const msgList = Array.isArray(messages) ? messages : (messages?.data || messages?.items || []);
           if (msgList.length > 0) {
             setLastMessage(msgList[0]);
           }
-        } catch (mErr) {
-          // Silently ignore message fetch errors
-        }
+        }).catch(() => {});
       }
 
-      // Fetch enrollment counts per day
-      let dayCounts: any[] = [];
-      if (isAuthenticated && !user?.isDemo) {
-        try {
-          dayCounts = await jobService.getCountWorkerPerDay(String(jobId));
-        } catch (err) {
-          // Silently ignore day counts error
-        }
-      } else if (user?.isDemo || !isAuthenticated) {
-        // Mock counts for demo
-        dayCounts = (sourceJob.selectedDays || []).map((d: string, i: number) => ({
-          date: d,
-          acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0),
-          neededWorkerCount: i % 2 === 0 ? sourceJob.workersNeeded : Math.max(1, sourceJob.workersNeeded - 2)
-        }));
-      }
+      const dayCounts = fetchedDayCounts.length > 0 ? fetchedDayCounts : (user?.isDemo || !isAuthenticated ? (sourceJob.selectedDays || []).map((d: string, i: number) => ({
+        date: d,
+        acceptedWorkerCount: i % 3 === 0 ? sourceJob.workersNeeded : (i % 3 === 1 ? 1 : 0),
+        neededWorkerCount: i % 2 === 0 ? sourceJob.workersNeeded : Math.max(1, sourceJob.workersNeeded - 2)
+      })) : []);
 
       const mappedData = mapJobPostToUI(sourceJob);
       
@@ -181,7 +157,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
             date: formattedSlotDate,
             rawDate: dateStr.substring(0, 10),
             available: !isFull,
-            reportedAt: reports.find(r => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
+            reportedAt: reports.find((r: JobDetailDTO) => r.workDate.includes(dateStr.substring(0, 10)))?.workDate,
             acceptedCount,
             neededCount
           };
@@ -190,7 +166,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
         // Fallback to legacy logic: use selectedDays + dayCounts
         timeSlots = (sourceJob.selectedDays || []).map((dateStr: string, index: number) => {
           const formattedSlotDate = new Date(dateStr).toLocaleDateString("vi-VN");
-          const countData = dayCounts.find(c => c.date?.substring(0, 10) === dateStr.substring(0, 10));
+          const countData = dayCounts.find((c: WorkerCountPerDay) => c.date?.substring(0, 10) === dateStr.substring(0, 10));
           const acceptedCount = countData?.acceptedWorkerCount || 0;
           const neededCount = countData?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
           const isFull = acceptedCount >= neededCount;
@@ -211,9 +187,9 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
       if (sourceJob.jobTypeId !== 1) {
         let neededCounts: number[] = [];
         if (sourceJob.jobPostDays && sourceJob.jobPostDays.length > 0) {
-          neededCounts = sourceJob.jobPostDays.map((d: any) => d.workersNeeded).filter((n: any) => n !== undefined);
+          neededCounts = sourceJob.jobPostDays.map((d: JobPostDayDTO) => d.workersNeeded).filter((n: number | undefined) => n !== undefined);
         } else if (dayCounts.length > 0) {
-          neededCounts = dayCounts.map(c => c.neededWorkerCount ?? sourceJob.workersNeeded).filter(n => n !== undefined);
+          neededCounts = dayCounts.map((c: WorkerCountPerDay) => c.neededWorkerCount ?? sourceJob.workersNeeded).filter((n: number | undefined) => n !== undefined);
         }
 
         if (neededCounts.length > 0) {
@@ -227,7 +203,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
 
       // Special case for backward compatibility or if selectedDays is empty for Daily jobs
       if (sourceJob.jobTypeId !== 1 && timeSlots.length === 0) {
-        const firstDayCount = dayCounts.find(c => c.date?.substring(0, 10) === sourceJob.startDate?.substring(0, 10));
+        const firstDayCount = dayCounts.find((c: WorkerCountPerDay) => c.date?.substring(0, 10) === sourceJob.startDate?.substring(0, 10));
         const accepted = firstDayCount?.acceptedWorkerCount || 0;
         const needed = firstDayCount?.neededWorkerCount ?? sourceJob.workersNeeded ?? 0;
 
@@ -236,7 +212,7 @@ export function useFetchJobDetail(jobId: string | number, isAuthenticated: boole
           date: mappedData.startDateFormatted,
           rawDate: sourceJob.startDate,
           available: accepted < needed,
-          reportedAt: reports.find(r => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate,
+          reportedAt: reports.find((r: JobDetailDTO) => r.workDate.includes(sourceJob.startDate?.substring(0, 10)))?.workDate,
           acceptedCount: accepted,
           neededCount: needed
         });

@@ -16,7 +16,7 @@ interface JobSearchCardProps {
   onPress: (job: JobDiscoveryDTO) => void;
 }
 
-export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
+export const JobSearchCard = React.memo(({ job, onPress }: JobSearchCardProps) => {
   return (
     <TouchableOpacity 
       className="mb-3 bg-white rounded-2xl flex-row overflow-hidden border border-slate-100" 
@@ -97,4 +97,4 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+});

@@ -167,10 +167,10 @@ export function useJobSearch() {
       resultCount = total;
 
       // PERFORM GEOCODING & DISTANCE CALCULATION IN BACKGROUND
-      // This avoids blocking the initial UI display for several seconds
+      // Parallelized for maximum speed
       (async () => {
         let hasChanges = false;
-        for (const job of mappedJobs) {
+        await Promise.all(mappedJobs.map(async (job) => {
           if (!job.latitude || !job.longitude) {
             const coords = await nominatimService.geocodeAddress(job.address);
             if (coords) {
@@ -180,7 +180,6 @@ export function useJobSearch() {
             }
           }
           
-          // Recalculate distance if coordinates are available
           if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
             const oldDist = job.distanceKm;
             job.distanceKm = nominatimService.calculateDistanceKm(
@@ -191,10 +190,9 @@ export function useJobSearch() {
             );
             if (oldDist !== job.distanceKm) hasChanges = true;
           }
-        }
+        }));
         
         if (hasChanges) {
-          // Trigger a re-render with updated distances/coordinates
           setResults([...mappedJobs]);
         }
       })();
@@ -246,7 +244,7 @@ export function useJobSearch() {
       // PERFORM GEOCODING & DISTANCE CALCULATION FOR NEW RESULTS IN BACKGROUND
       (async () => {
         let hasChanges = false;
-        for (const job of mappedNewJobs) {
+        await Promise.all(mappedNewJobs.map(async (job) => {
           if (!job.latitude || !job.longitude) {
             const coords = await nominatimService.geocodeAddress(job.address);
             if (coords) {
@@ -266,10 +264,10 @@ export function useJobSearch() {
             );
             if (oldDist !== job.distanceKm) hasChanges = true;
           }
-        }
+        }));
         
         if (hasChanges) {
-          setResults((prev) => [...prev]); // Trigger re-render of the same array to update view
+          setResults((prev) => [...prev]);
         }
       })();
     } catch (err: any) {
@@ -295,8 +293,8 @@ export function useJobSearch() {
         data = await jobService.getJobsByDate(type as any);
       }
       
-      // Perform sequential geocoding and manual distance calculation
-      for (const job of data) {
+      // Parallel geocoding and distance calculation
+      await Promise.all(data.map(async (job) => {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
           if (coords) {
@@ -316,7 +314,7 @@ export function useJobSearch() {
             job.longitude
           );
         }
-      }
+      }));
 
       const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
       setResults(mappedData);
@@ -347,8 +345,8 @@ export function useJobSearch() {
     try {
       const data = await jobService.getJobsByType(Number(typeId));
       
-      // Perform sequential geocoding and manual distance calculation
-      for (const job of data) {
+      // Parallel geocoding and distance calculation
+      await Promise.all(data.map(async (job) => {
         if (!job.latitude || !job.longitude) {
           const coords = await nominatimService.geocodeAddress(job.address);
           if (coords) {
@@ -365,7 +363,7 @@ export function useJobSearch() {
             job.longitude
           );
         }
-      }
+      }));
 
       const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
       setResults(mappedData);
