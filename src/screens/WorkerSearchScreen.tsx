@@ -52,11 +52,13 @@ export function WorkerSearchScreen({ navigation }: any) {
     }
 
     // DISTANCE FILTER: Only apply if user explicitly set a limit (not 'Toàn quốc' 3000km)
-    // This provides a second layer of accuracy over the backend search.
+    // IMPORTANT: If distanceKm is undefined (still geocoding), we SHOW the job temporarily 
+    // to prevent it disappearing from the list while processing.
     if (filters.maxDistanceKm && filters.maxDistanceKm < 2000) {
       data = data.filter(job => {
-        // If we have distance, use it. If not (geocode failed), hide it for strict filters.
-        return job.distanceKm !== undefined && job.distanceKm <= filters.maxDistanceKm!;
+        if (job.distanceKm === undefined) return true; // Show while calculating
+        // Use a small buffer (0.5km) to handle rounding differences between BE and FE
+        return job.distanceKm <= (filters.maxDistanceKm! + 0.5);
       });
     }
 
@@ -162,11 +164,15 @@ export function WorkerSearchScreen({ navigation }: any) {
       const location = { latitude: lat, longitude: lon };
       setUserLocation(location);
       
-      // Update filters so subsequent searches (like refresh or load more) use the location
-      updateFilter({ 
+      // Update filters so subsequent searches use the location
+      const finalFilters = { 
+        ...filters,
         workerLatitude: lat, 
         workerLongitude: lon,
-      });
+        pageNumber: 1
+      };
+      updateFilter(finalFilters);
+      search(finalFilters, user?.isDemo);
 
     } catch (err) {
       // Final fallback if everything fails

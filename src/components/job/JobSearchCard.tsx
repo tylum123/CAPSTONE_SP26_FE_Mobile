@@ -68,9 +68,7 @@ export const JobSearchCard = React.memo(({ job, onPress }: JobSearchCardProps) =
           <View className="flex-row items-center gap-1.5 flex-1 px-1 justify-center">
             <Users size={12} color="#64748b" />
             <Text className="text-[11px] text-slate-600 font-bold" numberOfLines={1}>
-              {(job as any).requiredWorkersRange 
-                ? `${(job as any).requiredWorkersRange} người/ngày`
-                : `${job.workersNeeded || 0} người${job.jobTypeId !== 1 ? "/ngày" : ""}`}
+              {`${(job as any).requiredWorkersRange || job.workersNeeded || 0} người${job.jobTypeId !== 1 ? "/ngày" : ""}`}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />

@@ -293,32 +293,43 @@ export function useJobSearch() {
         data = await jobService.getJobsByDate(type as any);
       }
       
-      // Parallel geocoding and distance calculation
-      await Promise.all(data.map(async (job) => {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-
-        const currentLat = location?.latitude || filters.workerLatitude;
-        const currentLon = location?.longitude || filters.workerLongitude;
-
-        if (currentLat && currentLon && job.latitude && job.longitude) {
-          job.distanceKm = nominatimService.calculateDistanceKm(
-            currentLat,
-            currentLon,
-            job.latitude,
-            job.longitude
-          );
-        }
-      }));
-
       const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
       setResults(mappedData);
       setTotalCount(data.length);
+
+      // Parallel geocoding and distance calculation IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedData.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address || "");
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          const currentLat = location?.latitude || filters.workerLatitude;
+          const currentLon = location?.longitude || filters.workerLongitude;
+
+          if (currentLat && currentLon && job.latitude && job.longitude) {
+            const newDist = nominatimService.calculateDistanceKm(
+              currentLat,
+              currentLon,
+              job.latitude,
+              job.longitude
+            );
+            if (Math.abs((job.distanceKm || 0) - newDist) > 0.1) {
+              job.distanceKm = newDist;
+              hasChanges = true;
+            }
+          }
+        }));
+        if (hasChanges) {
+          setResults([...mappedData]);
+        }
+      })();
       setFilters(prev => ({ 
         ...prev, 
         pageNumber: 1, 
@@ -345,29 +356,40 @@ export function useJobSearch() {
     try {
       const data = await jobService.getJobsByType(Number(typeId));
       
-      // Parallel geocoding and distance calculation
-      await Promise.all(data.map(async (job) => {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-
-        if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
-          job.distanceKm = nominatimService.calculateDistanceKm(
-            filters.workerLatitude,
-            filters.workerLongitude,
-            job.latitude,
-            job.longitude
-          );
-        }
-      }));
-
       const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
       setResults(mappedData);
       setTotalCount(data.length);
+
+      // Parallel geocoding and distance calculation IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedData.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address || "");
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+            const newDist = nominatimService.calculateDistanceKm(
+              filters.workerLatitude,
+              filters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (Math.abs((job.distanceKm || 0) - newDist) > 0.1) {
+              job.distanceKm = newDist;
+              hasChanges = true;
+            }
+          }
+        }));
+        if (hasChanges) {
+          setResults([...mappedData]);
+        }
+      })();
       setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));
     } catch (err: any) {
       handleError(err, "Không thể tải danh sách việc theo loại.");

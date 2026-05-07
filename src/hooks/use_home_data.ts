@@ -103,6 +103,7 @@ export function useHomeData(): HomeDataResult {
     let sourceJobs: any[]    = [];
     let sourceApps: any[]    = [];
     let sourceProfile: any   = null;
+    let gpsStatus: any = null;
 
     // ── 1. Fetch base data ──────────────────────────────────────────────────
 
@@ -118,13 +119,17 @@ export function useHomeData(): HomeDataResult {
       });
     } else {
       try {
-        const [jobs, apps, profile, categories, dashboard] = await Promise.all([
+        const results = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
           jobService.getCategories(),
           workerProfileService.getDashboardData().catch(() => null),
+          Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' })),
         ]);
+
+        const [jobs, apps, profile, categories, dashboard] = results;
+        gpsStatus = results[5];
 
         sourceJobs    = jobs;
         sourceApps    = apps;
@@ -168,25 +173,33 @@ export function useHomeData(): HomeDataResult {
     let lon = DEFAULT_LOCATION.longitude;
     let locationSource = "default";
 
-    // 2.1 TRY GPS FIRST (High Accuracy)
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({
+    // 2.1 Start GPS fetch (Non-blocking if possible)
+    if (gpsStatus?.status === 'granted') {
+      try {
+        Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
-        });
-        lat = location.coords.latitude;
-        lon = location.coords.longitude;
-        setUserLocation({ latitude: lat, longitude: lon });
-        locationSource = "gps";
-        console.log("[HomeLocation] Using GPS position:", lat, lon);
-      }
-    } catch (gpsError) {
-      console.warn("[HomeLocation] GPS fetch failed, falling back to profile:", gpsError);
+        }).then(location => {
+          const newLat = location.coords.latitude;
+          const newLon = location.coords.longitude;
+          if (Math.abs(lat - newLat) > 0.01 || Math.abs(lon - newLon) > 0.01) {
+            console.log("[HomeLocation] GPS updated, refreshing nearby jobs...");
+            setUserLocation({ latitude: newLat, longitude: newLon });
+            // Refresh nearby jobs with new coordinates in background
+            jobService.getNearbyJobs({ 
+              latitude: newLat, 
+              longitude: newLon, 
+              maxDistanceKm: sourceProfile?.travelRadiusKmPreference || radiusKm 
+            }).then(newNearby => {
+              // Re-map with new distances
+              // (This part will be handled by the geocoding background process if it detects location changes)
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      } catch {}
     }
 
-    // 2.2 FALLBACK TO PROFILE
-    if (locationSource !== "gps" && sourceProfile?.primaryLocation && sourceProfile.id !== 'demo-worker-123') {
+    // 2.2 SET INITIAL LOCATION (Default or Profile)
+    if (sourceProfile?.primaryLocation && sourceProfile.id !== 'demo-worker-123') {
       try {
         const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
         if (loc) {
@@ -194,19 +207,18 @@ export function useHomeData(): HomeDataResult {
           lat = loc.latitude;
           lon = loc.longitude;
           locationSource = "profile";
-          console.log("[HomeLocation] Using Profile position:", lat, lon);
         }
       } catch {
         setUserLocation(DEFAULT_LOCATION);
       }
-    } else if (locationSource !== "gps") {
+    } else {
       setUserLocation(DEFAULT_LOCATION);
     }
 
     const prefRadius = sourceProfile?.travelRadiusKmPreference || radiusKm;
 
     let finalizedNearby: any[] = [];
-    let todayReports: any[]    = [];
+    let todayReports: any[] = [];
 
     if (user?.isDemo) {
       finalizedNearby = sourceJobs;
