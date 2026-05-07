@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Search, SlidersHorizontal, Map as MapIcon, List, X, Zap, Briefcase } from "lucide-react-native";
 import { useDebounce } from "../hooks/use_debounce";
 import { EmptyState } from "../components/ui/export_ui_components";
+import * as Location from "expo-location";
 import { useAuth } from "../context/AuthContext";
 import { nominatimService, workerProfileService } from "../services/export_services";
 import { JobMap } from "../components/ui/JobMap";
@@ -39,12 +40,26 @@ export function WorkerSearchScreen({ navigation }: any) {
 
   const filteredResults = React.useMemo(() => {
     let data = [...results];
+    
+    // EXCLUDE APPLIED: Filter out jobs user already applied to
     if (filters.excludeApplied) {
       data = data.filter(job => !appliedJobPostIds.has(String(job.id)));
     }
-    // Strictly filter out urgent jobs if "Không cần gấp" is selected
+
+    // URGENT FILTER: Strictly filter out urgent jobs if "Không cần gấp" is selected
     if (filters.onlyUrgent === false) {
       data = data.filter(job => !job.isUrgent);
+    }
+
+    // DISTANCE FILTER: Only apply if user explicitly set a limit (not 'Toàn quốc' 3000km)
+    // IMPORTANT: If distanceKm is undefined (still geocoding), we SHOW the job temporarily 
+    // to prevent it disappearing from the list while processing.
+    if (filters.maxDistanceKm && filters.maxDistanceKm < 2000) {
+      data = data.filter(job => {
+        if (job.distanceKm === undefined) return true; // Show while calculating
+        // Use a small buffer (0.5km) to handle rounding differences between BE and FE
+        return job.distanceKm <= (filters.maxDistanceKm! + 0.5);
+      });
     }
 
     // MULTI-LEVEL SORT: 1. Proximity (closest first), 2. Start Date (earliest first)
@@ -63,7 +78,7 @@ export function WorkerSearchScreen({ navigation }: any) {
     });
 
     return data;
-  }, [results, filters.excludeApplied, filters.onlyUrgent, appliedJobPostIds]);
+  }, [results, filters.excludeApplied, filters.onlyUrgent, filters.maxDistanceKm, appliedJobPostIds]);
 
   const [activeQuickFilter, setActiveQuickFilter] = useState<string>("all");
   const hasInitialized = React.useRef(false);
@@ -98,64 +113,72 @@ export function WorkerSearchScreen({ navigation }: any) {
 
 
   /**
-   * Initializes screen by fetching user profile location or setting default coordinates.
+   * Initializes screen by fetching national results immediately, then updates with location.
    */
   const init = useCallback(async () => {
     try {
-      const profile = await workerProfileService.getProfile();
-      let lat = 10.762622;
-      let lon = 106.660172;
+      // 1. IMMEDIATE NATIONAL SEARCH (Toàn quốc)
+      // This ensures results are visible instantly without waiting for GPS
+      search({
+        pageNumber: 1,
+        pageSize: 20,
+        workerLatitude: undefined,
+        workerLongitude: undefined,
+        maxDistanceKm: 3000, // Explicitly national
+      }, user?.isDemo);
 
-      if (profile?.primaryLocation && !user?.isDemo) {
-        const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
-        if (loc) {
-          lat = loc.latitude;
-          lon = loc.longitude;
+      await refreshAppliedStatus();
+
+      // 2. FETCH LOCATION IN BACKGROUND
+      let lat = 10.762622; // Default (HCM City)
+      let lon = 106.660172;
+      let locationSource = "default";
+
+      // TRY GPS
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          lat = location.coords.latitude;
+          lon = location.coords.longitude;
+          locationSource = "gps";
+          console.log("[Location] GPS found:", lat, lon);
+        }
+      } catch (gpsError) {
+        // GPS failed, try profile
+        if (!user?.isDemo) {
+          const profile = await workerProfileService.getProfile();
+          if (profile?.primaryLocation) {
+            const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
+            if (loc) {
+              lat = loc.latitude;
+              lon = loc.longitude;
+              locationSource = "profile";
+            }
+          }
         }
       }
 
       const location = { latitude: lat, longitude: lon };
       setUserLocation(location);
       
-      // Store location for map view but DON'T filter by distance initially
-      // Reason: BE SearchJobs filters by Farm lat/lon which may be null for some jobs,
-      // causing them to be excluded entirely. Only filter when user explicitly sets distance.
-      updateFilter({ 
+      // Update filters so subsequent searches use the location
+      const finalFilters = { 
+        ...filters,
         workerLatitude: lat, 
         workerLongitude: lon,
-      });
-
-      await refreshAppliedStatus();
-
-      // ULTIMATE FALLBACK: Search with location and page size to ensure results are relevant and immediately visible
-      const count = await search({
-        pageNumber: 1,
-        pageSize: 20,
-        workerLatitude: lat,
-        workerLongitude: lon,
-      }, user?.isDemo);
-
-      // REAL-WORLD DEFENSIVE LOGIC: 
-      // If a real user sees 0 results even with ultimate fallback, 
-      // it might be because the BE spatial search is broken (requiring coords that don't match).
-      // Try one more search with NO coordinates if we still have nothing.
-      if (!user?.isDemo && count === 0) {
-        console.log("[SearchFallback] Zero results with coords. Retrying with NO location filters.");
-        await search({
-          pageNumber: 1,
-          pageSize: 20,
-          workerLatitude: undefined,
-          workerLongitude: undefined,
-          maxDistanceKm: undefined
-        });
-      }
-
+        pageNumber: 1
+      };
+      updateFilter(finalFilters);
+      search(finalFilters, user?.isDemo);
 
     } catch (err) {
-      // Fallback: search without any filters
+      // Final fallback if everything fails
       search({ pageNumber: 1, pageSize: 10, sortBy: "date" });
     }
-  }, [user?.isDemo]);
+  }, [user?.isDemo, search, updateFilter, refreshAppliedStatus]);
 
   useEffect(() => {
     init();
@@ -261,7 +284,12 @@ export function WorkerSearchScreen({ navigation }: any) {
           renderItem={({ item }) => (
             <JobSearchCard job={item} onPress={(j) => navigation.navigate("JobDetail", { jobId: j.id })} />
           )}
-          ListEmptyComponent={!isLoading ? (
+          ListEmptyComponent={isLoading ? (
+            <View className="flex-1 justify-center items-center py-20">
+              <ActivityIndicator size="large" color="#059669" />
+              <Text className="mt-4 text-slate-500 font-medium">Đang tìm kiếm việc làm...</Text>
+            </View>
+          ) : (
             <EmptyState 
               title="Không tìm thấy việc phù hợp" 
               message="Thử thay đổi bộ lọc hoặc tìm kiếm theo từ khóa khác thay vì xóa hết."
@@ -269,7 +297,7 @@ export function WorkerSearchScreen({ navigation }: any) {
               onAction={() => setIsFilterVisible(true)} 
               actionLabel="Điều chỉnh bộ lọc"
             />
-          ) : null}
+          )}
           ListFooterComponent={isLoading && results.length > 0 ? (
             <ActivityIndicator color="#059669" className="py-5" />
           ) : null}

@@ -322,7 +322,7 @@ export function WorkerHomeScreen({ navigation }: any) {
             </View>
 
             <View className="px-5 mb-4">
-              <SectionHeader title="Công việc mới đăng gần đây" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
+              <SectionHeader title="Việc mới đăng gần đây" actionLabel="Xem tất cả" onPressAction={() => navigation.navigate("Search")} />
             </View>
           </>
         }
@@ -358,14 +358,22 @@ export function WorkerHomeScreen({ navigation }: any) {
                    </View>
                    <View className="flex-row items-center flex-wrap gap-y-1 mb-2">
                      <View className="flex-row items-center gap-1.5">
-                       <Avatar source={job.farmerAvatar ? { uri: job.farmerAvatar } : undefined} fallback={job.farmer[0]} size={16} />
-                       <Text className="text-[11px] font-bold text-slate-500" numberOfLines={1}>{getShortName(job.farmer)}</Text>
+                       <Avatar 
+                        source={job.farmerAvatar || job.farmer?.avatar ? { uri: job.farmerAvatar || job.farmer?.avatar } : undefined} 
+                        fallback={(typeof job.farmer === 'string' ? job.farmer[0] : job.farmer?.name?.[0]) || "?"} 
+                        size={16} 
+                       />
+                       <Text className="text-[11px] font-bold text-slate-500" numberOfLines={1}>
+                        {getShortName(typeof job.farmer === 'string' ? job.farmer : (job.farmer?.name || "Chủ nông trại"))}
+                       </Text>
                      </View>
-                     {job.rating > 0 && (
+                     {( (typeof job.rating === 'number' ? job.rating : job.farmer?.rating) > 0) && (
                        <View className="flex-row items-center gap-0.5">
                          <View className="w-1 h-1 rounded-full bg-slate-300 mx-1.5" />
                          <Star size={10} color="#f59e0b" fill="#f59e0b" />
-                         <Text className="text-[10px] font-bold text-slate-500">{job.rating.toFixed(1)}</Text>
+                         <Text className="text-[10px] font-bold text-slate-500">
+                          {(typeof job.rating === 'number' ? job.rating : job.farmer?.rating || 0).toFixed(1)}
+                         </Text>
                        </View>
                      )}
                      <View className="flex-row items-center gap-1 w-full mt-1">
@@ -381,7 +389,9 @@ export function WorkerHomeScreen({ navigation }: any) {
                     <View className="gap-1 flex-1 pr-2">
                       <View className="flex-row items-center gap-1">
                         <MapPin size={11} color="#94a3b8" style={{ flexShrink: 0 }} />
-                        <Text className="text-[11px] text-slate-500 font-medium" numberOfLines={1} style={{ flexShrink: 1 }}>{job.location || 'N/A'}</Text>
+                        <Text className="text-[11px] text-slate-500 font-medium" numberOfLines={1} style={{ flexShrink: 1 }}>
+                          {typeof job.location === 'string' ? job.location : (job.location?.address || 'N/A')}
+                        </Text>
                       </View>
                       {(job.matchScore !== undefined && job.matchScore !== null) && (
                         <View className="flex-row items-center gap-1">

@@ -18,7 +18,7 @@ import {
   Dimensions
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Check, ChevronDown, Package, Tractor, Tag, MousePointer2 } from "lucide-react-native";
+import { X, Banknote, Briefcase, Zap, RotateCcw, MapPin, Check, ChevronDown, Package, Tractor, Tag, MousePointer2, Fish } from "lucide-react-native";
 import { JobCategoryDTO, SkillResponse } from "../../types/export_type_definitions";
 import { ExtendedJobFilter } from "../../hooks/use_job_search";
 import { jobService } from "../../services/job.service";
@@ -41,9 +41,10 @@ const DISTANCE_OPTIONS = [
 
 
 const SKILL_CATEGORY_MAP: Record<string, { name: string; icon: any; color: string }> = {
+  "all": { name: "Tất cả", icon: Briefcase, color: "#4f46e5" },
   "1": { name: "Trồng trọt", icon: Tractor, color: "#059669" },
   "2": { name: "Chăn nuôi", icon: Package, color: "#d97706" },
-  "3": { name: "Máy móc", icon: Tag, color: "#2563eb" },
+  "3": { name: "Thủy sản", icon: Fish, color: "#0ea5e9" },
   "4": { name: "Khác", icon: MousePointer2, color: "#64748b" },
 };
 
@@ -67,7 +68,8 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
   const [categories, setCategories] = useState<JobCategoryDTO[]>([]);
   const [availableSkills, setAvailableSkills] = useState<SkillResponse[]>([]);
   const [selectedSkillCategoryId, setSelectedSkillCategoryId] = useState<string>("all");
-  const [skillLimit, setSkillLimit] = useState(10);
+  const [skillLimit, setSkillLimit] = useState(12);
+  const [loadingSkills, setLoadingSkills] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -78,6 +80,7 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
 
   const loadData = async () => {
     try {
+      setLoadingSkills(true);
       const [cats, skills] = await Promise.all([
         jobService.getCategories(),
         skillService.getSkills()
@@ -86,11 +89,21 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
       setAvailableSkills(skills);
     } catch (error) {
       console.error("Failed to load filter data:", error);
+    } finally {
+      setLoadingSkills(false);
     }
   };
 
   const handleUpdate = (updates: Partial<ExtendedJobFilter>) => {
     setLocalFilters(prev => ({ ...prev, ...updates }));
+  };
+
+  const toggleSkill = (skillName: string) => {
+    const current = localFilters.requiredSkills || [];
+    const updated = current.includes(skillName) 
+      ? current.filter(s => s !== skillName)
+      : [...current, skillName];
+    handleUpdate({ requiredSkills: updated });
   };
 
   const handleReset = () => {
@@ -283,78 +296,104 @@ export function JobFilterModal({ visible, onClose, currentFilters, onApply }: Jo
                     <Text className="text-[16px] font-extrabold text-slate-800">Kỹ năng yêu cầu</Text>
                   </View>
 
-                  {/* Skill Category Selector */}
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5">
-                    <View className="flex-row gap-2">
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedSkillCategoryId("all");
-                          setSkillLimit(10);
-                        }}
-                        className={`px-4 py-2 rounded-xl border ${selectedSkillCategoryId === "all" ? "bg-orange-500 border-orange-500" : "bg-white border-slate-200"}`}
-                      >
-                        <Text className={`text-[12px] font-bold ${selectedSkillCategoryId === "all" ? "text-white" : "text-slate-600"}`}>Tất cả</Text>
-                      </TouchableOpacity>
-                      {Object.entries(SKILL_CATEGORY_MAP).map(([id, info]) => (
+
+                  {/* Skill Category Tabs */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6" contentContainerStyle={{ paddingHorizontal: 4, gap: 10 }}>
+                    {Object.entries(SKILL_CATEGORY_MAP).map(([id, cat]) => {
+                      const isSelected = selectedSkillCategoryId === id;
+                      const Icon = cat.icon;
+                      return (
                         <TouchableOpacity
                           key={id}
-                          onPress={() => {
-                            setSelectedSkillCategoryId(id);
-                            setSkillLimit(10);
-                          }}
-                          className={`flex-row items-center px-4 py-2 rounded-xl border ${selectedSkillCategoryId === id ? "bg-orange-500 border-orange-500" : "bg-white border-slate-200"}`}
+                          onPress={() => setSelectedSkillCategoryId(id)}
+                          className={`flex-row items-center px-4 py-2.5 rounded-2xl border ${isSelected ? "bg-indigo-50 border-indigo-200" : "bg-white border-slate-100"}`}
                         >
-                          <info.icon size={14} color={selectedSkillCategoryId === id ? "white" : info.color} className="mr-1.5" />
-                          <Text className={`text-[12px] font-bold ${selectedSkillCategoryId === id ? "text-white" : "text-slate-600"}`}>{info.name}</Text>
+                          <View className={`w-6 h-6 rounded-lg items-center justify-center mr-2 ${isSelected ? "bg-indigo-100" : "bg-slate-50"}`}>
+                            <Icon size={14} color={isSelected ? "#4f46e5" : "#64748b"} />
+                          </View>
+                          <Text className={`text-[14px] font-bold ${isSelected ? "text-indigo-700" : "text-slate-600"}`}>{cat.name}</Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
+                      );
+                    })}
                   </ScrollView>
 
-                  <View className="flex-row flex-wrap gap-2.5">
-                    {availableSkills
-                      .filter(skill => {
-                        if (selectedSkillCategoryId === "all") return true;
-                        let catId = String(skill.categoryId || "4");
-                        if (catId.startsWith("cat-")) catId = catId.replace("cat-", "");
-                        return catId === selectedSkillCategoryId;
-                      })
-                      .slice(0, skillLimit)
-                      .map((skill: SkillResponse) => {
-                        const sel = localFilters.requiredSkills?.includes(skill.name);
-                        return (
-                          <TouchableOpacity
-                            key={skill.id}
-                            onPress={() => {
-                              const current = localFilters.requiredSkills || [];
-                              const updated = sel 
-                                ? current.filter(s => s !== skill.name)
-                                : [...current, skill.name];
-                              handleUpdate({ requiredSkills: updated });
-                            }}
-                            style={{
-                              paddingHorizontal: 16,
-                              paddingVertical: 9,
-                              borderRadius: 16,
-                              borderWidth: 1.5,
-                              borderColor: sel ? "#f97316" : "#e2e8f0",
-                              backgroundColor: sel ? "#f97316" : "#ffffff",
-                            }}
-                          >
-                            <Text style={{ fontSize: 13, fontWeight: "700", color: sel ? "#ffffff" : "#475569" }}>
-                              {skill.name}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
+                  <View className="flex-row flex-wrap gap-2">
+                    {loadingSkills ? (
+                      <Text className="text-slate-400 italic py-4">Đang tải kỹ năng...</Text>
+                    ) : (
+                      availableSkills
+                        .filter(skill => {
+                          // Category Tab Filter
+                          if (selectedSkillCategoryId === "all") return true;
+                          
+                          // Robust category resolution:
+                          const skillCatIdRaw = (skill as any).categoryId || (skill as any).jobCategoryId;
+                          const resolvedCategory = categories.find(c => String(c.id) === String(skillCatIdRaw));
+                          const categoryName = (resolvedCategory?.name || "").toLowerCase();
+                          
+                          let bucketId = "4"; // Default to "Khác"
+                          if (categoryName.includes("trồng trọt") || categoryName.includes("lâm nghiệp") || categoryName.includes("cây trồng")) {
+                            bucketId = "1";
+                          } else if (categoryName.includes("chăn nuôi") || categoryName.includes("gia súc") || categoryName.includes("gia cầm")) {
+                            bucketId = "2";
+                          } else if (categoryName.includes("thủy sản") || categoryName.includes("hải sản") || categoryName.includes("nuôi trồng")) {
+                            bucketId = "3";
+                          } else {
+                            const rawIdStr = String(skillCatIdRaw || "").replace("cat-", "");
+                            if (["1", "2", "3", "4"].includes(rawIdStr)) {
+                              bucketId = rawIdStr;
+                            }
+                          }
+                          
+                          return bucketId === selectedSkillCategoryId;
+                        })
+                        .slice(0, skillLimit)
+                        .map((skill: SkillResponse) => {
+                          const sel = localFilters.requiredSkills?.includes(skill.name);
+                          return (
+                            <TouchableOpacity
+                              key={skill.id}
+                              onPress={() => toggleSkill(skill.name)}
+                              className={`flex-row items-center px-4 py-2.5 rounded-2xl border ${sel ? "bg-sky-50 border-sky-200" : "bg-white border-slate-200"}`}
+                              style={{ 
+                                backgroundColor: sel ? "#f0f9ff" : "#ffffff",
+                                borderColor: sel ? "#bae6fd" : "#e2e8f0" 
+                              }}
+                            >
+                              <Text className={`text-[14px] font-bold mr-1 ${sel ? "text-sky-700" : "text-slate-600"}`}>
+                                {skill.name}
+                              </Text>
+                              {sel && <Check size={14} color="#0284c7" />}
+                            </TouchableOpacity>
+                          );
+                        })
+                    )}
                   </View>
 
                   {/* Paging / Load More */}
                   {availableSkills.filter(skill => {
+                    // Category Tab Filter
                     if (selectedSkillCategoryId === "all") return true;
-                    let catId = String(skill.categoryId || "4");
-                    if (catId.startsWith("cat-")) catId = catId.replace("cat-", "");
-                    return catId === selectedSkillCategoryId;
+                    
+                    const skillCatIdRaw = (skill as any).categoryId || (skill as any).jobCategoryId;
+                    const resolvedCategory = categories.find(c => String(c.id) === String(skillCatIdRaw));
+                    const categoryName = (resolvedCategory?.name || "").toLowerCase();
+                    
+                    let bucketId = "4";
+                    if (categoryName.includes("trồng trọt") || categoryName.includes("lâm nghiệp") || categoryName.includes("cây trồng")) {
+                      bucketId = "1";
+                    } else if (categoryName.includes("chăn nuôi") || categoryName.includes("gia súc") || categoryName.includes("gia cầm")) {
+                      bucketId = "2";
+                    } else if (categoryName.includes("thủy sản") || categoryName.includes("hải sản") || categoryName.includes("nuôi trồng")) {
+                      bucketId = "3";
+                    } else {
+                      const rawIdStr = String(skillCatIdRaw || "").replace("cat-", "");
+                      if (["1", "2", "3", "4"].includes(rawIdStr)) {
+                        bucketId = rawIdStr;
+                      }
+                    }
+                    
+                    return bucketId === selectedSkillCategoryId;
                   }).length > skillLimit && (
                     <TouchableOpacity 
                       onPress={() => setSkillLimit(prev => prev + 10)}

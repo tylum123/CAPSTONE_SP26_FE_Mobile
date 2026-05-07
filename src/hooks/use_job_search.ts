@@ -122,15 +122,19 @@ export function useJobSearch() {
 
 
       // Merge with existing filters but reset page to 1 for new searches
+      // IMPORTANT: Preserve coordinates from current filters if not provided in customFilters
       const mergedFilters = { 
         ...filters, 
         ...customFilters, 
-        pageNumber: customFilters?.pageNumber || 1 
+        pageNumber: customFilters?.pageNumber || 1,
+        workerLatitude: customFilters?.workerLatitude !== undefined ? customFilters.workerLatitude : filters.workerLatitude,
+        workerLongitude: customFilters?.workerLongitude !== undefined ? customFilters.workerLongitude : filters.workerLongitude,
       };
 
-      // Ensure maxDistanceKm is at least 2000 if NO specific distance is provided but location exists
-      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && !mergedFilters.maxDistanceKm) {
-        mergedFilters.maxDistanceKm = 2000;
+      // Ensure maxDistanceKm is at least 3000 (Toàn quốc) if NO specific distance is provided but location exists
+      // This allows the backend to return results without strict filtering unless requested
+      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && mergedFilters.maxDistanceKm === undefined) {
+        mergedFilters.maxDistanceKm = 3000;
       }
 
       const response: any = await jobService.searchJobs(mergedFilters);
@@ -156,20 +160,42 @@ export function useJobSearch() {
         // 3. Fallback total
         if (total === 0) total = jobs.length;
       }
-      // Perform sequential geocoding for results to show on map
-      for (const job of jobs) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-      }
-      
-      setResults(jobs);
+      // Map results to UI-friendly format immediately to show results as fast as possible
+      const mappedJobs = jobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults(mappedJobs);
       setTotalCount(total);
       resultCount = total;
+
+      // PERFORM GEOCODING & DISTANCE CALCULATION IN BACKGROUND
+      // Parallelized for maximum speed
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedJobs.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address);
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+          
+          if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
+            const oldDist = job.distanceKm;
+            job.distanceKm = nominatimService.calculateDistanceKm(
+              mergedFilters.workerLatitude,
+              mergedFilters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (oldDist !== job.distanceKm) hasChanges = true;
+          }
+        }));
+        
+        if (hasChanges) {
+          setResults([...mappedJobs]);
+        }
+      })();
 
       // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
       refreshAppliedStatus();
@@ -211,19 +237,39 @@ export function useJobSearch() {
         }
       }
       
-      // Perform sequential geocoding for new results
-      for (const job of newJobs) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-      }
-
-      setResults((prev) => [...prev, ...newJobs]);
+      const mappedNewJobs = newJobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults((prev) => [...prev, ...mappedNewJobs]);
       setFilters(nextFilters);
+
+      // PERFORM GEOCODING & DISTANCE CALCULATION FOR NEW RESULTS IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedNewJobs.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address);
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+            const oldDist = job.distanceKm;
+            job.distanceKm = nominatimService.calculateDistanceKm(
+              filters.workerLatitude,
+              filters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (oldDist !== job.distanceKm) hasChanges = true;
+          }
+        }));
+        
+        if (hasChanges) {
+          setResults((prev) => [...prev]);
+        }
+      })();
     } catch (err: any) {
       handleError(err, "Không thể tải thêm kết quả.");
       setError("Không thể tải thêm kết quả.");
@@ -247,19 +293,43 @@ export function useJobSearch() {
         data = await jobService.getJobsByDate(type as any);
       }
       
-      // Perform sequential geocoding for results to show on map
-      for (const job of data) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-      }
-
-      setResults(data);
+      const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults(mappedData);
       setTotalCount(data.length);
+
+      // Parallel geocoding and distance calculation IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedData.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address || "");
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          const currentLat = location?.latitude || filters.workerLatitude;
+          const currentLon = location?.longitude || filters.workerLongitude;
+
+          if (currentLat && currentLon && job.latitude && job.longitude) {
+            const newDist = nominatimService.calculateDistanceKm(
+              currentLat,
+              currentLon,
+              job.latitude,
+              job.longitude
+            );
+            if (Math.abs((job.distanceKm || 0) - newDist) > 0.1) {
+              job.distanceKm = newDist;
+              hasChanges = true;
+            }
+          }
+        }));
+        if (hasChanges) {
+          setResults([...mappedData]);
+        }
+      })();
       setFilters(prev => ({ 
         ...prev, 
         pageNumber: 1, 
@@ -286,19 +356,40 @@ export function useJobSearch() {
     try {
       const data = await jobService.getJobsByType(Number(typeId));
       
-      // Perform sequential geocoding for results to show on map
-      for (const job of data) {
-        if (!job.latitude || !job.longitude) {
-          const coords = await nominatimService.geocodeAddress(job.address);
-          if (coords) {
-            job.latitude = coords.latitude;
-            job.longitude = coords.longitude;
-          }
-        }
-      }
-
-      setResults(data);
+      const mappedData = data.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      setResults(mappedData);
       setTotalCount(data.length);
+
+      // Parallel geocoding and distance calculation IN BACKGROUND
+      (async () => {
+        let hasChanges = false;
+        await Promise.all(mappedData.map(async (job) => {
+          if (!job.latitude || !job.longitude) {
+            const coords = await nominatimService.geocodeAddress(job.address || "");
+            if (coords) {
+              job.latitude = coords.latitude;
+              job.longitude = coords.longitude;
+              hasChanges = true;
+            }
+          }
+
+          if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
+            const newDist = nominatimService.calculateDistanceKm(
+              filters.workerLatitude,
+              filters.workerLongitude,
+              job.latitude,
+              job.longitude
+            );
+            if (Math.abs((job.distanceKm || 0) - newDist) > 0.1) {
+              job.distanceKm = newDist;
+              hasChanges = true;
+            }
+          }
+        }));
+        if (hasChanges) {
+          setResults([...mappedData]);
+        }
+      })();
       setFilters(prev => ({ ...prev, pageNumber: 1, jobTypeId: Number(typeId) }));
     } catch (err: any) {
       handleError(err, "Không thể tải danh sách việc theo loại.");

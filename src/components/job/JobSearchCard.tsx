@@ -16,7 +16,7 @@ interface JobSearchCardProps {
   onPress: (job: JobDiscoveryDTO) => void;
 }
 
-export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
+export const JobSearchCard = React.memo(({ job, onPress }: JobSearchCardProps) => {
   return (
     <TouchableOpacity 
       className="mb-3 bg-white rounded-2xl flex-row overflow-hidden border border-slate-100" 
@@ -33,7 +33,17 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
       <View className={["w-1.5", job.isUrgent ? "bg-rose-500" : "bg-primary-400"].join(" ")} />
       <View className="flex-1 p-4">
         <View className="flex-row items-center gap-3 mb-3">
-          <Avatar fallback={job.contactName?.[0] || "?"} size={42} />
+          <Avatar 
+            source={
+              (job as any).farmer?.avatar ? { uri: (job as any).farmer.avatar } : 
+              (job as any).farmerAvatar ? { uri: (job as any).farmerAvatar } :
+              (job as any).farmerAvatarUrl ? { uri: (job as any).farmerAvatarUrl } :
+              (job as any).avatarUrl ? { uri: (job as any).avatarUrl } :
+              undefined
+            } 
+            fallback={job.contactName?.[0] || "?"} 
+            size={42} 
+          />
           <View className="flex-1">
             <Text className="text-[16px] font-bold text-slate-800" numberOfLines={1}>{job.title}</Text>
             <Text className="text-xs text-slate-500">{job.contactName || "Chủ nông trại"}</Text>
@@ -51,16 +61,14 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
           <View className="flex-row items-center gap-1.5 flex-1 pr-1">
             <MapPin size={12} color="#64748b" />
             <Text className="text-[11px] text-slate-600 font-medium" numberOfLines={1}>
-              {job.distanceKm ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
+              {job.distanceKm !== undefined ? `${job.distanceKm.toFixed(1)} km` : (job.locationName || job.address || "Việt Nam")}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />
           <View className="flex-row items-center gap-1.5 flex-1 px-1 justify-center">
             <Users size={12} color="#64748b" />
             <Text className="text-[11px] text-slate-600 font-bold" numberOfLines={1}>
-              {(job as any).requiredWorkersRange 
-                ? `${(job as any).requiredWorkersRange} người/ngày`
-                : `${job.workersNeeded || 0} người${job.jobTypeId !== 1 ? "/ngày" : ""}`}
+              {`${(job as any).requiredWorkersRange || job.workersNeeded || 0} người${job.jobTypeId !== 1 ? "/ngày" : ""}`}
             </Text>
           </View>
           <View className="w-px h-3 bg-slate-200" />
@@ -87,4 +95,4 @@ export function JobSearchCard({ job, onPress }: JobSearchCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+});

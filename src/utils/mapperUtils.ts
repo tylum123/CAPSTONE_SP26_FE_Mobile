@@ -37,10 +37,10 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     description: cleanDescription,
     farmer: { 
       id: job.farmerProfileId,
-      userId: job.farmerUserId || fProfile?.userId || null,
+      userId: job.farmerUserId || fProfile?.userId || (job as any).farmerUserId || null,
       name: fProfile?.contactName || (job.contactName && job.contactName !== "string" ? job.contactName : "Chủ nông trại"), 
-      avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || null, 
-      rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || 0, 
+      avatar: fProfile?.avatarUrl || (job as any).farmerAvatarUrl || (job as any).farmerAvatar || (job as any).avatarUrl || (job as any).farmer?.avatarUrl || (job as any).farmerProfile?.avatarUrl || null, 
+      rating: fProfile?.averageRating || (discovery as any).farmerAverageRating || (job as any).averageRating || (job as any).farmerRating || 0, 
       totalJobs: fProfile?.totalJobsPosted || fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0,
       totalJobsPosted: fProfile?.totalJobsPosted || 0,
       totalJobsCompleted: fProfile?.totalJobsCompleted || (discovery as any).similarJobsCompleted || 0
@@ -55,23 +55,21 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     wageUnit: job.jobTypeId === 1 ? "" : " /ngày",
     startDateFormatted: formatDateStr(job.startDate),
     endDateFormatted: formatDateStr(job.endDate),
-    startDate: formatDateStr(job.startDate),
-    endDate: formatDateStr(job.endDate),
     date: formatDateStr(job.startDate),
     thumbnailUrl: getCategoryThumbnail(job.jobCategoryId, job.title),
     time: job.jobTypeId === 1 ? "Khoán" : (timeRange || "07:00 - 17:00"),
     duration: duration,
     workload: job.workload || "Thỏa thuận",
     requiredWorkers: job.workersNeeded || 0,
-    requiredWorkersRange: (job as any).workerCountPerDays?.length > 0 
-      ? (() => {
-          const counts = (job as any).workerCountPerDays.map((c: any) => c.neededWorkerCount).filter((n: any) => n !== undefined);
-          if (counts.length === 0) return null;
-          const min = Math.min(...counts);
-          const max = Math.max(...counts);
-          return min === max ? null : `${min} - ${max}`;
-        })()
-      : null,
+    requiredWorkersRange: (() => {
+      const dayData = (job as any).workerCountPerDays || (job as any).jobPostDays || [];
+      if (dayData.length === 0) return null;
+      const counts = dayData.map((c: any) => c.neededWorkerCount || c.workersNeeded).filter((n: any) => n !== undefined && n > 0);
+      if (counts.length === 0) return null;
+      const min = Math.min(...counts);
+      const max = Math.max(...counts);
+      return min === max ? `${min}` : `${min} - ${max}`;
+    })(),
     appliedWorkers: job.workersAccepted || 0,
     requiredSkills: job.jobSkillRequirements?.length > 0 ? job.jobSkillRequirements.map(s => s.name).join(", ") : "Nông nghiệp",
     genderPreference: "Không yêu cầu",

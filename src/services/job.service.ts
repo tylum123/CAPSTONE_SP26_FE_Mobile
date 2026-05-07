@@ -17,12 +17,16 @@ import {
   JobDiscoveryDTO,
   WorkerCountPerDay} from "../types/export_type_definitions";
 
+let categoriesCache: JobCategoryDTO[] | null = null;
+
 export const jobService = {
   getCategories: async (): Promise<JobCategoryDTO[]> => {
+    if (categoriesCache) return categoriesCache;
     const response = await api.get<ApiResponse<JobCategoryDTO[]>>(
       API_ENDPOINTS.JOB.CATEGORY_LIST,
     );
-    return Array.isArray(response.data.data) ? response.data.data : [];
+    categoriesCache = Array.isArray(response.data.data) ? response.data.data : [];
+    return categoriesCache;
   },
 
   getCategoryDetail: async (id: string): Promise<JobCategoryDTO> => {

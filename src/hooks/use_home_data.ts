@@ -17,6 +17,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { DeviceEventEmitter } from 'react-native';
+import * as Location from "expo-location";
 import { useAuth } from '../context/AuthContext';
 import {
   jobService,
@@ -57,7 +58,7 @@ interface UserLocation {
 }
 
 interface HomeDataResult {
-  nearbyJobs: Job[];
+  nearbyJobs: any[];
   pendingApplications: MappedApplication[];
   activeApplications: MappedApplication[];
   profileData: ProfileData;
@@ -78,7 +79,7 @@ const DEFAULT_LOCATION: UserLocation = { latitude: 10.762622, longitude: 106.660
 export function useHomeData(): HomeDataResult {
   const { user, isAuthenticated } = useAuth();
 
-  const [nearbyJobs, setNearbyJobs]               = useState<Job[]>([]);
+  const [nearbyJobs, setNearbyJobs]               = useState<any[]>([]);
   const [pendingApplications, setPendingApplications] = useState<MappedApplication[]>([]);
   const [activeApplications, setActiveApplications]   = useState<MappedApplication[]>([]);
   const [profileData, setProfileData]             = useState<ProfileData>({
@@ -102,6 +103,7 @@ export function useHomeData(): HomeDataResult {
     let sourceJobs: any[]    = [];
     let sourceApps: any[]    = [];
     let sourceProfile: any   = null;
+    let gpsStatus: any = null;
 
     // ── 1. Fetch base data ──────────────────────────────────────────────────
 
@@ -117,13 +119,17 @@ export function useHomeData(): HomeDataResult {
       });
     } else {
       try {
-        const [jobs, apps, profile, wallet, dashboard] = await Promise.all([
+        const results = await Promise.all([
           jobService.getJobPosts(),
           jobService.getApplications(),
           workerProfileService.getProfile(),
-          walletService.getWallet(),
+          jobService.getCategories(),
           workerProfileService.getDashboardData().catch(() => null),
+          Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' })),
         ]);
+
+        const [jobs, apps, profile, categories, dashboard] = results;
+        gpsStatus = results[5];
 
         sourceJobs    = jobs;
         sourceApps    = apps;
@@ -134,22 +140,27 @@ export function useHomeData(): HomeDataResult {
         const prefRadius = profile?.travelRadiusKmPreference || 10;
         setRadiusKm(prefRadius);
 
-        // Calculate today's earnings from wallet transactions
-        let todayEarnings = 0;
-        if (wallet?.id) {
-          const txsResult = await walletService.getTransactions(wallet.id);
-          const todayLocal = new Date().toISOString().slice(0, 10); // yyyy-MM-dd
-          todayEarnings = (txsResult?.data || [])
-            .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
-            .reduce((sum, tx) => sum + tx.amount, 0);
+        // Calculate today's earnings from wallet transactions in background
+        if (profile?.id) {
+          walletService.getWallet().then(async (wallet) => {
+            if (wallet?.id) {
+              const txsResult = await walletService.getTransactions(wallet.id);
+              const todayLocal = new Date().toISOString().slice(0, 10);
+              const earnings = (txsResult?.data || [])
+                .filter(tx => tx.createdAt.startsWith(todayLocal) && tx.amount > 0)
+                .reduce((sum, tx) => sum + tx.amount, 0);
+              
+              setProfileData(prev => ({ ...prev, todayEarnings: earnings }));
+            }
+          }).catch(() => {});
         }
 
-        setProfileData({
-          rating: dashboard?.averageRating ?? profile?.averageRating ?? null,
-          totalJobsCompleted: dashboard?.completedJobs ?? profile?.totalJobsCompleted ?? null,
-          avatarUrl: profile?.avatarUrl || null,
-          todayEarnings,
-        });
+        setProfileData(prev => ({
+          ...prev,
+          rating: dashboard?.averageRating ?? profile?.averageRating ?? prev.rating,
+          totalJobsCompleted: dashboard?.completedJobs ?? profile?.totalJobsCompleted ?? prev.totalJobsCompleted,
+          avatarUrl: profile?.avatarUrl || prev.avatarUrl,
+        }));
       } catch (err: any) {
         if (isAuthenticated) {
           handleError(err, "Không thể tải dữ liệu trang chủ.");
@@ -158,10 +169,38 @@ export function useHomeData(): HomeDataResult {
     }
 
     // ── 2. Geocode + fetch nearby jobs ──────────────────────────────────────
-
     let lat = DEFAULT_LOCATION.latitude;
     let lon = DEFAULT_LOCATION.longitude;
+    let locationSource = "default";
 
+    // 2.1 Start GPS fetch (Non-blocking if possible)
+    if (gpsStatus?.status === 'granted') {
+      try {
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }).then(location => {
+          const newLat = location.coords.latitude;
+          const newLon = location.coords.longitude;
+          if (Math.abs(lat - newLat) > 0.01 || Math.abs(lon - newLon) > 0.01) {
+            console.log("[HomeLocation] GPS updated, refreshing nearby jobs...");
+            setUserLocation({ latitude: newLat, longitude: newLon });
+            // Refresh nearby jobs with new coordinates in background
+            jobService.getNearbyJobs({ 
+              latitude: newLat, 
+              longitude: newLon, 
+              maxDistanceKm: sourceProfile?.travelRadiusKmPreference || radiusKm 
+            }).then(newNearby => {
+              if (newNearby && newNearby.length > 0) {
+                const mapped = newNearby.map(j => mapJobPostToUI(j));
+                setNearbyJobs(mapped);
+              }
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      } catch {}
+    }
+
+    // 2.2 SET INITIAL LOCATION (Default or Profile)
     if (sourceProfile?.primaryLocation && sourceProfile.id !== 'demo-worker-123') {
       try {
         const loc = await nominatimService.geocodeAddress(sourceProfile.primaryLocation);
@@ -169,6 +208,7 @@ export function useHomeData(): HomeDataResult {
           setUserLocation(loc);
           lat = loc.latitude;
           lon = loc.longitude;
+          locationSource = "profile";
         }
       } catch {
         setUserLocation(DEFAULT_LOCATION);
@@ -180,7 +220,7 @@ export function useHomeData(): HomeDataResult {
     const prefRadius = sourceProfile?.travelRadiusKmPreference || radiusKm;
 
     let finalizedNearby: any[] = [];
-    let todayReports: any[]    = [];
+    let todayReports: any[] = [];
 
     if (user?.isDemo) {
       finalizedNearby = sourceJobs;
@@ -203,8 +243,7 @@ export function useHomeData(): HomeDataResult {
       finalizedNearby = sourceJobs.filter((j: any) => j.statusId === 2);
     }
 
-    // ── 3. Map jobs ─────────────────────────────────────────────────────────
-
+    // ── 3. Map jobs (Initial pass) ──────────────────────────────────────────
     const myProfileId   = sourceProfile?.id;
     const myAppliedIds  = new Set(
       sourceApps
@@ -214,22 +253,10 @@ export function useHomeData(): HomeDataResult {
 
     const availableJobsRaw = finalizedNearby.filter(j => !myAppliedIds.has(String(j.id)));
     
-    // Perform sequential geocoding for markers
-    const mappedJobs: Job[] = [];
-    for (const j of availableJobsRaw) {
+    // Map immediately to show results without waiting for geocoding
+    const mappedJobs: Job[] = availableJobsRaw.map(j => {
       const m = mapJobPostToUI(j);
-      let lat = j.latitude;
-      let lon = j.longitude;
-      
-      if (!lat || !lon) {
-        const coords = await nominatimService.geocodeAddress(m.location.address);
-        if (coords) {
-          lat = coords.latitude;
-          lon = coords.longitude;
-        }
-      }
-
-      mappedJobs.push({
+      return {
         id: j.id,
         title: m.title,
         farmer: m.farmer.name,
@@ -245,12 +272,39 @@ export function useHomeData(): HomeDataResult {
         urgent: m.urgent,
         wageUnit: m.wageUnit,
         thumbnailUrl: m.thumbnailUrl,
-        latitude: lat,
-        longitude: lon,
-      });
-    }
+        latitude: j.latitude,
+        longitude: j.longitude,
+      };
+    });
 
     setNearbyJobs(mappedJobs);
+
+    // ── 3.1 Geocode in Background (Parallel) ────────────────────────────────
+    (async () => {
+      let hasGeocodingChanges = false;
+      await Promise.all(mappedJobs.map(async (job) => {
+        if (!job.latitude || !job.longitude) {
+          const coords = await nominatimService.geocodeAddress(job.location);
+          if (coords) {
+            job.latitude = coords.latitude;
+            job.longitude = coords.longitude;
+            hasGeocodingChanges = true;
+          }
+        }
+        
+        if (lat && lon && job.latitude && job.longitude) {
+          const newDist = nominatimService.calculateDistanceKm(lat, lon, job.latitude, job.longitude);
+          if (Math.abs((job.distanceKm || 0) - newDist) > 0.1) {
+            job.distanceKm = newDist;
+            hasGeocodingChanges = true;
+          }
+        }
+      }));
+
+      if (hasGeocodingChanges) {
+        setNearbyJobs([...mappedJobs]);
+      }
+    })();
 
     // ── 4. Map applications ─────────────────────────────────────────────────
 
