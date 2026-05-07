@@ -58,7 +58,7 @@ interface UserLocation {
 }
 
 interface HomeDataResult {
-  nearbyJobs: Job[];
+  nearbyJobs: any[];
   pendingApplications: MappedApplication[];
   activeApplications: MappedApplication[];
   profileData: ProfileData;
@@ -79,7 +79,7 @@ const DEFAULT_LOCATION: UserLocation = { latitude: 10.762622, longitude: 106.660
 export function useHomeData(): HomeDataResult {
   const { user, isAuthenticated } = useAuth();
 
-  const [nearbyJobs, setNearbyJobs]               = useState<Job[]>([]);
+  const [nearbyJobs, setNearbyJobs]               = useState<any[]>([]);
   const [pendingApplications, setPendingApplications] = useState<MappedApplication[]>([]);
   const [activeApplications, setActiveApplications]   = useState<MappedApplication[]>([]);
   const [profileData, setProfileData]             = useState<ProfileData>({
@@ -190,8 +190,10 @@ export function useHomeData(): HomeDataResult {
               longitude: newLon, 
               maxDistanceKm: sourceProfile?.travelRadiusKmPreference || radiusKm 
             }).then(newNearby => {
-              // Re-map with new distances
-              // (This part will be handled by the geocoding background process if it detects location changes)
+              if (newNearby && newNearby.length > 0) {
+                const mapped = newNearby.map(j => mapJobPostToUI(j));
+                setNearbyJobs(mapped);
+              }
             }).catch(() => {});
           }
         }).catch(() => {});

@@ -61,15 +61,15 @@ export const mapJobPostToUI = (job: JobPostDTO | JobDiscoveryDTO) => {
     duration: duration,
     workload: job.workload || "Thỏa thuận",
     requiredWorkers: job.workersNeeded || 0,
-    requiredWorkersRange: (job as any).workerCountPerDays?.length > 0 
-      ? (() => {
-          const counts = (job as any).workerCountPerDays.map((c: any) => c.neededWorkerCount).filter((n: any) => n !== undefined);
-          if (counts.length === 0) return null;
-          const min = Math.min(...counts);
-          const max = Math.max(...counts);
-          return min === max ? null : `${min} - ${max}`;
-        })()
-      : null,
+    requiredWorkersRange: (() => {
+      const dayData = (job as any).workerCountPerDays || (job as any).jobPostDays || [];
+      if (dayData.length === 0) return null;
+      const counts = dayData.map((c: any) => c.neededWorkerCount || c.workersNeeded).filter((n: any) => n !== undefined && n > 0);
+      if (counts.length === 0) return null;
+      const min = Math.min(...counts);
+      const max = Math.max(...counts);
+      return min === max ? `${min}` : `${min} - ${max}`;
+    })(),
     appliedWorkers: job.workersAccepted || 0,
     requiredSkills: job.jobSkillRequirements?.length > 0 ? job.jobSkillRequirements.map(s => s.name).join(", ") : "Nông nghiệp",
     genderPreference: "Không yêu cầu",
