@@ -1,22 +1,24 @@
 /* AI CONTEXT:
  * Action: Displays the read-only view of the workers public profile and stats.
- * Modification: Refactored to reduce lines < 250, added Dispute History entry.
- * Inputs: Current user context data.
- * Outputs: Profile UI, settings navigation links.
- * Dependencies: Auth context, User service. */
+ * Modification: Restriction badge uses Toast, others use Modals (restored).
+ * Inputs: Current user context data, Rating service data, Profile API.
+ * Outputs: Profile UI with trust score, warning count, and account status.
+ * Dependencies: Auth context, User service, Rating service, react-native-toast-message. */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, DeviceEventEmitter, Modal, Pressable } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, DeviceEventEmitter, Modal, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 import { Avatar, Badge } from "../components/ui/export_ui_components";
-import { CreditCard, Users, LogOut, Edit2, Phone, Wallet, Bell, FileText, ChevronRight, MapPin, Clock, ShieldAlert, X, Tractor, Package, Tag, MousePointer2, Calendar, Navigation, CheckCircle2 } from "lucide-react-native";
+import { CreditCard, Users, LogOut, Edit2, Phone, Wallet, Bell, FileText, ChevronRight, MapPin, Clock, ShieldAlert, X, Tractor, Package, Tag, MousePointer2, Calendar, Navigation, CheckCircle2, CircleHelp, Info } from "lucide-react-native";
 import { useAuth } from "../context/AuthContext";
-import { workerProfileService, walletService, jobService, dailyReportService } from "../services/export_services";
+import { workerProfileService, walletService, jobService, dailyReportService, ratingService } from "../services/export_services";
 import { WorkerProfileDTO } from "../types/define_worker_interfaces";
 import { FeedbackModal } from "../components/ui/FeedbackModal";
 import { handleError } from "../utils/errorHandler";
 import { DEMO_WORKER_PROFILE } from "../constants/demoData";
 import { parseLocation } from "../utils/locationUtils";
+import { formatDate } from "../utils/provide_formatting_helpers";
 
 // --- Extracted Constants & Helpers ---
 const EXPERIENCE_INFO: Record<number, { label: string; sub: string }> = { 
@@ -24,7 +26,6 @@ const EXPERIENCE_INFO: Record<number, { label: string; sub: string }> = {
 };
 const DAYS_ORDER = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const LABELS_MAP: Record<string, string> = { T2: "Thứ 2", T3: "Thứ 3", T4: "Thứ 4", T5: "Thứ 5", T6: "Thứ 6", T7: "Thứ 7", CN: "Chủ nhật" };
-
 
 const fmtSched = (raw?: string | null) => {
   if (!raw?.trim()) return "Chưa cập nhật";
@@ -40,7 +41,6 @@ const fmtSched = (raw?: string | null) => {
   return sorted.map(id => LABELS_MAP[id]).join(", ");
 };
 
-
 export function WorkerProfileScreen({ navigation }: any) {
   const { user, logout, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<WorkerProfileDTO | null>(null);
@@ -49,22 +49,26 @@ export function WorkerProfileScreen({ navigation }: any) {
   const [categories, setCategories] = useState<any[]>([]);
   const [statsData, setStatsData] = useState<any>(null);
   const [reports, setReports] = useState<any[]>([]);
+  const [workerRatings, setWorkerRatings] = useState<any[]>([]);
+  const [showReliabilityModal, setShowReliabilityModal] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!isAuthenticated) return;
       try {
-        const [p, cats, dash] = await Promise.all([
+        const [p, cats, dash, userRatings] = await Promise.all([
           workerProfileService.getProfile(),
           jobService.getCategories().catch(() => []),
           workerProfileService.getDashboardData().catch(() => null),
+          isAuthenticated && user?.id ? ratingService.getUserRatings(user.id).catch(() => []) : Promise.resolve([]),
         ]);
         
         setProfile(p);
         setCategories(cats);
         setStatsData(dash);
+        setWorkerRatings(userRatings);
 
-        // Conditional fetches requiring profile/user ID
         const [_, reps] = await Promise.all([
           isAuthenticated && !user?.isDemo ? walletService.getWallet().catch(() => ({ balance: 0 })) : Promise.resolve({ balance: 8500000 }),
           isAuthenticated && !user?.isDemo && p?.id ? dailyReportService.getWorkerReports(p.id).catch(() => []) : Promise.resolve([])
@@ -76,7 +80,7 @@ export function WorkerProfileScreen({ navigation }: any) {
     fetchData();
     const sub = DeviceEventEmitter.addListener("REFRESH_DATA", fetchData);
     return () => sub.remove();
-  }, [isAuthenticated, user?.isDemo]);
+  }, [isAuthenticated, user?.id]);
 
   const displayProf = useMemo(() => (!isAuthenticated || user?.isDemo) ? DEMO_WORKER_PROFILE : profile || { ...DEMO_WORKER_PROFILE, fullName: user?.name || "" }, [profile, isAuthenticated, user?.isDemo, user?.name]);
 
@@ -93,10 +97,43 @@ export function WorkerProfileScreen({ navigation }: any) {
 
   const reliability = useMemo(() => {
     const completed = statsData?.completedJobs || 0;
-    const cancelled = statsData?.cancelledApplications || 0;
-    const resolved = completed + cancelled;
-    return resolved > 0 ? Math.round((completed / resolved) * 100) : 100;
-  }, [statsData]);
+    if (completed === 0) return 100;
+    const badRatingsCount = workerRatings.filter(r => (r.ratingScore || 0) <= 4.5).length;
+    const score = ((completed - badRatingsCount) / completed) * 100;
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }, [statsData, workerRatings, profile]);
+
+  const restrictionInfo = useMemo(() => {
+    const isActive = profile?.isActive ?? displayProf.isActive ?? true;
+    const warningCount = Number((profile as any)?.warningCount ?? (profile as any)?.warnings ?? (displayProf as any)?.warningCount ?? 0);
+    const lastWarnedAtRaw = profile?.lastWarnedAt ?? displayProf.lastWarnedAt;
+    
+    let isRestricted = !isActive;
+    let isPermanent = warningCount >= 4;
+    let daysRemaining = 0;
+
+    const hasValidWarnDate = lastWarnedAtRaw && !lastWarnedAtRaw.startsWith("0001-01-01");
+
+    if (isPermanent) {
+      isRestricted = true;
+    } else if (warningCount > 0) {
+      if (hasValidWarnDate) {
+        const warnDate = new Date(lastWarnedAtRaw);
+        const penaltyMs = warningCount * 3 * 24 * 60 * 60 * 1000;
+        const expirationTime = warnDate.getTime() + penaltyMs;
+        const nowTime = new Date().getTime();
+
+        if (nowTime < expirationTime) {
+          isRestricted = true;
+          daysRemaining = Math.ceil((expirationTime - nowTime) / (24 * 60 * 60 * 1000));
+        }
+      } else {
+        isRestricted = true;
+        daysRemaining = warningCount * 3;
+      }
+    }
+    return { isRestricted, isPermanent, daysRemaining };
+  }, [displayProf, profile]);
 
   const weeklyActivityData = useMemo(() => {
     const activity = [
@@ -105,12 +142,9 @@ export function WorkerProfileScreen({ navigation }: any) {
       { day: "T6", val: 0, count: 0 }, { day: "T7", val: 0, count: 0 }, 
       { day: "CN", val: 0, count: 0 }
     ];
-    
     if (!reports || reports.length === 0) return activity;
-
     const today = new Date();
-    const dNum = today.getDay(); // 0 (Sun) - 6 (Sat)
-    // Find previous Monday (Mon=1 in getDay)
+    const dNum = today.getDay(); 
     const monday = new Date(today);
     monday.setDate(today.getDate() - (dNum === 0 ? 6 : dNum - 1));
     monday.setHours(0, 0, 0, 0);
@@ -125,28 +159,46 @@ export function WorkerProfileScreen({ navigation }: any) {
     });
 
     const maxCount = Math.max(...activity.map(a => a.count), 1);
-    // Scale max height to 75% to leave room for numbers above
     return activity.map(a => ({ ...a, val: (a.count / maxCount) * 75 }));
   }, [reports]);
 
   const weekTotal = useMemo(() => weeklyActivityData.reduce((acc, curr) => acc + curr.count, 0), [weeklyActivityData]);
 
+  const handleRestrictionPress = () => {
+    Toast.show({
+      type: 'info',
+      text1: 'Thông báo hạn chế',
+      text2: 'Tài khoản của bạn hiện tại không thể ứng tuyển cho bất cứ bài đăng nào.',
+      position: 'top',
+      visibilityTime: 4000,
+    });
+  };
+
   return (
     <>
     <SafeAreaView className="flex-1 bg-emerald-600" edges={["top"]}>
       <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
-        {/* HEADER SECTION */}
         <View className="bg-emerald-600 h-[120px] relative" />
-
-        {/* PROFILE CONTENT CONTAINER (WHITE SHEET) */}
         <View className="flex-1 bg-white -mt-10 rounded-t-[40px] px-6 pt-6">
-          <View className="flex-row justify-between items-end mb-6">
-             <View className="-mt-16 p-1 bg-white rounded-full">
-               <Avatar 
-                 source={displayProf.avatarUrl ? { uri: displayProf.avatarUrl } : undefined} 
-                 fallback={displayProf.fullName?.[0] || user?.name?.[0] || "H"} 
-                 size={90} 
-               />
+          <View className="flex-row justify-between items-end mb-4">
+             <View className="items-center">
+               <View className="-mt-16 p-1 bg-white rounded-full shadow-lg">
+                 <Avatar 
+                   source={displayProf.avatarUrl ? { uri: displayProf.avatarUrl } : undefined} 
+                   fallback={displayProf.fullName?.[0] || user?.name?.[0] || "H"} 
+                   size={90} 
+                 />
+               </View>
+               {restrictionInfo.isRestricted && (
+                 <TouchableOpacity 
+                   onPress={handleRestrictionPress}
+                   className="mt-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 shadow-sm"
+                 >
+                   <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">
+                     {restrictionInfo.isPermanent ? "Bị khóa vĩnh viễn" : `Bị hạn chế ${restrictionInfo.daysRemaining} ngày`}
+                   </Text>
+                 </TouchableOpacity>
+               )}
              </View>
 
              <TouchableOpacity 
@@ -158,10 +210,11 @@ export function WorkerProfileScreen({ navigation }: any) {
              </TouchableOpacity>
           </View>
 
-          {/* IDENTITY & QUICK STATS ROW */}
           <View className="flex-row justify-between mb-8">
             <View className="flex-1 pr-4">
-              <Text className="text-[20px] font-black text-slate-800 mb-0.5" numberOfLines={1}>{displayProf.fullName || user?.name || "Người dùng"}</Text>
+              <View className="flex-row items-center gap-2 mb-0.5">
+                <Text className="text-[20px] font-black text-slate-800" numberOfLines={1}>{displayProf.fullName || user?.name || "Người dùng"}</Text>
+              </View>
               <Text className="text-[13px] text-slate-400 font-medium" numberOfLines={1}>{user?.email || "Chưa cập nhật email"}</Text>
             </View>
             
@@ -177,7 +230,6 @@ export function WorkerProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* 2X2 BENTO STATS GRID */}
           <View className="flex-row flex-wrap justify-between gap-y-4 mb-8">
             <View className="w-[48%] bg-slate-50/50 rounded-[28px] p-5 border border-slate-100">
                <View className="w-10 h-10 rounded-2xl bg-orange-100 items-center justify-center mb-4">
@@ -210,19 +262,25 @@ export function WorkerProfileScreen({ navigation }: any) {
             </View>
 
             <View className="w-[48%] bg-slate-50/50 rounded-[28px] p-5 border border-slate-100">
-               <View className="w-10 h-10 rounded-2xl bg-emerald-100 items-center justify-center mb-4">
-                  <CheckCircle2 size={20} color="#10b981" />
+               <View className="flex-row justify-between items-start mb-4">
+                 <View className="w-10 h-10 rounded-2xl bg-emerald-100 items-center justify-center">
+                    <CheckCircle2 size={20} color="#10b981" />
+                 </View>
+                 <TouchableOpacity 
+                   onPress={() => setShowReliabilityModal(true)}
+                   className="w-8 h-8 items-center justify-center rounded-full bg-slate-100/50"
+                 >
+                    <CircleHelp size={14} color="#94a3b8" />
+                 </TouchableOpacity>
                </View>
                <Text className="text-[18px] font-black text-slate-800 mb-0.5">{reliability}%</Text>
                <Text className="text-[11px] text-slate-400 font-bold uppercase tracking-wide">Tin cậy</Text>
             </View>
           </View>
 
-          {/* CHI TIẾT HỒ SƠ (PERSONAL INFO - HYBRID GRID) */}
           <View className="mb-8">
             <Text className="text-[16px] font-black text-slate-800 mb-4">Chi tiết hồ sơ</Text>
             <View className="bg-slate-50/50 border border-slate-100 rounded-[32px] p-6">
-              {/* PINNED ADDRESS ROW */}
               <View className="flex-row items-center gap-4 mb-6 border-b border-slate-100 pb-5">
                 <View className="w-10 h-10 rounded-2xl bg-white items-center justify-center shadow-sm">
                   <MapPin size={18} color="#ec4899" />
@@ -235,30 +293,44 @@ export function WorkerProfileScreen({ navigation }: any) {
                 </View>
               </View>
 
-              {/* GRID INFORMATION */}
               <View className="flex-row flex-wrap justify-between gap-y-6">
                 {[
                   { label: "Giới tính", value: displayProf.gender === "Male" ? "Nam" : displayProf.gender === "Female" ? "Nữ" : displayProf.gender || "—", icon: Users, color: "#6366f1" },
-                  { 
-                    label: "Ngày sinh", 
-                    value: displayProf.date_of_birth?.includes("/") 
-                      ? displayProf.date_of_birth 
-                      : (displayProf.date_of_birth && !isNaN(new Date(displayProf.date_of_birth).getTime()) 
-                          ? new Date(displayProf.date_of_birth).toLocaleDateString("vi-VN") 
-                          : "—"), 
-                    icon: Calendar, 
-                    color: "#f43f5e" 
-                  },
+                  { label: "Ngày sinh", value: formatDate(displayProf.date_of_birth), icon: Calendar, color: "#f43f5e" },
                   { label: "Số điện thoại", value: displayProf.phoneNumber || "—", icon: Phone, color: "#059669" },
                   { label: "Phạm vi", value: `${displayProf.travelRadiusKmPreference || 20} km`, icon: Navigation, color: "#f59e0b" },
+                  { 
+                    label: "Số lần bị cảnh báo", 
+                    value: `${(profile as any)?.warningCount ?? (profile as any)?.warnings ?? (displayProf as any)?.warningCount ?? 0} lần`, 
+                    icon: ShieldAlert, 
+                    color: "#f59e0b",
+                    hasInfo: true,
+                    onInfoPress: () => setShowWarningModal(true)
+                  },
+                  { 
+                    label: "Cảnh báo gần nhất", 
+                    value: (() => {
+                      const lastWarn = (profile as any)?.lastWarnedAt ?? (displayProf as any)?.lastWarnedAt;
+                      return lastWarn && !lastWarn.startsWith("0001-01-01") ? formatDate(lastWarn) : "—";
+                    })(), 
+                    icon: Clock, 
+                    color: "#64748b" 
+                  },
                   { label: "Lịch làm việc", value: fmtSched(displayProf.availabilitySchedule), icon: Clock, color: "#10b981", full: true },
-                ].map((info, idx) => (
+                ].map((info: any, idx: number) => (
                   <View key={idx} className={`${info.full ? "w-full border-t border-slate-100 pt-5 mt-1" : "w-[47%]"} flex-row items-center gap-3`}>
                     <View className="w-9 h-9 rounded-xl bg-white items-center justify-center shadow-sm">
                       <info.icon size={16} color={info.color} />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mb-0.5" numberOfLines={1}>{info.label}</Text>
+                      <View className="flex-row items-center gap-1 mb-0.5">
+                        <Text className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter" numberOfLines={1}>{info.label}</Text>
+                        {info.hasInfo && (
+                          <TouchableOpacity onPress={info.onInfoPress}>
+                            <Info size={10} color="#94a3b8" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                       <Text className="text-[13px] font-black text-slate-800 leading-tight" numberOfLines={info.full ? 2 : 1}>{info.value}</Text>
                     </View>
                   </View>
@@ -267,7 +339,6 @@ export function WorkerProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* WEEKLY ACTIVITY BAR CHART */}
           <View className="mb-8">
             <View className="flex-row items-center justify-between mb-5">
               <Text className="text-[16px] font-black text-slate-800">Hiệu suất báo cáo ngày</Text>
@@ -275,26 +346,17 @@ export function WorkerProfileScreen({ navigation }: any) {
                  <Text className="text-emerald-600 font-bold text-[10px]">Tuần này: {weekTotal} báo cáo</Text>
               </View>
             </View>
-            
             <View className="bg-slate-50/50 border border-slate-100 rounded-[32px] p-6 pb-4">
                <View className="flex-row items-end justify-between h-[130px] mb-2">
                   {weeklyActivityData.map((d, i) => {
-                    const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0, Sun=6
+                    const todayIdx = (new Date().getDay() + 6) % 7;
                     const isToday = i === todayIdx;
                     return (
                       <View key={i} className="items-center">
-                         {/* Numerical Data Point */}
                          {d.count > 0 && (
-                           <Text 
-                             className={`text-[10px] font-black mb-1.5 ${isToday ? "text-emerald-600" : "text-slate-400"}`}
-                           >
-                             {d.count}
-                           </Text>
+                           <Text className={`text-[10px] font-black mb-1.5 ${isToday ? "text-emerald-600" : "text-slate-400"}`}>{d.count}</Text>
                          )}
-                         <View 
-                           style={{ height: `${d.val || 4}%` }} 
-                           className={`w-[32px] rounded-2xl ${isToday ? "bg-emerald-500 shadow-lg shadow-emerald-200" : "bg-emerald-200/40"}`} 
-                         />
+                         <View style={{ height: `${d.val || 4}%` }} className={`w-[32px] rounded-2xl ${isToday ? "bg-emerald-500 shadow-lg shadow-emerald-200" : "bg-emerald-200/40"}`} />
                          <Text className={`text-[10px] font-bold mt-3 ${isToday ? "text-emerald-600 font-black" : "text-slate-400"}`}>{d.day}</Text>
                       </View>
                     );
@@ -303,7 +365,6 @@ export function WorkerProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          {/* SETTINGS MENU LIST */}
           <View className="mb-8">
             <Text className="text-[16px] font-black text-slate-800 mb-4">Cài đặt & Tiện ích</Text>
             <View className="bg-slate-50/50 border border-slate-100 rounded-[32px] overflow-hidden">
@@ -314,11 +375,7 @@ export function WorkerProfileScreen({ navigation }: any) {
                  { icon: ShieldAlert, label: "Khiếu nại của tôi", sub: "Khiếu nại & Trợ giúp", color: "#f43f5e", onPress: () => navigation.navigate("DisputeHistory") },
                  { icon: CreditCard, label: "Ví của tôi", sub: "Quản lý thu nhập", color: "#059669", onPress: () => navigation.navigate("WorkerWallet") },
                ].map((item, idx) => (
-                 <TouchableOpacity 
-                   key={idx} 
-                   className={`flex-row items-center justify-between p-5 ${idx !== 4 ? "border-b border-slate-100" : ""}`}
-                   onPress={item.onPress}
-                 >
+                 <TouchableOpacity key={idx} className={`flex-row items-center justify-between p-5 ${idx !== 4 ? "border-b border-slate-100" : ""}`} onPress={item.onPress}>
                    <View className="flex-row items-center gap-4">
                       <View className="w-10 h-10 rounded-2xl bg-white items-center justify-center shadow-sm">
                         <item.icon size={18} color={item.color} />
@@ -334,28 +391,15 @@ export function WorkerProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          <TouchableOpacity 
-            className="flex-row items-center justify-center gap-2 bg-rose-50 rounded-[28px] p-5 border border-rose-500/10 mb-10" 
-            onPress={() => setShowLogoutModal(true)}
-          >
+          <TouchableOpacity className="flex-row items-center justify-center gap-2 bg-rose-50 rounded-[28px] p-5 border border-rose-500/10 mb-10" onPress={() => setShowLogoutModal(true)}>
             <LogOut size={18} color="#f43f5e" />
             <Text className="text-[15px] font-bold text-rose-500">Đăng xuất hệ thống</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-
     </SafeAreaView>
 
-    <FeedbackModal 
-      visible={showLogoutModal} 
-      title="Đăng xuất" 
-      message="Bạn có chắc chắn muốn thoát khỏi hệ thống?" 
-      variant="info" 
-      confirmLabel="Đăng xuất" 
-      cancelLabel="Hủy" 
-      onClose={() => setShowLogoutModal(false)} 
-      onConfirm={() => { setShowLogoutModal(false); logout().catch(() => undefined); }} 
-    />
+    <FeedbackModal visible={showLogoutModal} title="Đăng xuất" message="Bạn có chắc chắn muốn thoát khỏi hệ thống?" variant="info" confirmLabel="Đăng xuất" cancelLabel="Hủy" onClose={() => setShowLogoutModal(false)} onConfirm={() => { setShowLogoutModal(false); logout().catch(() => undefined); }} />
 
     <Modal visible={showAllSkills} animationType="slide" transparent={true} onRequestClose={() => setShowAllSkills(false)}>
       <View className="flex-1 justify-end bg-black/50">
@@ -398,6 +442,47 @@ export function WorkerProfileScreen({ navigation }: any) {
               })}
             </View>
           </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal visible={showReliabilityModal} animationType="fade" transparent={true} onRequestClose={() => setShowReliabilityModal(false)}>
+      <View className="flex-1 justify-center items-center bg-black/40 px-6">
+        <Pressable className="absolute inset-0" onPress={() => setShowReliabilityModal(false)} />
+        <View className="bg-white rounded-[32px] w-full p-6 shadow-2xl">
+          <View className="w-12 h-12 rounded-2xl bg-emerald-100 items-center justify-center mb-4">
+            <Info size={24} color="#10b981" />
+          </View>
+          <Text className="text-[20px] font-black text-slate-900 mb-2">Độ tin cậy là gì?</Text>
+          <Text className="text-[14px] text-slate-600 leading-6 mb-6">
+            Chỉ số này phản ánh chất lượng công việc dựa trên đánh giá từ các chủ nông trại.{"\n\n"}
+            <Text className="font-bold text-slate-800">Cách tính:</Text> Tỷ lệ số công việc đạt <Text className="text-emerald-600 font-bold">đánh giá tốt (trên 4.5 sao)</Text> trên tổng số công việc đã hoàn thành.{"\n\n"}
+            <Text className="text-[12px] italic text-slate-500">* Các công việc chưa được đánh giá sẽ mặc định được tính là 5 sao để bảo vệ quyền lợi của bạn.</Text>
+          </Text>
+          <TouchableOpacity onPress={() => setShowReliabilityModal(false)} className="bg-slate-900 rounded-2xl py-4 items-center">
+            <Text className="text-white font-bold">Đã hiểu</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal visible={showWarningModal} transparent animationType="fade" onRequestClose={() => setShowWarningModal(false)}>
+      <View className="flex-1 bg-black/60 justify-center items-center px-6">
+        <View className="bg-white w-full rounded-[40px] p-8 shadow-2xl">
+          <View className="w-16 h-16 rounded-3xl bg-orange-100 items-center justify-center mb-6">
+            <ShieldAlert size={32} color="#f97316" />
+          </View>
+          <Text className="text-[20px] font-black text-slate-900 mb-2">Quy định cảnh báo</Text>
+          <Text className="text-[14px] text-slate-600 leading-6 mb-6">
+            Hệ thống áp dụng các biện pháp hạn chế để đảm bảo môi trường làm việc chuyên nghiệp.{"\n\n"}
+            <Text className="font-bold text-slate-800">Mức hình phạt:</Text>{"\n"}
+            • 1-3 lần cảnh báo: Bị hạn chế nhận việc trong <Text className="text-orange-600 font-bold">3 ngày/lần</Text>.{"\n"}
+            • Từ 4 lần cảnh báo: Tài khoản sẽ bị <Text className="text-rose-600 font-bold uppercase">Khóa vĩnh viễn</Text>.{"\n\n"}
+            <Text className="text-[12px] italic text-slate-500">* Các cảnh báo thường đến từ việc bị khiếu nại hoặc vi phạm nội quy làm việc.</Text>
+          </Text>
+          <TouchableOpacity onPress={() => setShowWarningModal(false)} className="bg-slate-900 rounded-2xl py-4 items-center">
+            <Text className="text-white font-bold">Đã hiểu</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>

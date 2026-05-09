@@ -25,6 +25,9 @@ export interface WorkerProfileDTO {
   skills: SkillResponse[];
   genderId: number;
   gender: string;
+  isActive: boolean;
+  warningCount: number;
+  lastWarnedAt: any;
 }
 
 // Matches backend UpdateWorkerProfileRequest.cs

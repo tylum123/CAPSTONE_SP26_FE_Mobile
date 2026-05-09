@@ -5,6 +5,8 @@
  * Rule: DO NOT modify existing code logic.
  */
 import { ClassValue, clsx } from "clsx";
+import { format, isValid } from "date-fns";
+import { vi } from "date-fns/locale";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -19,6 +21,26 @@ export function formatCurrency(amount: number | string): string {
   })
     .format(num)
     .replace("₫", "đ");
+}
+
+/**
+ * Formats a date string to DD/MM/YYYY.
+ * Handles ISO strings and already formatted strings.
+ */
+export function formatDate(dateStr: string | undefined): string {
+  if (!dateStr || dateStr === "N/A" || dateStr === "Chưa rõ") return "—";
+
+  // If it's already in DD/MM/YYYY format, return it as is
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+
+  try {
+    const date = new Date(dateStr);
+    if (!isValid(date)) return "—";
+    
+    return format(date, "dd/MM/yyyy", { locale: vi });
+  } catch {
+    return "—";
+  }
 }
 
 export function formatDistance(km: number | string): string {
