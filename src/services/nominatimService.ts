@@ -107,6 +107,39 @@ class NominatimService {
 
     return R * c;
   }
+
+  /**
+   * Gets real driving distance between two coordinates using OSRM (OpenStreetMap Routing).
+   * Falls back to straight-line distance if the request fails.
+   */
+  async getRouteDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): Promise<number> {
+    const straightDist = this.calculateDistanceKm(lat1, lon1, lat2, lon2);
+    
+    // For very short distances (< 0.5km), road vs straight is negligible and OSRM might be overkill
+    if (straightDist < 0.5) return straightDist;
+
+    try {
+      // OSRM Public Demo API (limit: 1 req/sec)
+      // Format: {lon1},{lat1};{lon2},{lat2}
+      const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+      
+      const response = await axios.get(url, {
+        headers: { "User-Agent": "Capstone_SP26_FE_Mobile/1.0" },
+        timeout: 2000 // Short timeout to avoid blocking UI
+      });
+
+      if (response.data && response.data.routes && response.data.routes.length > 0) {
+        // Distance is returned in meters, convert to km
+        return response.data.routes[0].distance / 1000;
+      }
+      
+      // Fallback: Haversine distance with a "winding factor" for road distance estimation
+      return straightDist * 1.3;
+    } catch (error) {
+      console.log("[Nominatim] Routing failed, using estimated straight-line distance.");
+      return straightDist * 1.3;
+    }
+  }
 }
 
 export const nominatimService = new NominatimService();

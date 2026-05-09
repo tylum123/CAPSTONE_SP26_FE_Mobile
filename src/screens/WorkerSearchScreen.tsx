@@ -129,8 +129,11 @@ export function WorkerSearchScreen({ navigation }: any) {
         if (status === "granted") {
           // Use a timeout to prevent GPS from blocking the UI for too long
           const location = await Promise.race([
-            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+            Location.getCurrentPositionAsync({ 
+              accuracy: Location.Accuracy.High,
+              distanceInterval: 10 
+            }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
           ]);
           if (location && "coords" in location) {
             lat = location.coords.latitude;
