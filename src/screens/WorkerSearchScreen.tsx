@@ -54,7 +54,7 @@ export function WorkerSearchScreen({ navigation }: any) {
     // DISTANCE FILTER: Only apply if user explicitly set a limit (not 'Toàn quốc' 3000km)
     // IMPORTANT: If distanceKm is undefined (still geocoding), we SHOW the job temporarily 
     // to prevent it disappearing from the list while processing.
-    if (filters.maxDistanceKm && filters.maxDistanceKm < 2000) {
+    if (filters.maxDistanceKm && filters.maxDistanceKm < 2000 && filters.workerLatitude && filters.workerLongitude) {
       data = data.filter(job => {
         if (job.distanceKm === undefined) return true; // Show while calculating
         // Use a small buffer (0.5km) to handle rounding differences between BE and FE
@@ -91,9 +91,10 @@ export function WorkerSearchScreen({ navigation }: any) {
       hasInitialized.current = true;
       return;
     }
-    // Only trigger live search when user actually types
+    // Only trigger live search when user actually types (not when isDemo changes)
     search({ ...filters, pageNumber: 1 }, user?.isDemo);
-  }, [debouncedKeyword, user?.isDemo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedKeyword]);
 
 
   const handleQuickFilter = (type: string) => {
@@ -113,66 +114,72 @@ export function WorkerSearchScreen({ navigation }: any) {
 
 
   /**
-   * Initializes screen by fetching national results immediately, then updates with location.
+   * Initializes screen by resolving location first, then performing a single search.
+   * FIXED: Previously called search() twice (fire-and-forget national + location-based),
+   * causing a race condition where the first response could overwrite the second.
    */
   const init = useCallback(async () => {
     try {
-      // 1. IMMEDIATE NATIONAL SEARCH (Toàn quốc)
-      // This ensures results are visible instantly without waiting for GPS
-      search({
-        pageNumber: 1,
-        pageSize: 20,
-        workerLatitude: undefined,
-        workerLongitude: undefined,
-        maxDistanceKm: 3000, // Explicitly national
-      }, user?.isDemo);
+      // 1. RESOLVE LOCATION (fast, with timeout to avoid blocking)
+      let lat: number | undefined;
+      let lon: number | undefined;
 
-      await refreshAppliedStatus();
-
-      // 2. FETCH LOCATION IN BACKGROUND
-      let lat = 10.762622; // Default (HCM City)
-      let lon = 106.660172;
-      let locationSource = "default";
-
-      // TRY GPS
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          lat = location.coords.latitude;
-          lon = location.coords.longitude;
-          locationSource = "gps";
-          console.log("[Location] GPS found:", lat, lon);
+        if (status === "granted") {
+          // Use a timeout to prevent GPS from blocking the UI for too long
+          const location = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+          ]);
+          if (location && "coords" in location) {
+            lat = location.coords.latitude;
+            lon = location.coords.longitude;
+            console.log("[Location] GPS found:", lat, lon);
+          }
         }
       } catch (gpsError) {
-        // GPS failed, try profile
-        if (!user?.isDemo) {
+        console.log("[Location] GPS Permission error:", gpsError);
+      }
+
+      // 2. FALLBACK TO PROFILE ADDRESS if GPS failed or timed out
+      // Even for Demo, we try to resolve location for distance mapping, but we don't block
+      if (lat === undefined && !user?.isDemo) {
+        try {
+          console.log("[Location] GPS unavailable, attempting profile fallback...");
           const profile = await workerProfileService.getProfile();
           if (profile?.primaryLocation) {
             const loc = await nominatimService.geocodeAddress(profile.primaryLocation);
             if (loc) {
               lat = loc.latitude;
               lon = loc.longitude;
-              locationSource = "profile";
+              console.log("[Location] Profile address geocoded:", lat, lon);
             }
           }
+        } catch (profileError) {
+          console.log("[Location] Profile fallback failed:", profileError);
         }
       }
 
-      const location = { latitude: lat, longitude: lon };
-      setUserLocation(location);
-      
-      // Update filters so subsequent searches use the location
-      const finalFilters = { 
-        ...filters,
-        workerLatitude: lat, 
-        workerLongitude: lon,
-        pageNumber: 1
+      // 4. SET USER LOCATION (for map view)
+      if (lat !== undefined && lon !== undefined) {
+        setUserLocation({ latitude: lat, longitude: lon });
+      }
+
+      // 5. SINGLE SEARCH CALL with best available location (Use HCMC fallback for better BE matching)
+      const searchFilters = {
+        pageNumber: 1,
+        pageSize: 10,
+        workerLatitude: lat ?? 10.7626, // Fallback to HCMC
+        workerLongitude: lon ?? 106.6602, 
+        maxDistanceKm: 3000, // National scope
+        sortBy: "date"
       };
-      updateFilter(finalFilters);
-      search(finalFilters, user?.isDemo);
+      updateFilter(searchFilters);
+      search(searchFilters, user?.isDemo);
+
+      // 6. Refresh applied status in background (non-blocking)
+      refreshAppliedStatus();
 
     } catch (err) {
       // Final fallback if everything fails

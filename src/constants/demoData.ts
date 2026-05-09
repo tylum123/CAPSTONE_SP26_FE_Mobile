@@ -25,7 +25,10 @@ export const DEMO_WORKER_PROFILE: WorkerProfileDTO = {
   updatedAt: "2026-03-01T00:00:00Z",
   genderId: 1,
   gender: "Nam",
+  isActive: true,
+  warningCount: 0,
   skills: [],
+  lastWarnedAt: undefined
 };
 
 export const DEMO_CATEGORIES: JobCategoryDTO[] = [

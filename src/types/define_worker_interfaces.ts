@@ -25,6 +25,9 @@ export interface WorkerProfileDTO {
   skills: SkillResponse[];
   genderId: number;
   gender: string;
+  isActive: boolean;
+  warningCount: number;
+  lastWarnedAt: any;
 }
 
 // Matches backend UpdateWorkerProfileRequest.cs
@@ -236,11 +239,7 @@ export interface JobSearchFilterRequest {
   jobCategoryId?: string;
   searchKeyword?: string;
   requiredSkills?: string[];
-  dateFilter?: string; // today | tomorrow | weekend | upcoming
-  startDateFrom?: string;
-  startDateTo?: string;
   durationType?: string; // Daily | PerJob | LongTerm
-  paymentMethod?: string;
   onlyUrgent?: boolean;
   minWorkerRating?: number;
   pageNumber?: number;
