@@ -4,7 +4,7 @@
  * Outputs: Filter state, search results, loading/error status, and search handlers.
  * Dependencies: jobService, JobSearchFilterRequest, JobDiscoveryDTO. */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { jobService, nominatimService } from "../services/export_services";
 import { 
   JobSearchFilterRequest, 
@@ -18,8 +18,11 @@ export interface ExtendedJobFilter extends JobSearchFilterRequest {
 
 const INITIAL_FILTERS: ExtendedJobFilter = {
   pageNumber: 1,
-  pageSize: 20,
+  pageSize: 10,
   excludeApplied: false,
+  workerLatitude: 0,
+  workerLongitude: 0,
+  maxDistanceKm: 3000,
 };
 
 import { DEMO_JOB_POSTS } from "../constants/demoData";
@@ -31,9 +34,14 @@ export function useJobSearch() {
   const [filters, setFilters] = useState<ExtendedJobFilter>(INITIAL_FILTERS);
   const [results, setResults] = useState<JobDiscoveryDTO[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start true — loading indicator shows immediately until first search completes
   const [error, setError] = useState<string | null>(null);
   const [appliedJobPostIds, setAppliedJobPostIds] = useState<Set<string>>(new Set());
+
+  // REQUEST COUNTER: Prevents stale responses from overwriting newer results.
+  // Each search() call increments this and captures the current value.
+  // Before applying results, we check if the captured ID still matches — if not, discard.
+  const searchIdRef = useRef(0);
 
   /**
    * Partially updates the filter state and resets pagination to page 1.
@@ -74,6 +82,8 @@ export function useJobSearch() {
    * @returns The number of jobs found.
    */
   const search = useCallback(async (customFilters?: Partial<ExtendedJobFilter>, isDemo: boolean = false) => {
+    // Increment counter to invalidate any in-flight requests
+    const thisSearchId = ++searchIdRef.current;
     setIsLoading(true);
     setError(null);
     let resultCount = 0;
@@ -131,13 +141,33 @@ export function useJobSearch() {
         workerLongitude: customFilters?.workerLongitude !== undefined ? customFilters.workerLongitude : filters.workerLongitude,
       };
 
-      // Ensure maxDistanceKm is at least 3000 (Toàn quốc) if NO specific distance is provided but location exists
-      // This allows the backend to return results without strict filtering unless requested
-      if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && mergedFilters.maxDistanceKm === undefined) {
-        mergedFilters.maxDistanceKm = 3000;
+      const { excludeApplied, ...requestData } = mergedFilters;
+      
+      // ALIASING: Some backends use 'page'/'size'
+      (requestData as any).page = requestData.pageNumber;
+      (requestData as any).size = requestData.pageSize;
+
+      // CLEANUP: If coordinates are missing or zero, we MUST remove distance-related filters
+      // because the backend cannot calculate distance from (0,0) or null.
+      if (!requestData.workerLatitude || !requestData.workerLongitude) {
+        delete requestData.workerLatitude;
+        delete requestData.workerLongitude;
+        delete requestData.maxDistanceKm;
+        console.log("[Search] Omit location filters (Global Search)");
+      } else {
+        // Ensure they are numbers
+        requestData.workerLatitude = Number(requestData.workerLatitude);
+        requestData.workerLongitude = Number(requestData.workerLongitude);
       }
 
-      const response: any = await jobService.searchJobs(mergedFilters);
+      console.log("[Search] Request Data:", JSON.stringify(requestData));
+      const response: any = await jobService.searchJobs(requestData as any);
+
+      // STALE CHECK: If a newer search was fired while this one was in-flight, discard this response
+      if (thisSearchId !== searchIdRef.current) {
+        console.log(`[Search] Discarding stale response (id=${thisSearchId}, current=${searchIdRef.current})`);
+        return 0;
+      }
 
       // ULTIMATE DEFENSIVE DECODING: 
       // Handle PascalCase, camelCase, direct Array, or any object property that is an array
@@ -161,7 +191,13 @@ export function useJobSearch() {
         if (total === 0) total = jobs.length;
       }
       // Map results to UI-friendly format immediately to show results as fast as possible
-      const mappedJobs = jobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      let mappedJobs = jobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+
+      // Client-side filtering for applied jobs if requested
+      if (excludeApplied && appliedJobPostIds.size > 0) {
+        mappedJobs = mappedJobs.filter(job => !appliedJobPostIds.has(job.id));
+      }
+
       setResults(mappedJobs);
       setTotalCount(total);
       resultCount = total;
@@ -192,7 +228,7 @@ export function useJobSearch() {
           }
         }));
         
-        if (hasChanges) {
+        if (hasChanges && thisSearchId === searchIdRef.current) {
           setResults([...mappedJobs]);
         }
       })();
@@ -200,13 +236,19 @@ export function useJobSearch() {
       // Refresh applied status whenever we search to ensure "Exclude Applied" is accurate
       refreshAppliedStatus();
     } catch (err: any) {
-      handleError(err, "Đã xảy ra lỗi khi tìm kiếm công việc.");
-      const errorMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.";
-      setError(errorMsg);
-      setResults([]);
-      resultCount = 0;
+      // Only apply error state if this is still the latest search
+      if (thisSearchId === searchIdRef.current) {
+        handleError(err, "Đã xảy ra lỗi khi tìm kiếm công việc.");
+        const errorMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi khi tìm kiếm công việc.";
+        setError(errorMsg);
+        setResults([]);
+        resultCount = 0;
+      }
     } finally {
-      setIsLoading(false);
+      // Only clear loading if this is still the latest search
+      if (thisSearchId === searchIdRef.current) {
+        setIsLoading(false);
+      }
     }
     return resultCount;
   }, [filters, refreshAppliedStatus]);
@@ -223,7 +265,8 @@ export function useJobSearch() {
       const nextPage = (filters.pageNumber || 1) + 1;
       const nextFilters = { ...filters, pageNumber: nextPage };
       
-      const response: any = await jobService.searchJobs(nextFilters);
+      const { excludeApplied, ...requestData } = nextFilters;
+      const response: any = await jobService.searchJobs(requestData as any);
       
       // Use SAME robust decoding for pagination
       let newJobs: JobDiscoveryDTO[] = [];
@@ -237,8 +280,14 @@ export function useJobSearch() {
         }
       }
       
-      const mappedNewJobs = newJobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
-      setResults((prev) => [...prev, ...mappedNewJobs]);
+      // Map and Filter
+      let mappedNewJobs = newJobs.map(j => mapJobPostToUI(j)) as unknown as JobDiscoveryDTO[];
+      
+      if (excludeApplied && appliedJobPostIds.size > 0) {
+        mappedNewJobs = mappedNewJobs.filter(job => !appliedJobPostIds.has(job.id));
+      }
+
+      setResults(prev => [...prev, ...mappedNewJobs]);
       setFilters(nextFilters);
 
       // PERFORM GEOCODING & DISTANCE CALCULATION FOR NEW RESULTS IN BACKGROUND
@@ -333,7 +382,6 @@ export function useJobSearch() {
       setFilters(prev => ({ 
         ...prev, 
         pageNumber: 1, 
-        dateFilter: type !== 'urgent' ? type : undefined, 
         onlyUrgent: type === 'urgent',
         workerLatitude: location?.latitude || prev.workerLatitude,
         workerLongitude: location?.longitude || prev.workerLongitude

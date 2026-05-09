@@ -236,11 +236,7 @@ export interface JobSearchFilterRequest {
   jobCategoryId?: string;
   searchKeyword?: string;
   requiredSkills?: string[];
-  dateFilter?: string; // today | tomorrow | weekend | upcoming
-  startDateFrom?: string;
-  startDateTo?: string;
   durationType?: string; // Daily | PerJob | LongTerm
-  paymentMethod?: string;
   onlyUrgent?: boolean;
   minWorkerRating?: number;
   pageNumber?: number;
