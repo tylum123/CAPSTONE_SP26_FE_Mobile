@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, DeviceEventEmitter, Modal, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import { Avatar, Badge } from "../components/ui/export_ui_components";
 import { CreditCard, Users, LogOut, Edit2, Phone, Wallet, Bell, FileText, ChevronRight, MapPin, Clock, ShieldAlert, X, Tractor, Package, Tag, MousePointer2, Calendar, Navigation, CheckCircle2, CircleHelp, Info } from "lucide-react-native";
@@ -166,11 +167,13 @@ export function WorkerProfileScreen({ navigation }: any) {
 
   const handleRestrictionPress = () => {
     Toast.show({
-      type: 'info',
-      text1: 'Thông báo hạn chế',
-      text2: 'Tài khoản của bạn hiện tại không thể ứng tuyển cho bất cứ bài đăng nào.',
+      type: 'error',
+      text1: 'Tài khoản đang bị hạn chế ⚠️',
+      text2: 'Bạn không thể ứng tuyển công việc cho đến khi hết thời gian hạn chế.',
       position: 'top',
-      visibilityTime: 4000,
+      visibilityTime: 6000,
+      autoHide: true,
+      topOffset: 50,
     });
   };
 
@@ -189,16 +192,6 @@ export function WorkerProfileScreen({ navigation }: any) {
                    size={90} 
                  />
                </View>
-               {restrictionInfo.isRestricted && (
-                 <TouchableOpacity 
-                   onPress={handleRestrictionPress}
-                   className="mt-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100 shadow-sm"
-                 >
-                   <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">
-                     {restrictionInfo.isPermanent ? "Bị khóa vĩnh viễn" : `Bị hạn chế ${restrictionInfo.daysRemaining} ngày`}
-                   </Text>
-                 </TouchableOpacity>
-               )}
              </View>
 
              <TouchableOpacity 
@@ -210,7 +203,7 @@ export function WorkerProfileScreen({ navigation }: any) {
              </TouchableOpacity>
           </View>
 
-          <View className="flex-row justify-between mb-8">
+          <View className="flex-row justify-between mb-6">
             <View className="flex-1 pr-4">
               <View className="flex-row items-center gap-2 mb-0.5">
                 <Text className="text-[20px] font-black text-slate-800" numberOfLines={1}>{displayProf.fullName || user?.name || "Người dùng"}</Text>
@@ -229,6 +222,39 @@ export function WorkerProfileScreen({ navigation }: any) {
                </View>
             </View>
           </View>
+
+          {restrictionInfo.isRestricted && (
+            <TouchableOpacity 
+              onPress={handleRestrictionPress}
+              activeOpacity={0.85}
+              className="mb-8"
+            >
+              <LinearGradient
+                colors={["#fff1f2", "#ffe4e6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className="rounded-[32px] border border-rose-200 shadow-sm shadow-rose-100 overflow-hidden"
+              >
+                <View className="flex-row items-center p-5">
+                  <View className="w-12 h-12 bg-rose-500 rounded-2xl items-center justify-center mr-4 shadow-sm shadow-rose-200">
+                    <ShieldAlert size={24} color="white" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-rose-900 font-black text-[15px] mb-0.5">Tài khoản đang bị hạn chế</Text>
+                    <Text className="text-rose-600 text-[11px] font-bold uppercase tracking-tight">
+                      {restrictionInfo.isPermanent 
+                        ? "Đã khóa vĩnh viễn khỏi hệ thống" 
+                        : `Thời gian còn lại: ${restrictionInfo.daysRemaining} ngày`}
+                    </Text>
+                  </View>
+                  <View className="bg-rose-200/50 p-2 rounded-full">
+                    <ChevronRight size={16} color="#be123c" />
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
 
           <View className="flex-row flex-wrap justify-between gap-y-4 mb-8">
             <View className="w-[48%] bg-slate-50/50 rounded-[28px] p-5 border border-slate-100">
