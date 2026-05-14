@@ -147,7 +147,7 @@ export function ReviewScreen({ navigation, route }: any) {
 
   const handleSubmit = async () => {
     if (rating === 0) { 
-      handleError(null, "Vui lòng chọn số sao đánh giá"); 
+      handleError(null, "Vui lòng chọn số sao đánh giá famrer"); 
       return; 
     }
     
