@@ -118,11 +118,26 @@ export function useJobSearch() {
         }
 
         // Map to JobDiscoveryDTO ensuring no fields are missing for UI
-        const mappedResults = filtered.map(j => ({
-          ...mapJobPostToUI(j),
-          distanceKm: Math.random() * 10,
-          matchScore: 0.8 + Math.random() * 0.2
-        })) as unknown as JobDiscoveryDTO[];
+        const workerLat = customFilters?.workerLatitude || filters.workerLatitude;
+        const workerLon = customFilters?.workerLongitude || filters.workerLongitude;
+
+        const mappedResults = filtered.map(j => {
+          const mapped = mapJobPostToUI(j);
+          let dist = 0;
+          
+          if (workerLat && workerLon && j.latitude && j.longitude) {
+            dist = nominatimService.calculateDistanceKm(workerLat, workerLon, j.latitude, j.longitude);
+          } else {
+            // Realistic fallback for demo if no coords
+            dist = (Math.random() * 5) + 1; 
+          }
+
+          return {
+            ...mapped,
+            distanceKm: dist,
+            matchScore: 0.8 + Math.random() * 0.2
+          };
+        }) as unknown as JobDiscoveryDTO[];
 
         setResults(mappedResults);
         setTotalCount(mappedResults.length);
@@ -218,7 +233,7 @@ export function useJobSearch() {
           
           if (mergedFilters.workerLatitude && mergedFilters.workerLongitude && job.latitude && job.longitude) {
             const oldDist = job.distanceKm;
-            job.distanceKm = nominatimService.calculateDistanceKm(
+            job.distanceKm = await nominatimService.getRouteDistanceKm(
               mergedFilters.workerLatitude,
               mergedFilters.workerLongitude,
               job.latitude,
@@ -305,7 +320,7 @@ export function useJobSearch() {
 
           if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
             const oldDist = job.distanceKm;
-            job.distanceKm = nominatimService.calculateDistanceKm(
+            job.distanceKm = await nominatimService.getRouteDistanceKm(
               filters.workerLatitude,
               filters.workerLongitude,
               job.latitude,
@@ -363,7 +378,7 @@ export function useJobSearch() {
           const currentLon = location?.longitude || filters.workerLongitude;
 
           if (currentLat && currentLon && job.latitude && job.longitude) {
-            const newDist = nominatimService.calculateDistanceKm(
+            const newDist = await nominatimService.getRouteDistanceKm(
               currentLat,
               currentLon,
               job.latitude,
@@ -422,7 +437,7 @@ export function useJobSearch() {
           }
 
           if (filters.workerLatitude && filters.workerLongitude && job.latitude && job.longitude) {
-            const newDist = nominatimService.calculateDistanceKm(
+            const newDist = await nominatimService.getRouteDistanceKm(
               filters.workerLatitude,
               filters.workerLongitude,
               job.latitude,
